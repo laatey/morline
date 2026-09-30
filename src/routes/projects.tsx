@@ -226,8 +226,8 @@ function ProjectsPage() {
 
   return (
     <RequireAuth>
-    <div className="min-h-screen bg-surface">
-      <header className="flex h-12 items-center gap-2 px-4 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-surface">
+      <header className="flex h-12 shrink-0 items-center gap-2 px-4 sm:px-6">
         {/* Desktop breadcrumb */}
         <div className="hidden sm:flex sm:items-center sm:gap-2">
           <Link to="/projects" className="flex items-center gap-2 pr-2">
@@ -287,8 +287,8 @@ function ProjectsPage() {
         </span>
       </header>
 
-      <div className="relative mx-0 mb-2 sm:mx-4 sm:mb-4">
-        <section className="relative flex min-h-[calc(100vh-3.75rem)] flex-col overflow-hidden rounded-t-2xl border bg-background shadow-[0_24px_60px_-40px_oklch(0.19_0.012_264/0.35)]">
+      <div className="relative mx-0 flex flex-1 flex-col sm:mx-4">
+        <section className="relative flex min-h-[calc(100vh-3rem)] flex-1 flex-col overflow-hidden rounded-t-2xl border border-b-0 bg-background shadow-[0_24px_60px_-40px_oklch(0.19_0.012_264/0.35)]">
           <div className="grid-paper-sm pointer-events-none absolute inset-x-0 top-0 h-40 opacity-50 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
 
           <div className="relative flex flex-wrap items-end justify-between gap-6 border-b px-5 pb-6 pt-7 sm:px-8">
