@@ -154,12 +154,28 @@ function ProjectsPage() {
   const createProject = useMutation({
     mutationFn: async (input: NewProjectInput) => {
       if (!teamId) throw new Error("No workspace selected");
-      const res = await api<ApiProject | { project: ApiProject }>(`/teams/${teamId}/projects`, { method: "POST", body: input });
-      return "project" in res && res.project ? res.project : (res as ApiProject);
+      const res = await api<ApiProject | { project: ApiProject; services?: unknown[] }>(`/teams/${teamId}/projects`, { method: "POST", body: input });
+      const project = "project" in res && res.project ? res.project : (res as ApiProject);
+      const alreadySeeded = "services" in res && Array.isArray(res.services) && res.services.length > 0;
+      if (input.source === "github" && input.github && !alreadySeeded) {
+        // Seed the repo as the first service in the project's default environment.
+        let envId = (project as ApiProject & { defaultEnvironmentId?: string | null }).defaultEnvironmentId ?? null;
+        if (!envId) envId = (await api<{ data: { id: string }[] }>(`/projects/${project.id}/environments`)).data[0]?.id ?? null;
+        if (envId) {
+          const repo = input.github.repo;
+          try {
+            await api(`/environments/${envId}/services`, { method: "POST", body: { name: repo.split("/")[1] ?? repo, source: { type: "github", repo, branch: input.github.branch }, position: { x: 80, y: 80 } } });
+            return { ...project, serviceCount: Math.max(1, project.serviceCount ?? 0) };
+          } catch (e) {
+            toast.error(`Project created, but ${repo} could not be added: ${(e as ApiError)?.message ?? "unknown error"}`);
+          }
+        }
+      }
+      return project;
     },
-    onSuccess: (created) => {
+    onSuccess: (created, input) => {
       setLocalProjects((list) => [...(list ?? (projectsQuery.data ?? []).map(mapProject)), mapProject(created)]);
-      toast.success(`Project ${created.name} created`);
+      toast.success(input.source === "github" ? `${created.name} created — first build started` : `Project ${created.name} created`);
     },
     onError: (error) => {
       const message = (error as ApiError)?.message ?? "Could not create the project";

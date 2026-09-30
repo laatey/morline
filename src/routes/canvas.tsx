@@ -12,6 +12,8 @@ import { Kbd, StatusDot } from "@/components/moor/primitives";
 import { cn } from "@/lib/utils";
 import { api, type ApiError } from "@/lib/api";
 import { useProject } from "@/lib/workspace";
+import type { Kind, LogoKey } from "@/lib/platform-data";
+import { PendingChangesBar } from "@/components/moor/pending-changes";
 
 export const Route = createFileRoute("/canvas")({
   head: () => ({
@@ -48,6 +50,27 @@ function CanvasPage() {
 
   const counts = state.services.reduce<Record<string, number>>((a, s) => ({ ...a, [s.status]: (a[s.status] ?? 0) + 1 }), {});
 
+  // Drops a placeholder card on the canvas immediately, then swaps in the real service.
+  const addService = async (name: string, logo: LogoKey, kind: Kind, body: Record<string, unknown>, note: string) => {
+    setAdding(false);
+    if (!state.envId) return;
+    const maxY = state.services.length ? Math.max(...state.services.map((s) => s.y)) : -100;
+    const position = { x: 80, y: maxY + 180 };
+    const tempId = `tmp_${crypto.randomUUID()}`;
+    state.setServices((all) => [...all, { id: tempId, name, kind, logo, status: "deploying", x: position.x, y: position.y, source: name, region: "us-east", replicas: 1, cpu: 0, mem: 0, lastDeploy: "just now" }]);
+    try {
+      const res = await api<{ service?: { id: string; name: string }; id?: string; name?: string; data?: { id: string; name: string } }>(`/environments/${state.envId}/services`, { method: "POST", body: { ...body, position } });
+      const created = res?.service ?? res?.data ?? (res?.id ? { id: res.id, name: res.name ?? name } : null);
+      await state.refresh();
+      if (created?.id) setSelected(created.id);
+      toast.success(`${created?.name ?? name} added — ${note}`);
+    } catch (e) {
+      toast.error((e as ApiError)?.message ?? `Could not add ${name}`);
+    } finally {
+      state.setServices((all) => all.filter((s) => s.id !== tempId));
+    }
+  };
+
   return (
     <WorkspaceShell title="Canvas" onAssistant={() => setAssistantOpen((open) => !open)}>
       <Canvas state={state} selected={selected} onSelect={setSelected} />
@@ -83,44 +106,27 @@ function CanvasPage() {
           <Kbd className="hidden sm:inline-block">N</Kbd>
         </Button>
       </div>
+      {state.loading ? (
+        <div className="pointer-events-none absolute inset-0 z-[5] flex items-start justify-center gap-6 pt-40" aria-label="Loading services">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 w-[232px] rounded-xl border bg-card p-3" style={{ marginTop: i === 1 ? 120 : 0 }}>
+              <div className="flex items-center gap-2"><div className="h-7 w-7 animate-pulse rounded-md bg-muted" /><div className="h-3 w-24 animate-pulse rounded bg-muted" /></div>
+              <div className="mt-4 h-2.5 w-32 animate-pulse rounded bg-muted/70" />
+              <div className="mt-2 h-2.5 w-20 animate-pulse rounded bg-muted/50" />
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <PendingChangesBar />
       {service ? <Inspector service={service} onClose={() => setSelected(null)} /> : null}
       {assistantOpen && !service ? <AiAssistant onClose={() => setAssistantOpen(false)} /> : null}
       <NewServiceDialog
         open={adding}
         onOpenChange={setAdding}
-        onPick={async (t) => {
-          setAdding(false);
-          if (!state.envId) return;
-          const maxY = state.services.length ? Math.max(...state.services.map((s) => s.y)) : -100;
-          try {
-            const res = await api<{ service: { id: string; name: string } }>(`/environments/${state.envId}/services`, {
-              method: "POST",
-              body: { templateId: t.id, source: { type: "template", templateId: t.id }, position: { x: 80, y: maxY + 180 } },
-            });
-            await state.refresh();
-            setSelected(res.service.id);
-            toast.success(`${res.service.name} added — first deploy started`);
-          } catch (e) {
-            toast.error((e as ApiError).message ?? `Could not add ${t.name}`);
-          }
-        }}
-        onPickRepo={async (r) => {
-          setAdding(false);
-          if (!state.envId) return;
-          const maxY = state.services.length ? Math.max(...state.services.map((s) => s.y)) : -100;
-          try {
-            const res = await api<{ service: { id: string; name: string } }>(`/environments/${state.envId}/services`, {
-              method: "POST",
-              body: { name: r.fullName.split("/")[1], source: { type: "github", repo: r.fullName, branch: r.defaultBranch }, position: { x: 80, y: maxY + 180 } },
-            });
-            await state.refresh();
-            setSelected(res.service.id);
-            toast.success(`${res.service.name} added — first build started`);
-          } catch (e) {
-            toast.error((e as ApiError).message ?? `Could not deploy ${r.fullName}`);
-          }
-        }}
+        onPick={(t) => void addService(t.name, t.logo, t.kind, { templateId: t.id, source: { type: "template", templateId: t.id } }, "first deploy started")}
+        onPickRepo={(r) => void addService(r.fullName.split("/")[1] ?? r.fullName, "github", "app", { name: r.fullName.split("/")[1], source: { type: "github", repo: r.fullName, branch: r.defaultBranch } }, "first build started")}
       />
+
     </WorkspaceShell>
   );
 }

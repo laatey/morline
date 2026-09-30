@@ -18,3 +18,7 @@
 - [x] AI assistant threads via /assistant/threads.
 - [x] Account settings: profile, avatar, password, sessions, preferences, delete via API.
 - [x] Onboarding progress via /me/onboarding.
+- [x] Fix service-create crash; placeholder + skeleton cards on canvas.
+- [x] Project from repo also adds the repo service.
+- [x] Unapplied-changes bar (deploy/discard) — needs backend /staged-changes.
+- [x] Suggested variables — needs backend /variables/suggestions.
