@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Eye, EyeOff, GitCommitHorizontal, Link2, MoreHorizontal, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import { Copy, Eye, EyeOff, GitCommitHorizontal, Link2, MoreHorizontal, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -131,7 +131,20 @@ function RelationList({ label, services }: { label: string; services: Service[] 
 type SuggestedVar = { key: string; value?: string; secret?: boolean; source?: string };
 
 /** Keys found in the repo's .env.example / .env.sample etc. that aren't set yet. */
-function SuggestedVariables({ serviceId, existing, onAdded }: { serviceId: string; existing: string[]; onAdded: () => unknown }) {
+type DraftVar = { id: string; key: string; value: string; secret: boolean };
+
+/** Keys found in the repo's .env.example / .env.sample etc. that aren't set yet. */
+function SuggestedVariables({
+  serviceId,
+  existing,
+  onSelectSuggestion,
+  onSelectAll,
+}: {
+  serviceId: string;
+  existing: string[];
+  onSelectSuggestion: (s: SuggestedVar) => void;
+  onSelectAll: (items: SuggestedVar[]) => void;
+}) {
   const qc = useQueryClient();
   const key = ["variable-suggestions", serviceId];
   const { data = [] } = useQuery({
@@ -145,15 +158,17 @@ function SuggestedVariables({ serviceId, existing, onAdded }: { serviceId: strin
   const list = data.filter((s) => !existing.includes(s.key));
   if (!list.length) return null;
   const drop = (keys: string[]) => qc.setQueryData<SuggestedVar[]>(key, (d = []) => d.filter((s) => !keys.includes(s.key)));
-  const add = async (items: SuggestedVar[]) => {
-    const prev = qc.getQueryData<SuggestedVar[]>(key);
-    drop(items.map((i) => i.key));
-    try {
-      await Promise.all(items.map((i) => api(`/services/${serviceId}/variables`, { method: "POST", body: { key: i.key, value: i.value ?? "", secret: i.secret ?? false } })));
-      toast.success(items.length === 1 ? `${items[0]!.key} added — redeploy to apply` : `${items.length} variables added — redeploy to apply`);
-      await onAdded();
-    } catch (e) { qc.setQueryData(key, prev); toast.error(errMsg(e, "Could not add variables")); }
+
+  const handleSelect = (s: SuggestedVar) => {
+    drop([s.key]);
+    onSelectSuggestion(s);
   };
+
+  const handleSelectAll = () => {
+    drop(list.map((s) => s.key));
+    onSelectAll(list);
+  };
+
   const dismiss = async (keys: string[]) => {
     const prev = qc.getQueryData<SuggestedVar[]>(key);
     drop(keys);
@@ -168,7 +183,7 @@ function SuggestedVariables({ serviceId, existing, onAdded }: { serviceId: strin
         {source ? <span className="font-mono text-[10px] text-muted-foreground">from {source}</span> : null}
         <div className="ml-auto flex gap-1">
           <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => void dismiss(list.map((s) => s.key))}>Dismiss all</Button>
-          <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => void add(list)}>Add all</Button>
+          <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={handleSelectAll}>Add all to form</Button>
         </div>
       </div>
       <ul className="divide-y">
@@ -177,7 +192,7 @@ function SuggestedVariables({ serviceId, existing, onAdded }: { serviceId: strin
             <span className="w-48 shrink-0 truncate">{s.key}</span>
             <span className="flex-1 truncate text-muted-foreground">{s.value || "—"}</span>
             <button className="rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => void dismiss([s.key])}>Dismiss</button>
-            <button aria-label={`Add ${s.key}`} className="rounded p-1 hover:bg-accent" onClick={() => void add([s])}><Plus className="h-3.5 w-3.5" /></button>
+            <button aria-label={`Add ${s.key}`} className="rounded p-1 hover:bg-accent" onClick={() => handleSelect(s)}><Plus className="h-3.5 w-3.5" /></button>
           </li>
         ))}
       </ul>
@@ -195,7 +210,7 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
   });
   const [shown, setShown] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
-  const [draft, setDraft] = useState({ key: "", value: "", secret: false });
+  const [drafts, setDrafts] = useState<DraftVar[]>([{ id: "1", key: "", value: "", secret: false }]);
   const [raw, setRaw] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -207,12 +222,61 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
     setRaw(null);
     void run(() => api(`/services/${serviceId}/variables`, { method: "PUT", body: { variables } }), `${variables.length} variables saved — redeploy to apply`);
   };
-  const add = () => {
-    if (!draft.key) return;
-    const k = draft.key.toUpperCase().replace(/\W/g, "_");
-    setDraft({ key: "", value: "", secret: false });
-    void run(() => api(`/services/${serviceId}/variables`, { method: "POST", body: { key: k, value: draft.value, secret: draft.secret } }), `${k} added — redeploy to apply`);
+
+  const addDraftRow = () => {
+    setDrafts((prev) => [...prev, { id: crypto.randomUUID(), key: "", value: "", secret: false }]);
   };
+
+  const updateDraft = (id: string, patch: Partial<DraftVar>) => {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+  };
+
+  const removeDraftRow = (id: string) => {
+    setDrafts((prev) => {
+      if (prev.length <= 1) return [{ id: crypto.randomUUID(), key: "", value: "", secret: false }];
+      return prev.filter((d) => d.id !== id);
+    });
+  };
+
+  const handleSelectSuggestion = (s: SuggestedVar) => {
+    setDrafts((prev) => {
+      if (prev.length === 1 && !prev[0].key.trim() && !prev[0].value.trim()) {
+        return [{ id: prev[0].id, key: s.key, value: s.value ?? "", secret: Boolean(s.secret) }];
+      }
+      return [...prev.filter((d) => d.key.trim() || d.value.trim()), { id: crypto.randomUUID(), key: s.key, value: s.value ?? "", secret: Boolean(s.secret) }];
+    });
+  };
+
+  const handleSelectAllSuggestions = (items: SuggestedVar[]) => {
+    setDrafts((prev) => {
+      const existingDraftKeys = new Set(prev.map((d) => d.key.trim().toUpperCase()));
+      const newItems = items
+        .filter((i) => !existingDraftKeys.has(i.key.trim().toUpperCase()))
+        .map((i) => ({ id: crypto.randomUUID(), key: i.key, value: i.value ?? "", secret: Boolean(i.secret) }));
+      const filteredPrev = prev.filter((d) => d.key.trim() || d.value.trim());
+      return [...filteredPrev, ...newItems];
+    });
+  };
+
+  const validDrafts = drafts.filter((d) => d.key.trim().length > 0);
+
+  const saveDrafts = () => {
+    if (!validDrafts.length) return;
+    const variables = validDrafts.map((d) => ({
+      key: d.key.trim().toUpperCase().replace(/\W/g, "_"),
+      value: d.value,
+      secret: d.secret
+    }));
+
+    setDrafts([{ id: crypto.randomUUID(), key: "", value: "", secret: false }]);
+    void run(
+      () => api(`/services/${serviceId}/variables`, { method: "POST", body: { variables } }),
+      variables.length === 1
+        ? `${variables[0].key} added — redeploy to apply`
+        : `${variables.length} variables added — redeploy to apply`
+    );
+  };
+
   const list = vars.filter((v) => v.key.toLowerCase().includes(q.toLowerCase()));
   return (
     <div>
@@ -224,13 +288,83 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
         </div>
         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setRaw(vars.filter((v) => !v.secret || reveal).map((v) => `${v.key}=${v.value}`).join("\n"))}>Raw</Button>
       </div>
-      <div className="mx-4 mb-3 flex items-center gap-2 rounded-md border border-dashed p-2">
-        <Input value={draft.key} onChange={(e) => setDraft({ ...draft, key: e.target.value })} placeholder="KEY" className="h-7 font-mono text-xs" />
-        <Input value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="value or ${{ service.VAR }}" className="h-7 font-mono text-xs" />
-        <label className="flex shrink-0 items-center gap-1 font-mono text-[10px] text-muted-foreground"><Switch checked={draft.secret} onCheckedChange={(v) => setDraft({ ...draft, secret: v })} className="scale-75" />secret</label>
-        <Button size="sm" className="h-7 px-2" onClick={add} aria-label="Add variable"><Plus className="h-3.5 w-3.5" /></Button>
+
+      <div className="mx-4 mb-3 space-y-2 rounded-md border border-dashed p-2.5">
+        {drafts.map((d, index) => (
+          <div key={d.id} className="flex items-center gap-2">
+            <Input
+              value={d.key}
+              onChange={(e) => updateDraft(d.id, { key: e.target.value })}
+              placeholder="KEY"
+              className="h-7 w-36 shrink-0 font-mono text-xs sm:w-48"
+            />
+            <Input
+              value={d.value}
+              onChange={(e) => updateDraft(d.id, { value: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  if (index === drafts.length - 1 && d.key.trim()) {
+                    addDraftRow();
+                  } else {
+                    saveDrafts();
+                  }
+                }
+              }}
+              placeholder="value or ${{ service.VAR }}"
+              className="h-7 flex-1 font-mono text-xs"
+            />
+            <label className="flex shrink-0 items-center gap-1 font-mono text-[10px] text-muted-foreground">
+              <Switch
+                checked={d.secret}
+                onCheckedChange={(v) => updateDraft(d.id, { secret: v })}
+                className="scale-75"
+              />
+              secret
+            </label>
+            {drafts.length > 1 || d.key || d.value ? (
+              <button
+                type="button"
+                onClick={() => removeDraftRow(d.id)}
+                className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label="Remove draft row"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+        ))}
+
+        <div className="flex items-center justify-between pt-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-6 gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+            onClick={addDraftRow}
+          >
+            <Plus className="h-3 w-3" /> Add another
+          </Button>
+
+          {validDrafts.length > 0 ? (
+            <Button
+              size="sm"
+              className="h-6 px-3 text-[11px]"
+              onClick={saveDrafts}
+            >
+              Save {validDrafts.length > 1 ? `(${validDrafts.length})` : ""}
+            </Button>
+          ) : null}
+        </div>
       </div>
-      {!isLoading ? <SuggestedVariables serviceId={serviceId} existing={vars.map((v) => v.key)} onAdded={refresh} /> : null}
+
+      {!isLoading ? (
+        <SuggestedVariables
+          serviceId={serviceId}
+          existing={[...vars.map((v) => v.key), ...drafts.map((d) => d.key.trim().toUpperCase()).filter(Boolean)]}
+          onSelectSuggestion={handleSelectSuggestion}
+          onSelectAll={handleSelectAllSuggestions}
+        />
+      ) : null}
       {isLoading ? <ListSkeleton /> : (
         <ul className="divide-y border-t">
           {list.map((v) => {
