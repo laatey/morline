@@ -47,6 +47,8 @@ const choices: Choice[] = [
   },
 ];
 
+export type NewProjectInput = { name: string; source: "empty" | "github"; github?: { repo: string; branch?: string } };
+
 export function NewProjectDialog({
   open,
   onOpenChange,
@@ -54,11 +56,13 @@ export function NewProjectDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate?: (name: string) => Promise<void> | void;
+  onCreate?: (input: NewProjectInput) => Promise<void> | void;
 }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState<Choice | null>(null);
+  const [pickingRepo, setPickingRepo] = useState(false);
+  const [repo, setRepo] = useState<GhRepo | null>(null);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -73,7 +77,12 @@ export function NewProjectDialog({
 
   const handleSelect = (choice: Choice) => {
     if (onCreate) {
+      if (choice.id === "github") {
+        setPickingRepo(true);
+        return;
+      }
       setPending(choice);
+      setRepo(null);
       setName("");
       return;
     }
@@ -86,7 +95,7 @@ export function NewProjectDialog({
     if (!onCreate || creating) return;
     setCreating(true);
     try {
-      await onCreate(finalName);
+      await onCreate(repo ? { name: finalName, source: "github", github: { repo: repo.fullName, branch: repo.defaultBranch } } : { name: finalName, source: "empty" });
       onOpenChange(false);
       navigate({ to: "/projects" });
     } finally {
@@ -101,6 +110,8 @@ export function NewProjectDialog({
         if (!v) {
           setQuery("");
           setPending(null);
+          setPickingRepo(false);
+          setRepo(null);
         }
         onOpenChange(v);
       }}
@@ -113,11 +124,25 @@ export function NewProjectDialog({
             Add a project
           </DialogTitle>
           <DialogDescription className="mt-0.5 text-xs text-muted-foreground">
-            {pending ? "Name the project before it is created." : "Choose where the first service should come from."}
+            {pickingRepo ? "Pick the repository to deploy as the first service." : pending ? "Name the project before it is created." : "Choose where the first service should come from."}
           </DialogDescription>
         </div>
 
-        {pending ? (
+        {pickingRepo ? (
+          <>
+            <GitHubRepoPicker
+              onPick={(r) => {
+                setRepo(r);
+                setName(r.fullName.split("/")[1]!.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 40));
+                setPending(choices[0]!);
+                setPickingRepo(false);
+              }}
+            />
+            <DialogFooter className="border-t px-4.5 py-3 sm:px-5">
+              <Button type="button" variant="outline" size="sm" onClick={() => setPickingRepo(false)}>Back</Button>
+            </DialogFooter>
+          </>
+        ) : pending ? (
           <form
             onSubmit={(event) => {
               event.preventDefault();
