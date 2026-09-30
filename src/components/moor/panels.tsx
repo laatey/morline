@@ -147,7 +147,7 @@ function SuggestedVariables({
 }) {
   const qc = useQueryClient();
   const key = ["variable-suggestions", serviceId];
-  const { data = [] } = useQuery({
+  const { data = [], isLoading } = useQuery({
     queryKey: key,
     queryFn: async () => {
       try { return (await api<{ data: SuggestedVar[] }>(`/services/${serviceId}/variables/suggestions`)).data ?? []; }
@@ -155,6 +155,9 @@ function SuggestedVariables({
     },
     staleTime: 60_000,
   });
+  if (isLoading) {
+    return <div className="mx-4 mb-3 h-12 animate-pulse rounded-md border border-dashed bg-muted/30" />;
+  }
   const list = data.filter((s) => !existing.includes(s.key));
   if (!list.length) return null;
   const drop = (keys: string[]) => qc.setQueryData<SuggestedVar[]>(key, (d = []) => d.filter((s) => !keys.includes(s.key)));
@@ -357,14 +360,12 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
         </div>
       </div>
 
-      {!isLoading ? (
-        <SuggestedVariables
-          serviceId={serviceId}
-          existing={[...vars.map((v) => v.key), ...drafts.map((d) => d.key.trim().toUpperCase()).filter(Boolean)]}
-          onSelectSuggestion={handleSelectSuggestion}
-          onSelectAll={handleSelectAllSuggestions}
-        />
-      ) : null}
+      <SuggestedVariables
+        serviceId={serviceId}
+        existing={[...vars.map((v) => v.key), ...drafts.map((d) => d.key.trim().toUpperCase()).filter(Boolean)]}
+        onSelectSuggestion={handleSelectSuggestion}
+        onSelectAll={handleSelectAllSuggestions}
+      />
       {isLoading ? <ListSkeleton /> : (
         <ul className="divide-y border-t">
           {list.map((v) => {
