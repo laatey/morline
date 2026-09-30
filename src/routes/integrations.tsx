@@ -86,7 +86,7 @@ function IntegrationsPage() {
                   </li>
                 );
               })}
-              {repos.isLoading ? <li className="px-4 py-4 text-xs text-muted-foreground">Loading repositories…</li> : !repos.data?.length ? <li className="px-4 py-6 text-sm text-muted-foreground">No repositories are shared with the Morline app yet.</li> : null}
+              {repos.isLoading ? <li aria-busy className="space-y-2 px-4 py-3">{[0,1,2].map((i) => <div key={i} className="h-8 animate-pulse rounded-md bg-muted/60" />)}</li> : !repos.data?.length ? <li className="px-4 py-6 text-sm text-muted-foreground">No repositories are shared with the Morline app yet.</li> : null}
             </ul>
             <p className="label-caps px-4 pb-2 pt-6">Behaviour</p>
             <div className="divide-y border-y">

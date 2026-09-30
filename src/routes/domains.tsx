@@ -90,7 +90,7 @@ function DomainsPage() {
               <button aria-label={`Remove ${d.host}`} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive" onClick={() => remove(d.id, d.host)}><Trash2 className="h-3.5 w-3.5" /></button>
             </li>
           ))}
-          {domainsQ.isLoading ? <li className="px-4 py-4 text-xs text-muted-foreground">Loading…</li> : !list.length ? <li className="px-4 py-6 text-sm text-muted-foreground">No public domains yet. Generate one from a service's Network tab, or add your own.</li> : null}
+          {domainsQ.isLoading ? <li aria-busy className="space-y-2 px-4 py-3">{[0,1].map((i) => <div key={i} className="h-8 animate-pulse rounded-md bg-muted/60" />)}</li> : !list.length ? <li className="px-4 py-6 text-sm text-muted-foreground">No public domains yet. Generate one from a service's Network tab, or add your own.</li> : null}
         </ul>
         <p className="label-caps px-4 pb-2 pt-6">Private network</p>
         <ul className="divide-y border-y font-mono text-xs">
