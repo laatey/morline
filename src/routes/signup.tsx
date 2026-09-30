@@ -11,6 +11,7 @@ import { ApiError, oauthUrl } from "@/lib/api";
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
+      { name: "theme-color", content: "#171717" },
       { title: "Create account — Morline" },
       { name: "description", content: "Create a Morline account and deploy your first service in minutes." },
       { property: "og:title", content: "Create account — Morline" },
