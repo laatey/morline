@@ -104,6 +104,22 @@ function CanvasPage() {
             toast.error((e as ApiError).message ?? `Could not add ${t.name}`);
           }
         }}
+        onPickRepo={async (r) => {
+          setAdding(false);
+          if (!state.envId) return;
+          const maxY = state.services.length ? Math.max(...state.services.map((s) => s.y)) : -100;
+          try {
+            const res = await api<{ service: { id: string; name: string } }>(`/environments/${state.envId}/services`, {
+              method: "POST",
+              body: { name: r.fullName.split("/")[1], source: { type: "github", repo: r.fullName, branch: r.defaultBranch }, position: { x: 80, y: maxY + 180 } },
+            });
+            await state.refresh();
+            setSelected(res.service.id);
+            toast.success(`${res.service.name} added — first build started`);
+          } catch (e) {
+            toast.error((e as ApiError).message ?? `Could not deploy ${r.fullName}`);
+          }
+        }}
       />
     </WorkspaceShell>
   );

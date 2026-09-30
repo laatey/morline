@@ -9,7 +9,7 @@ import { NotificationsButton, ProfileMenu, SearchButton, WorkspaceSwitcher } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mark } from "@/components/moor/workspace-shell";
-import { NewProjectDialog } from "@/components/moor/new-project";
+import { NewProjectDialog, type NewProjectInput } from "@/components/moor/new-project";
 import { Logo, StatusDot } from "@/components/moor/primitives";
 import { type LogoKey, type Status } from "@/lib/platform-data";
 import { api, type ApiError } from "@/lib/api";
@@ -152,9 +152,10 @@ function ProjectsPage() {
   const projects = localProjects ?? serverProjects;
 
   const createProject = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (input: NewProjectInput) => {
       if (!teamId) throw new Error("No workspace selected");
-      return api<ApiProject>(`/teams/${teamId}/projects`, { method: "POST", body: { name } });
+      const res = await api<ApiProject | { project: ApiProject }>(`/teams/${teamId}/projects`, { method: "POST", body: input });
+      return "project" in res && res.project ? res.project : (res as ApiProject);
     },
     onSuccess: (created) => {
       setLocalProjects((list) => [...(list ?? (projectsQuery.data ?? []).map(mapProject)), mapProject(created)]);
