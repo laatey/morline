@@ -46,11 +46,15 @@ export function useCanvasState() {
   useEffect(() => {
     if (!serverServices) return;
     revision.current = canvasQ.data?.revision;
-    setServices((local) => serverServices.map((s) => {
-      const mapped = toService(s);
-      const mine = local.find((l) => l.id === s.id);
-      return mine ? { ...mapped, x: mine.x, y: mine.y } : mapped;
-    }));
+    setServices((local) => [
+      ...serverServices.map((s) => {
+        const mapped = toService(s);
+        const mine = local.find((l) => l.id === s.id);
+        return mine ? { ...mapped, x: mine.x, y: mine.y } : mapped;
+      }),
+      // keep optimistic placeholders until their create request settles
+      ...local.filter((l) => l.id.startsWith("tmp_")),
+    ]);
   }, [serverServices, canvasQ.data?.revision]);
 
   const persist = (next: Service[], prev: Service[]) => {
