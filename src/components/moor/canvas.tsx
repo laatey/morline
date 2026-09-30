@@ -13,7 +13,7 @@ const BASE_NODE_H = 88;
 const NODE_H = BASE_NODE_H;
 
 function nodeHeight(s: Service) {
-  return BASE_NODE_H + (s.domain || s.volume ? 32 : 0);
+  return BASE_NODE_H + (s.domain || s.volume ? 20 : 0);
 }
 
 export function useCanvasState() {
@@ -416,17 +416,17 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
               title={`Open https://${s.domain}`}
-              className="group/link mt-2.5 flex items-center gap-1.5 truncate rounded border border-border/70 bg-surface/80 px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground"
+              className="mt-1 flex items-center gap-1 truncate font-mono text-[10px] text-muted-foreground hover:text-foreground hover:underline"
             >
-              <Globe className="h-3 w-3 shrink-0 text-muted-foreground group-hover/link:text-primary" />
-              <span className="truncate flex-1 font-mono">{s.domain}</span>
-              <ArrowUpRight className="h-2.5 w-2.5 shrink-0 opacity-50 transition-transform group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5 group-hover/link:opacity-100" />
+              <Globe className="h-2.5 w-2.5 shrink-0 opacity-70" />
+              <span className="truncate">{s.domain}</span>
+              <ArrowUpRight className="h-2.5 w-2.5 shrink-0 opacity-50" />
             </a>
           ) : s.volume ? (
-            <div className="mt-2.5 flex items-center gap-1.5 rounded border border-border/50 bg-surface/50 px-2 py-1 font-mono text-[10px] text-muted-foreground">
-              <HardDrive className="h-3 w-3 shrink-0" />
+            <p className="mt-1 flex items-center gap-1 truncate font-mono text-[10px] text-muted-foreground">
+              <HardDrive className="h-2.5 w-2.5 shrink-0 opacity-70" />
               <span className="truncate">{s.volume}</span>
-            </div>
+            </p>
           ) : null}
         </div>
         <div>
