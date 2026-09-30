@@ -360,14 +360,8 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
         </div>
       </div>
 
-      <SuggestedVariables
-        serviceId={serviceId}
-        existing={[...vars.map((v) => v.key), ...drafts.map((d) => d.key.trim().toUpperCase()).filter(Boolean)]}
-        onSelectSuggestion={handleSelectSuggestion}
-        onSelectAll={handleSelectAllSuggestions}
-      />
       {isLoading ? <ListSkeleton /> : (
-        <ul className="divide-y border-t">
+        <ul className="divide-y border-t border-b">
           {list.map((v) => {
             const visible = !v.secret || shown.has(v.key) || v.isReference;
             return (
@@ -399,6 +393,15 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
         </ul>
       )}
       {!isLoading && !list.length ? <p className="px-4 py-6 text-sm text-muted-foreground">{vars.length ? "No variables match." : "No variables yet."}</p> : null}
+
+      <div className="mt-4">
+        <SuggestedVariables
+          serviceId={serviceId}
+          existing={[...vars.map((v) => v.key), ...drafts.map((d) => d.key.trim().toUpperCase()).filter(Boolean)]}
+          onSelectSuggestion={handleSelectSuggestion}
+          onSelectAll={handleSelectAllSuggestions}
+        />
+      </div>
       <Dialog open={raw !== null} onOpenChange={(o) => !o && setRaw(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>Raw editor</DialogTitle><DialogDescription>Paste a .env file. Saving replaces all variables on this service.</DialogDescription></DialogHeader>
