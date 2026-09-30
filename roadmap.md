@@ -13,6 +13,8 @@
 - [x] Canvas: services, connections, saved positions, add/delete service via API (polling; SSE later).
 - [x] Deployments (+detail, redeploy/rollback/cancel), logs, metrics, variables, domains via API.
 - [x] Activity, notifications, GitHub integration via API.
-- [ ] Global search via /search; connections create/delete from canvas; AI assistant threads.
+- [x] Global search via /search (command palette).
+- [x] Canvas connections: drag-to-connect + remove via API.
+- [ ] AI assistant threads — blocked: backend has no assistant endpoints.
 - [x] Account settings: profile, avatar, password, sessions, preferences, delete via API.
-- [ ] Onboarding flow via API state.
+- [ ] Onboarding flow via API state — blocked: backend has no onboarding endpoint.
