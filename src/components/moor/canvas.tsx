@@ -397,7 +397,8 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
           <span className="grid h-7 w-7 place-items-center rounded-md border bg-surface"><Logo k={s.logo} /></span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold leading-tight">{s.name}</p>
-            <p className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground"><KindIcon className="h-2.5 w-2.5" />{s.kind} · {s.replicas}×</p>
+            <p className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                {s.sourceType === "github" ? <Logo k="github" className="h-2.5 w-2.5" /> : <KindIcon className="h-2.5 w-2.5" />}{s.kind} · {s.replicas}×</p>
           </div>
         </div>
         <div className="mt-3 flex items-center justify-between">

@@ -85,6 +85,7 @@ export function toService(s: ApiService): Service {
     id: s.id, name: s.name, kind: s.kind, logo, status: serviceStatus(s.status),
     x: s.position?.x ?? 80, y: s.position?.y ?? 80,
     source: s.source?.display ?? s.source?.repo ?? s.source?.image ?? s.name,
+    sourceType: s.source?.type,
     region: s.region ?? "us-east", replicas: s.replicas ?? 1,
     ...(s.port ? { port: s.port } : {}),
     ...(s.primaryDomain ? { domain: s.primaryDomain } : {}),
@@ -93,6 +94,7 @@ export function toService(s: ApiService): Service {
     lastDeploy: timeAgo(s.activeDeployment?.finishedAt ?? s.updatedAt),
   };
 }
+
 
 /* ── Hooks ───────────────────────────────────────────────────────── */
 

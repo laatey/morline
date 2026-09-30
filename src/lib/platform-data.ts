@@ -30,6 +30,7 @@ export interface Service {
   x: number;
   y: number;
   source: string;
+  sourceType?: string;
   region: string;
   replicas: number;
   port?: number;
@@ -39,6 +40,7 @@ export interface Service {
   mem: number; // MB in use
   lastDeploy: string;
 }
+
 
 export interface Edge {
   from: string;
