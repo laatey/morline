@@ -31,14 +31,18 @@ export function useCanvasState() {
       const r = await api<{ injectedVariables?: { key: string }[] }>(`/environments/${envId}/connections`, { method: "POST", body: { fromServiceId, toServiceId } });
       const keys = (r.injectedVariables ?? []).map((v) => v.key).join(", ");
       toast.success("Services connected", keys ? { description: `Added ${keys}` } : undefined);
+      void qc.invalidateQueries({ queryKey: ["staged-changes", envId] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not connect services");
     }
     void qc.invalidateQueries({ queryKey: ["canvas", envId] });
   };
   const disconnect = async (id: string) => {
-    try { await api(`/connections/${id}`, { method: "DELETE" }); toast.success("Connection removed"); }
-    catch (err) { toast.error(err instanceof Error ? err.message : "Could not remove connection"); }
+    try {
+      await api(`/connections/${id}`, { method: "DELETE" });
+      toast.success("Connection removed");
+      void qc.invalidateQueries({ queryKey: ["staged-changes", envId] });
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Could not remove connection"); }
     void qc.invalidateQueries({ queryKey: ["canvas", envId] });
   };
 
