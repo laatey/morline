@@ -415,8 +415,7 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
-              title={`Open https://${s.domain}`}
-              className="mt-1 flex items-center gap-1 truncate font-mono text-[10px] text-muted-foreground hover:text-foreground hover:underline"
+              className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
             >
               <Globe className="h-2.5 w-2.5 shrink-0 opacity-70" />
               <span className="truncate">{s.domain}</span>
