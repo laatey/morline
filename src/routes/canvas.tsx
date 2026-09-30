@@ -107,14 +107,15 @@ function CanvasPage() {
         </Button>
       </div>
       {state.loading ? (
-        <div className="pointer-events-none absolute inset-0 z-[5] flex items-start justify-center gap-6 pt-40" aria-label="Loading services">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-24 w-[232px] rounded-xl border bg-card p-3" style={{ marginTop: i === 1 ? 120 : 0 }}>
-              <div className="flex items-center gap-2"><div className="h-7 w-7 animate-pulse rounded-md bg-muted" /><div className="h-3 w-24 animate-pulse rounded bg-muted" /></div>
-              <div className="mt-4 h-2.5 w-32 animate-pulse rounded bg-muted/70" />
-              <div className="mt-2 h-2.5 w-20 animate-pulse rounded bg-muted/50" />
+        <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center" aria-label="Loading services">
+          <div className="h-32 w-[280px] rounded-xl border bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 animate-pulse rounded-lg bg-muted" />
+              <div className="h-3.5 w-28 animate-pulse rounded bg-muted" />
             </div>
-          ))}
+            <div className="mt-5 h-3 w-40 animate-pulse rounded bg-muted/70" />
+            <div className="mt-2.5 h-2.5 w-24 animate-pulse rounded bg-muted/50" />
+          </div>
         </div>
       ) : null}
       <PendingChangesBar />
