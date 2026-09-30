@@ -17,7 +17,7 @@ import { useAuth, RequireAuth } from "@/lib/auth";
 import usFlag from "@/assets/flags/us.svg";
 import euFlag from "@/assets/flags/eu.svg";
 import { cn } from "@/lib/utils";
-import { selectProject } from "@/lib/workspace";
+import { useSelection } from "@/lib/workspace";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/projects")({
@@ -127,6 +127,7 @@ function ProjectsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, teams, activeTeamId, setActiveTeamId } = useAuth();
+  const { projectId: lastProjectId } = useSelection();
   const teamId = activeTeamId ?? teams[0]?.id ?? null;
 
   const [filter, setFilter] = useState<(typeof filters)[number]["key"]>("all");
@@ -256,7 +257,7 @@ function ProjectsPage() {
               {!teams.length ? <DropdownMenuItem disabled>Personal workspace</DropdownMenuItem> : null}
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="label-caps">Navigation</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => navigate({ to: "/canvas" })} className="flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-medium cursor-pointer">
+              <DropdownMenuItem onClick={() => navigate({ to: lastProjectId ? `/project/${lastProjectId}` : "/projects" })} className="flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-medium cursor-pointer">
                 <Waypoints className="h-4 w-4 text-muted-foreground" />
                 <span>Canvas</span>
               </DropdownMenuItem>
@@ -398,8 +399,8 @@ function ProjectsPage() {
 function ProjectCard({ p, onRemove, onRename }: { p: Project; onRemove: () => void; onRename: () => void }) {
   return (
     <Link
-      to="/canvas"
-      onClick={() => selectProject(p.id)}
+      to="/project/$projectId"
+      params={{ projectId: p.id }}
       className="group relative flex min-h-[224px] flex-col overflow-hidden rounded-xl border bg-card p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-[0_16px_36px_-20px_oklch(0.19_0.012_264/0.4)]"
     >
       <div className="flex items-center justify-between gap-2.5">

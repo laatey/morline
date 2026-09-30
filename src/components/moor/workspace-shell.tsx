@@ -21,7 +21,6 @@ export function Mark({ className }: { className?: string }) {
 }
 
 const nav = [
-  { to: "/canvas", label: "Canvas", icon: Waypoints },
   { to: "/deployments", label: "Deployments", icon: Rocket },
   { to: "/logs", label: "Logs", icon: ScrollText },
   { to: "/metrics", label: "Metrics", icon: Activity },
@@ -144,6 +143,24 @@ export function WorkspaceShell({ children, title, actions, onAssistant }: { chil
                 <DropdownMenuSeparator />
 
                 <DropdownMenuLabel className="label-caps">Navigation</DropdownMenuLabel>
+                {/* Canvas — dynamic URL so the back-button and refresh work */}
+                {(() => {
+                  const canvasTo = projectId ? `/project/${projectId}` : "/projects";
+                  const active = path.startsWith("/project/");
+                  return (
+                    <DropdownMenuItem
+                      onClick={() => navigate({ to: canvasTo })}
+                      className={cn(
+                        "flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-medium cursor-pointer",
+                        active && "bg-accent text-foreground font-semibold"
+                      )}
+                    >
+                      <Waypoints className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+                      <span className="flex-1">Canvas</span>
+                      {active && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                    </DropdownMenuItem>
+                  );
+                })()}
                 {nav.map((n) => {
                   const active = path.startsWith(n.to);
                   return (
@@ -225,6 +242,29 @@ export function WorkspaceShell({ children, title, actions, onAssistant }: { chil
         </header>
         <div className="flex min-h-0 flex-1 gap-1 pr-0 sm:gap-2 sm:pr-2">
           <nav className="hidden w-10 shrink-0 flex-col items-center gap-1.5 overflow-y-auto pt-2 sm:flex sm:w-12 sm:gap-2 sm:pt-3">
+            {/* Canvas — dynamic URL */}
+            {(() => {
+              const canvasTo = projectId ? `/project/${projectId}` : "/projects";
+              const active = path.startsWith("/project/");
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to={canvasTo}
+                      aria-label="Canvas"
+                      className={cn(
+                        "relative grid h-9 w-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                        active && "bg-accent text-foreground",
+                      )}
+                    >
+                      {active ? <span className="absolute -left-2.5 h-4 w-0.5 rounded-r bg-primary" /> : null}
+                      <Waypoints className="h-4 w-4" />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Canvas</TooltipContent>
+                </Tooltip>
+              );
+            })()}
             {nav.map((n) => {
               const active = path.startsWith(n.to);
               return (

@@ -88,7 +88,7 @@ export function NewProjectDialog({
       return;
     }
     onOpenChange(false);
-    navigate({ to: "/canvas" });
+    navigate({ to: "/projects" });
   };
 
   const handleCreate = async () => {

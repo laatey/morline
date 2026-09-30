@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Kbd, Logo } from "./primitives";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { selectProject, timeAgo, useServices } from "@/lib/workspace";
+import { selectProject, timeAgo, useSelection, useServices } from "@/lib/workspace";
 import { logos, type LogoKey } from "@/lib/platform-data";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,6 @@ type SearchHit = { type: string; id: string; title: string; subtitle?: string | 
 
 const pages = [
   { to: "/projects", label: "Projects", icon: LayoutGrid },
-  { to: "/canvas", label: "Canvas", icon: Waypoints },
   { to: "/deployments", label: "Deployments", icon: Rocket },
   { to: "/logs", label: "Logs", icon: ScrollText },
   { to: "/metrics", label: "Metrics", icon: Activity },
@@ -35,6 +34,7 @@ const pages = [
 export function SearchButton() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { projectId: currentProjectId } = useSelection();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setOpen((o) => !o); }
@@ -42,6 +42,12 @@ export function SearchButton() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  const goCanvas = (pid?: string | null) => {
+    const id = pid ?? currentProjectId;
+    setOpen(false);
+    if (id) navigate({ to: "/project/$projectId", params: { projectId: id } });
+    else navigate({ to: "/projects" });
+  };
   const go = (to: string) => { setOpen(false); navigate({ to }); };
   const services = useServices().data ?? [];
   const { activeTeamId } = useAuth();
@@ -60,7 +66,7 @@ export function SearchButton() {
     if (h.projectId) selectProject(h.projectId, h.environmentId);
     if (h.type === "deployment") navigate({ to: "/deployments/$id", params: { id: h.id } });
     else if (h.type === "domain") navigate({ to: "/domains" });
-    else navigate({ to: "/canvas" });
+    else goCanvas(h.projectId);
   };
   return (
     <>
@@ -88,7 +94,7 @@ export function SearchButton() {
           ) : null}
           <CommandGroup heading="Services in this project">
             {services.map((s) => (
-              <CommandItem key={s.id} value={`service ${s.name}`} onSelect={() => go("/canvas")}>
+              <CommandItem key={s.id} value={`service ${s.name}`} onSelect={() => goCanvas()}>
                 <Logo k={s.logo} className="mr-2" />{s.name}<span className="ml-auto font-mono text-[10px] text-muted-foreground">{s.kind}</span>
               </CommandItem>
             ))}
