@@ -2,37 +2,44 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Bot, Check, Clock3, History, Plus, Send, Square, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
-// UI-only concept: canned replies, no model calls, no persistence.
+// Threads persist via /assistant/threads.
 type Msg = { role: "user" | "agent"; text: string; action?: string };
 type Thread = { id: string; title: string; when: string; messages: Msg[] };
 
 const prompts = ["Why did the latest deploy fail?", "Review environment variables", "Explain this service map"];
-const canned: Record<string, Msg> = {
-  "Why did the latest deploy fail?": { role: "agent", text: "nightly-report crashed at 12:48:10 with `column \"exported_at\" does not exist`. Commit e11b4c8 reads a column that the postgres migration hasn't added yet.", action: "Roll back nightly-report to 3f2aa70" },
-  "Review environment variables": { role: "agent", text: "api has 7 variables. DATABASE_URL and REDIS_URL are references — good. API_SECRET_KEY is a live key in staging too; consider scoping it to production only.", action: "Open variables" },
-  "Explain this service map": { role: "agent", text: "web calls api over :8080. api and queue-worker share postgres and redis on the private network. nightly-report calls api on a schedule and is currently crashed." },
-};
 
-const seedThreads: Thread[] = [
-  { id: "t1", title: "Deploy failure in api", when: "now", messages: [] },
-  { id: "t2", title: "Production health review", when: "2d", messages: [{ role: "user", text: "How healthy is production?" }, { role: "agent", text: "5 of 6 services are online. p95 latency is 84 ms, CPU is 38% of the limit. nightly-report needs attention." }] },
-  { id: "t3", title: "Redis memory usage", when: "3d", messages: [{ role: "user", text: "Is redis close to its memory limit?" }, { role: "agent", text: "redis uses 0.4 of 5 GB on its volume and 92 MB in memory. Plenty of headroom." }] },
-];
+type RawMsg = { role?: string; text?: string; content?: string; action?: string };
+type RawThread = { id: string; title?: string; updatedAt?: string; createdAt?: string; messages?: RawMsg[] };
+const ago = (iso?: string) => { if (!iso) return "now"; const m = Math.max(0, (Date.now() - Date.parse(iso)) / 60000); return m < 1 ? "now" : m < 60 ? `${Math.floor(m)}m` : m < 1440 ? `${Math.floor(m / 60)}h` : `${Math.floor(m / 1440)}d`; };
+const toMsg = (m: RawMsg): Msg => ({ role: m.role === "user" ? "user" : "agent", text: m.text ?? m.content ?? "", ...(m.action ? { action: m.action } : {}) });
+const toThread = (t: RawThread): Thread => ({ id: t.id, title: t.title || "New conversation", when: ago(t.updatedAt ?? t.createdAt), messages: (t.messages ?? []).map(toMsg) });
+const unwrap = (r: unknown): RawThread[] => Array.isArray(r) ? r : ((r as { threads?: RawThread[]; data?: RawThread[] })?.threads ?? (r as { data?: RawThread[] })?.data ?? []);
+const fresh = (): Thread => ({ id: crypto.randomUUID(), title: "New conversation", when: "now", messages: [] });
 
 export function AiAssistant({ onClose }: { onClose: () => void }) {
-  const [threads, setThreads] = useState(seedThreads);
-  const [activeId, setActiveId] = useState("t1");
+  const [threads, setThreads] = useState<Thread[]>(() => [fresh()]);
+  const [activeId, setActiveId] = useState(() => threads[0]!.id);
   const [view, setView] = useState<"chat" | "history">("chat");
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const [applied, setApplied] = useState<Set<string>>(new Set());
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopRef = useRef<(() => void) | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const active = threads.find((t) => t.id === activeId) ?? threads[0]!;
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [active?.messages.length, thinking]);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  useEffect(() => () => { stopRef.current?.(); }, []);
+
+  const load = async () => {
+    const list = unwrap(await api("/assistant/threads")).map(toThread);
+    return list;
+  };
+  useEffect(() => {
+    load().then((list) => { if (list.length) { setThreads(list); setActiveId(list[0]!.id); } }).catch(() => toast.error("Could not load conversations"));
+  }, []);
 
   const update = (id: string, fn: (t: Thread) => Thread) => setThreads((l) => l.map((t) => (t.id === id ? fn(t) : t)));
   const send = (text: string) => {
@@ -42,13 +49,24 @@ export function AiAssistant({ onClose }: { onClose: () => void }) {
     update(id, (t) => ({ ...t, title: t.messages.length ? t.title : q.slice(0, 40), when: "now", messages: [...t.messages, { role: "user", text: q }] }));
     setInput("");
     setThinking(true);
-    timer.current = setTimeout(() => {
-      update(id, (t) => ({ ...t, messages: [...t.messages, canned[q] ?? { role: "agent", text: "This is a design preview — the agent isn't connected yet. In the real product I'd inspect logs, deploys and config for this environment to answer." }] }));
-      setThinking(false);
-    }, 1100);
+    const cancelled = { v: false };
+    stopRef.current = () => { cancelled.v = true; };
+    api<unknown>(`/assistant/threads/${id}/messages`, { method: "POST", body: { text: q } })
+      .then(async (res) => {
+        if (cancelled.v) return;
+        const r = res as { thread?: RawThread; messages?: RawMsg[]; reply?: RawMsg; message?: RawMsg };
+        if (r?.thread?.messages) update(id, () => toThread(r.thread!));
+        else if (r?.messages) update(id, (t) => ({ ...t, messages: r.messages!.map(toMsg) }));
+        else {
+          const t = (await load()).find((x) => x.id === id);
+          if (t) update(id, () => t);
+        }
+      })
+      .catch((e) => { if (!cancelled.v) update(id, (t) => ({ ...t, messages: [...t.messages, { role: "agent", text: (e as Error).message || "Something went wrong." }] })); })
+      .finally(() => { if (!cancelled.v) setThinking(false); });
   };
-  const stop = () => { if (timer.current) clearTimeout(timer.current); setThinking(false); update(active.id, (t) => ({ ...t, messages: [...t.messages, { role: "agent", text: "Stopped." }] })); };
-  const newThread = () => { const id = crypto.randomUUID(); setThreads((l) => [{ id, title: "New conversation", when: "now", messages: [] }, ...l]); setActiveId(id); setView("chat"); };
+  const stop = () => { stopRef.current?.(); setThinking(false); update(active.id, (t) => ({ ...t, messages: [...t.messages, { role: "agent", text: "Stopped." }] })); };
+  const newThread = () => { const t = fresh(); setThreads((l) => [t, ...l]); setActiveId(t.id); setView("chat"); };
 
   return (
     <aside className="absolute bottom-2.5 right-2.5 top-2.5 z-20 flex w-[min(380px,calc(100%-1.25rem))] flex-col overflow-hidden rounded-xl border bg-card shadow-2xl animate-in slide-in-from-right-6 fade-in duration-200">
@@ -73,7 +91,7 @@ export function AiAssistant({ onClose }: { onClose: () => void }) {
                 <span className={cn("block truncate text-xs font-medium", t.id === activeId && "text-primary")}>{t.title}</span>
                 <span className="font-mono text-[10px] text-muted-foreground">{t.messages.length} messages · {t.when}</span>
               </button>
-              <button aria-label={`Delete ${t.title}`} className="rounded p-1 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100" onClick={() => { setThreads((l) => { const n = l.filter((x) => x.id !== t.id); if (!n.length) n.push({ id: "fresh", title: "New conversation", when: "now", messages: [] }); if (t.id === activeId) setActiveId(n[0]!.id); return n; }); }}><Trash2 className="h-3.5 w-3.5" /></button>
+              <button aria-label={`Delete ${t.title}`} className="rounded p-1 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100" onClick={() => { if (t.messages.length) api(`/assistant/threads/${t.id}`, { method: "DELETE" }).catch(() => toast.error("Could not delete conversation")); setThreads((l) => { const n = l.filter((x) => x.id !== t.id); if (!n.length) n.push(fresh()); if (t.id === activeId) setActiveId(n[0]!.id); return n; }); }}><Trash2 className="h-3.5 w-3.5" /></button>
             </li>
           ))}
         </ul>
@@ -102,7 +120,7 @@ export function AiAssistant({ onClose }: { onClose: () => void }) {
                     {m.text}
                     {m.action ? (
                       <button disabled={applied.has(`${active.id}-${i}`)} onClick={() => setApplied((s) => new Set(s).add(`${active.id}-${i}`))} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border bg-card px-2 py-1.5 text-[11px] font-medium hover:bg-accent disabled:text-score">
-                        {applied.has(`${active.id}-${i}`) ? <><Check className="h-3 w-3" />Done (preview)</> : m.action}
+                        {applied.has(`${active.id}-${i}`) ? <><Check className="h-3 w-3" />Noted</> : m.action}
                       </button>
                     ) : null}
                   </div>
@@ -125,7 +143,7 @@ export function AiAssistant({ onClose }: { onClose: () => void }) {
           <div className="rounded-xl border bg-background p-2 shadow-sm">
             <textarea aria-label="Ask Morline Agent" rows={3} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }} placeholder="Ask about this environment…" className="w-full resize-none bg-transparent px-1 py-1 text-sm outline-none placeholder:text-muted-foreground" />
             <div className="mt-1 flex items-center justify-between">
-              <span className="px-1 font-mono text-[9px] text-muted-foreground">Design preview · replies are samples</span>
+              <span className="px-1 font-mono text-[9px] text-muted-foreground">Enter to send · Shift+Enter for newline</span>
               {thinking ? (
                 <Button size="icon" variant="outline" className="h-7 w-7" aria-label="Stop" onClick={stop}><Square className="h-3 w-3" /></Button>
               ) : <Button size="icon" className="h-7 w-7" aria-label="Send message" disabled={!input.trim()} onClick={() => send(input)}><Send className="h-3.5 w-3.5" /></Button>}
