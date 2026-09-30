@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { templates, type LogoKey } from "@/lib/platform-data";
 import { Logo, Kbd } from "./primitives";
+import { GitHubRepoPicker, type GhRepo } from "./github-repo-picker";
 
 type Choice = {
   id: string;
