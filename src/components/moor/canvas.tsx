@@ -405,7 +405,7 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
         ) : null}
       </div>
       {s.domain || s.volume ? (
-        <div className="flex h-7 items-center gap-1.5 border-t bg-surface/60 px-3.5 font-mono text-[10px] text-muted-foreground">
+        <div className="flex h-7 items-center gap-1.5 rounded-b-xl border-t bg-surface/60 px-3.5 font-mono text-[10px] text-muted-foreground">
           {s.domain ? <Globe className="h-3 w-3" /> : <HardDrive className="h-3 w-3" />}
           <span className="truncate">{s.domain ?? s.volume}</span>
         </div>
