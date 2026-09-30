@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, type ApiError } from "@/lib/api";
-import { selectEnvironment, useEnvId, useEnvironments, useProject, useSelection, useUsage } from "@/lib/workspace";
+import { selectEnvironment, selectProject, useEnvId, useEnvironments, useProject, useSelection, useUsage } from "@/lib/workspace";
 import { RequireAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
