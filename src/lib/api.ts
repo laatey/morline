@@ -32,6 +32,20 @@ const SESSION_KEY = "morline.session";
 
 export function getSession(): Session | null {
   try {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const rawSession = params.get("auth_session");
+      if (rawSession) {
+        const parsed = JSON.parse(rawSession) as Session;
+        if (parsed.accessToken) {
+          setSession(parsed);
+          params.delete("auth_session");
+          const cleanSearch = params.toString() ? `?${params.toString()}` : "";
+          window.history.replaceState({}, "", `${window.location.pathname}${cleanSearch}${window.location.hash}`);
+          return parsed;
+        }
+      }
+    }
     const raw = localStorage.getItem(SESSION_KEY);
     return raw ? (JSON.parse(raw) as Session) : null;
   } catch {
