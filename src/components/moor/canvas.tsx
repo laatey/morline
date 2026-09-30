@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Box, Clock, HardDrive, Maximize, Minus, Plus, Redo2, Undo2, Globe, X } from "lucide-react";
+import { ArrowUpRight, Box, Clock, HardDrive, Maximize, Minus, Plus, Redo2, Undo2, Globe, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Edge, Service } from "@/lib/platform-data";
@@ -9,10 +9,11 @@ import { Logo, StatusDot, Kbd } from "./primitives";
 import { cn } from "@/lib/utils";
 
 const NODE_W = 232;
-const NODE_H = 96;
+const BASE_NODE_H = 88;
+const NODE_H = BASE_NODE_H;
 
 function nodeHeight(s: Service) {
-  return NODE_H + (s.domain || s.volume ? 28 : 0);
+  return BASE_NODE_H + (s.domain || s.volume ? 32 : 0);
 }
 
 export function useCanvasState() {
@@ -289,7 +290,7 @@ export function Canvas({
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={1} height={1}>
           {link && byId[link.from] ? (() => {
             const a = byId[link.from]!;
-            const sx = a.x + NODE_W, sy = a.y + NODE_H / 2;
+            const sx = a.x + NODE_W, sy = a.y + nodeHeight(a) / 2;
             const c = Math.max(40, Math.abs(link.x - sx) / 2);
             return <path d={`M${sx},${sy} C${sx + c},${sy} ${link.x - c},${link.y} ${link.x},${link.y}`} className="fill-none stroke-primary" strokeWidth={1.5} strokeDasharray="4 4" />;
           })() : null}
@@ -297,8 +298,8 @@ export function Canvas({
             const a = byId[e.from];
             const b = byId[e.to];
             if (!a || !b) return null;
-            const ax = a.x + NODE_W, ay = a.y + NODE_H / 2;
-            const bx = b.x, by = b.y + NODE_H / 2;
+            const ax = a.x + NODE_W, ay = a.y + nodeHeight(a) / 2;
+            const bx = b.x, by = b.y + nodeHeight(b) / 2;
             const flip = bx < ax;
             const sx = flip ? a.x : ax, tx = flip ? b.x + NODE_W : bx;
             const c = Math.max(60, Math.abs(tx - sx) / 2) * (flip ? -1 : 1);
@@ -373,6 +374,7 @@ const kindIcon = { app: Box, worker: Box, database: HardDrive, cron: Clock };
 
 function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDown, onLinkStart }: { s: Service; selected: boolean; dimmed: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void; onLinkStart: (e: React.PointerEvent) => void }) {
   const KindIcon = kindIcon[s.kind];
+  const h = nodeHeight(s);
   return (
     <div
       role="button"
@@ -386,7 +388,7 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
         selected && "border-primary ring-4 ring-primary/15",
         dimmed && "opacity-40",
       )}
-      style={{ left: s.x, top: s.y, width: NODE_W }}
+      style={{ left: s.x, top: s.y, width: NODE_W, height: h }}
     >
       <span
         role="button"
@@ -394,31 +396,49 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
         title="Drag to another service to connect"
         onPointerDown={onLinkStart}
         className="absolute -right-2 z-10 grid h-4 w-4 cursor-crosshair place-items-center rounded-full border bg-background opacity-0 transition-opacity hover:border-primary group-hover:opacity-100 [@media(hover:none)]:opacity-100"
-        style={{ top: NODE_H / 2 - 8 }}
+        style={{ top: h / 2 - 8 }}
       ><span className="h-1.5 w-1.5 rounded-full bg-primary" /></span>
-      <div className="px-3.5 pb-3 pt-3" style={{ height: NODE_H }}>
-        <div className="flex items-center gap-2">
-          <span className="grid h-7 w-7 place-items-center rounded-md border bg-surface"><Logo k={s.logo} /></span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold leading-tight">{s.name}</p>
-            <p className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+      <div className="flex h-full flex-col justify-between p-3.5">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border bg-surface"><Logo k={s.logo} /></span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold leading-tight">{s.name}</p>
+              <p className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
                 {s.sourceType === "github" ? <Logo k="github" className="h-2.5 w-2.5" /> : <KindIcon className="h-2.5 w-2.5" />}{s.kind} · {s.replicas}×</p>
+            </div>
           </div>
+          {s.domain ? (
+            <a
+              href={`https://${s.domain}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              title={`Open https://${s.domain}`}
+              className="group/link mt-2.5 flex items-center gap-1.5 truncate rounded border border-border/70 bg-surface/80 px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground"
+            >
+              <Globe className="h-3 w-3 shrink-0 text-muted-foreground group-hover/link:text-primary" />
+              <span className="truncate flex-1 font-mono">{s.domain}</span>
+              <ArrowUpRight className="h-2.5 w-2.5 shrink-0 opacity-50 transition-transform group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5 group-hover/link:opacity-100" />
+            </a>
+          ) : s.volume ? (
+            <div className="mt-2.5 flex items-center gap-1.5 rounded border border-border/50 bg-surface/50 px-2 py-1 font-mono text-[10px] text-muted-foreground">
+              <HardDrive className="h-3 w-3 shrink-0" />
+              <span className="truncate">{s.volume}</span>
+            </div>
+          ) : null}
         </div>
-        <div className="mt-3 flex items-center justify-between">
-          <StatusDot status={s.status} withLabel />
-          <span className="font-mono text-[10px] text-muted-foreground">{s.status === "deploying" ? "building a41c9e2" : s.lastDeploy}</span>
+        <div>
+          <div className="flex items-center justify-between">
+            <StatusDot status={s.status} withLabel />
+            <span className="font-mono text-[10px] text-muted-foreground">{s.status === "deploying" ? "building..." : s.lastDeploy}</span>
+          </div>
+          {s.status === "deploying" ? (
+            <div className="mt-2 h-0.5 overflow-hidden rounded-full bg-muted"><div className="deploy-bar h-full w-1/3 bg-score-mid" /></div>
+          ) : null}
         </div>
-        {s.status === "deploying" ? (
-          <div className="mt-2 h-0.5 overflow-hidden rounded-full bg-muted"><div className="deploy-bar h-full w-1/3 bg-score-mid" /></div>
-        ) : null}
       </div>
-      {s.domain || s.volume ? (
-        <div className="flex h-7 items-center gap-1.5 rounded-b-xl border-t bg-surface/60 px-3.5 font-mono text-[10px] text-muted-foreground">
-          {s.domain ? <Globe className="h-3 w-3" /> : <HardDrive className="h-3 w-3" />}
-          <span className="truncate">{s.domain ?? s.volume}</span>
-        </div>
-      ) : null}
     </div>
   );
 }
