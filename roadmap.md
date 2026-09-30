@@ -15,6 +15,6 @@
 - [x] Activity, notifications, GitHub integration via API.
 - [x] Global search via /search (command palette).
 - [x] Canvas connections: drag-to-connect + remove via API.
-- [ ] AI assistant threads — blocked: backend has no assistant endpoints.
+- [x] AI assistant threads via /assistant/threads.
 - [x] Account settings: profile, avatar, password, sessions, preferences, delete via API.
-- [ ] Onboarding flow via API state — blocked: backend has no onboarding endpoint.
+- [x] Onboarding progress via /me/onboarding.
