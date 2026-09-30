@@ -152,9 +152,10 @@ function ProjectsPage() {
   const projects = localProjects ?? serverProjects;
 
   const createProject = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (input: NewProjectInput) => {
       if (!teamId) throw new Error("No workspace selected");
-      return api<ApiProject>(`/teams/${teamId}/projects`, { method: "POST", body: { name } });
+      const res = await api<ApiProject | { project: ApiProject }>(`/teams/${teamId}/projects`, { method: "POST", body: input });
+      return "project" in res && res.project ? res.project : (res as ApiProject);
     },
     onSuccess: (created) => {
       setLocalProjects((list) => [...(list ?? (projectsQuery.data ?? []).map(mapProject)), mapProject(created)]);
