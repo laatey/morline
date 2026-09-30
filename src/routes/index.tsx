@@ -69,6 +69,51 @@ function Circled({ children }: { children: React.ReactNode }) {
   );
 }
 
+function DotMatrix({
+  cols = 36,
+  rows = 18,
+  className = "",
+  invert = false,
+}: {
+  cols?: number;
+  rows?: number;
+  className?: string;
+  invert?: boolean;
+}) {
+  const dots: React.ReactNode[] = [];
+  const cw = 100 / cols;
+  const rh = 100 / rows;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const nx = c / (cols - 1);
+      const ny = r / (rows - 1);
+      const dist = Math.sqrt((nx - 0.5) ** 2 + (ny - 0.5) ** 2) / 0.707;
+      const radius = invert
+        ? Math.max(0.2, (1 - dist) * 2.8)
+        : Math.max(0.2, dist * 2.8);
+      dots.push(
+        <circle
+          key={`${r}-${c}`}
+          cx={c * cw + cw / 2}
+          cy={r * rh + rh / 2}
+          r={radius}
+          fill="currentColor"
+        />,
+      );
+    }
+  }
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      className={className}
+      aria-hidden="true"
+    >
+      {dots}
+    </svg>
+  );
+}
+
 function MarketingPage() {
   useEffect(() => {
     document.documentElement.style.backgroundColor = "var(--color-background)";
@@ -146,8 +191,9 @@ function MarketingPage() {
           </svg>
           {specimens.map((s) => (
             <figure key={s.name} className={`group absolute w-32 transition-transform duration-300 hover:z-10 hover:rotate-0 hover:scale-110 ${s.pos}`}>
-              <div className="grid aspect-[4/5] place-items-center border border-border bg-card shadow-sm">
-                <img src={s.src} alt="" className="h-12 w-12 grayscale transition group-hover:grayscale-0" />
+              <div className="relative grid aspect-[4/5] place-items-center border border-border bg-card shadow-sm overflow-hidden">
+                <DotMatrix className="pointer-events-none absolute inset-0 h-full w-full text-foreground opacity-[0.12] transition-opacity duration-500 group-hover:opacity-0" cols={14} rows={18} invert />
+                <img src={s.src} alt="" className="relative z-10 h-12 w-12 grayscale transition group-hover:grayscale-0" />
               </div>
               <figcaption className="mt-1.5 text-center font-mono text-[9px] uppercase text-muted-foreground"><span className="text-foreground">{s.name}</span><br />{s.note}</figcaption>
             </figure>
@@ -161,7 +207,10 @@ function MarketingPage() {
         <div className="grid grid-cols-2 gap-4 px-5 pb-8 md:hidden">
           {specimens.slice(0, 6).map((s, i) => (
             <figure key={s.name} className={i % 2 ? "rotate-2" : "-rotate-2"}>
-              <div className="grid aspect-[4/5] place-items-center border border-border bg-card"><img src={s.src} alt="" className="h-10 w-10" /></div>
+              <div className="relative grid aspect-[4/5] place-items-center border border-border bg-card overflow-hidden">
+                <DotMatrix className="pointer-events-none absolute inset-0 h-full w-full text-foreground opacity-[0.12]" cols={10} rows={12} invert />
+                <img src={s.src} alt="" className="relative z-10 h-10 w-10" />
+              </div>
               <figcaption className="mt-1 text-center font-mono text-[9px] uppercase text-muted-foreground">{s.name} · {s.note}</figcaption>
             </figure>
           ))}
@@ -243,6 +292,68 @@ function MarketingPage() {
             <span className="-rotate-6 rounded-sm border-2 border-primary px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-primary">Approved for deploy</span>
             <Mono className="md:text-right">Ledger 04<br />Page 112</Mono>
           </div>
+        </div>
+      </section>
+
+      {/* Sheet 05 — dot matrix */}
+      <section className="relative overflow-hidden border-b border-border bg-card" aria-labelledby="dot-matrix-heading">
+        {/* large halftone background — dense centre fading outward */}
+        <DotMatrix
+          cols={80}
+          rows={40}
+          className="pointer-events-none absolute inset-0 h-full w-full text-foreground opacity-[0.06]"
+          invert
+        />
+
+        <div className="relative grid gap-6 p-5 md:grid-cols-[1fr_2fr_1fr] md:p-8">
+          <Mono>Fig. 05 · Dot matrix<br />Halftone study</Mono>
+          <h2 id="dot-matrix-heading" className="font-display text-3xl font-semibold leading-tight tracking-tight md:text-center md:text-5xl">
+            Every part is a <Circled>signal.</Circled>
+          </h2>
+          <Mono className="md:text-right">Exposure 1/60s<br />ISO 400 · f/5.6</Mono>
+        </div>
+
+        {/* Halftone canvas — three columns each with a different density gradient */}
+        <div className="relative mx-5 mb-5 grid h-64 grid-cols-3 gap-px overflow-hidden border border-border md:h-96">
+          {/* Column A — sparse outer ring → dense core */}
+          <div className="relative overflow-hidden border-r border-border bg-background">
+            <DotMatrix cols={22} rows={28} invert className="absolute inset-0 h-full w-full text-primary opacity-70" />
+            <div className="absolute inset-0 flex flex-col items-start justify-end p-3">
+              <Mono>Node A<br />fra-1</Mono>
+            </div>
+          </div>
+          {/* Column B — dense core (invert=false → large dots at edges for silhouette) */}
+          <div className="relative overflow-hidden bg-background">
+            <DotMatrix cols={30} rows={28} invert={false} className="absolute inset-0 h-full w-full text-foreground opacity-[0.18]" />
+            {/* centred wordmark */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+              <span className="select-none font-display text-4xl font-extrabold tracking-[-0.07em] md:text-6xl">
+                morline<span className="text-primary">.</span>
+              </span>
+              <Mono>Halftone · Fig. 05</Mono>
+            </div>
+          </div>
+          {/* Column C — sparse */}
+          <div className="relative overflow-hidden border-l border-border bg-background">
+            <DotMatrix cols={22} rows={28} invert className="absolute inset-0 h-full w-full text-muted-foreground opacity-40" />
+            <div className="absolute inset-0 flex flex-col items-end justify-end p-3">
+              <Mono className="text-right">Node C<br />sin-1</Mono>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative grid gap-6 border-t border-border p-5 md:grid-cols-3 md:p-8">
+          {[
+            ["01", "Service as signal.", "Every running process emits a pulse — a health state, a log line, a connection. Morline turns that noise into a readable picture."],
+            ["02", "Density = activity.", "The darker the grid, the busier the service. Watch the dots change as traffic flows in and out, or as deploys roll through replicas."],
+            ["03", "Pattern over time.", "Halftone printing revealed tone with distance. Morline reveals topology with position. Same idea. Different ink."],
+          ].map(([k, t, d]) => (
+            <div key={k}>
+              <Mono>Print {k}</Mono>
+              <p className="mt-2 font-display text-2xl font-semibold">{t}</p>
+              <p className="mt-2 max-w-xs text-sm text-muted-foreground">{d}</p>
+            </div>
+          ))}
         </div>
       </section>
 
