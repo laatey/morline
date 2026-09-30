@@ -46,7 +46,6 @@ export function GitHubRepoPicker({ onPick }: { onPick: (repo: GhRepo) => void })
   }
 
   if (!connected) {
-    const account = status.data?.account;
     return (
       <div className="p-5 text-center">
         <span className="mx-auto grid h-10 w-10 place-items-center rounded-xl border bg-surface"><Github className="h-5 w-5" /></span>
@@ -69,7 +68,6 @@ export function GitHubRepoPicker({ onPick }: { onPick: (repo: GhRepo) => void })
           </Button>
         </div>
         {waiting ? <p className="mt-3 text-[11px] text-muted-foreground">Waiting for GitHub… finish in the other window.</p> : null}
-        {account ? null : null}
       </div>
     );
   }

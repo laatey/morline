@@ -165,8 +165,8 @@ export function NewProjectDialog({
                   {pending.logoKey ? <Logo k={pending.logoKey} className="h-4 w-4" /> : pending.icon ? <pending.icon className="h-4 w-4 text-foreground/80" /> : null}
                 </span>
                 <span className="min-w-0 text-xs">
-                  <span className="block truncate font-medium">{pending.title}</span>
-                  <span className="block truncate text-muted-foreground">{pending.note}</span>
+                  <span className="block truncate font-medium">{repo ? repo.fullName : pending.title}</span>
+                  <span className="block truncate text-muted-foreground">{repo ? `Deploys ${repo.defaultBranch} as the first service` : pending.note}</span>
                 </span>
               </div>
             </div>
