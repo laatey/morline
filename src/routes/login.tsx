@@ -40,7 +40,8 @@ export function StackAside() {
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, status } = useAuth();
+  useEffect(() => { if (status === "signed-in") navigate({ to: "/projects", replace: true }); }, [status, navigate]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

@@ -58,8 +58,11 @@ function DomainsPage() {
     void refresh();
   };
   const remove = async (id: string, h: string) => {
+    const key = ["domains", envId];
+    const prev = qc.getQueryData(key);
+    qc.setQueryData(key, (old: unknown) => Array.isArray(old) ? old.filter((d: { id: string }) => d.id !== id) : old);
     try { await api(`/domains/${id}`, { method: "DELETE" }); toast.success(`${h} removed`); }
-    catch (e) { toast.error((e as ApiError).message ?? "Could not remove domain"); }
+    catch (e) { qc.setQueryData(key, prev); toast.error((e as ApiError).message ?? "Could not remove domain"); }
     void refresh();
   };
   const name = (id: string) => services.find((s) => s.id === id);
