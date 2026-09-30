@@ -34,6 +34,16 @@ export function WorkspaceShell({ children, title, actions, onAssistant }: { chil
   const path = useRouterState({ select: (s) => s.location.pathname });
   const qc = useQueryClient();
   const { projectId } = useSelection();
+  const pathMatch = path.match(/\/project\/([^/?#]+)/);
+  const pathProjectId = pathMatch?.[1] ?? null;
+  const effectiveProjectId = pathProjectId || projectId;
+
+  useEffect(() => {
+    if (pathProjectId && pathProjectId !== projectId) {
+      selectProject(pathProjectId);
+    }
+  }, [pathProjectId, projectId]);
+
   const projectQ = useProject();
   const envList = useEnvironments().data ?? [];
   const envId = useEnvId();
@@ -43,11 +53,16 @@ export function WorkspaceShell({ children, title, actions, onAssistant }: { chil
   const env = envList.find((e) => e.id === envId)?.name ?? "production";
   const setEnv = (name: string) => { const e = envList.find((x) => x.name === name); if (e) selectEnvironment(e.id); };
   const [creating, setCreating] = useState(false);
-  useEffect(() => { if (!projectId) navigate({ to: "/projects" }); }, [projectId, navigate]);
+  useEffect(() => {
+    if (!effectiveProjectId && !path.startsWith("/project/")) {
+      navigate({ to: "/projects" });
+    }
+  }, [effectiveProjectId, navigate, path]);
   const createEnv = async (name: string, forkId: string | null) => {
+    if (!effectiveProjectId) return;
     try {
-      const created = await api<{ id: string; name: string }>(`/projects/${projectId}/environments`, { method: "POST", body: { name, ...(forkId ? { forkFromEnvironmentId: forkId } : {}) } });
-      await qc.invalidateQueries({ queryKey: ["environments", projectId] });
+      const created = await api<{ id: string; name: string }>(`/projects/${effectiveProjectId}/environments`, { method: "POST", body: { name, ...(forkId ? { forkFromEnvironmentId: forkId } : {}) } });
+      await qc.invalidateQueries({ queryKey: ["environments", effectiveProjectId] });
       selectEnvironment(created.id);
       toast.success(`Environment ${created.name} created`);
     } catch (e) { toast.error((e as ApiError).message ?? "Could not create environment"); }

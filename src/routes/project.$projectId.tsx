@@ -16,6 +16,11 @@ import type { Kind, LogoKey } from "@/lib/platform-data";
 import { PendingChangesBar } from "@/components/moor/pending-changes";
 
 export const Route = createFileRoute("/project/$projectId")({
+  beforeLoad: ({ params }) => {
+    if (params.projectId) {
+      selectProject(params.projectId);
+    }
+  },
   head: () => ({
     meta: [
       { name: "theme-color", content: "#171717" },
@@ -32,6 +37,9 @@ export const Route = createFileRoute("/project/$projectId")({
 
 function CanvasPage() {
   const { projectId } = Route.useParams();
+  if (projectId) {
+    selectProject(projectId);
+  }
   const navigate = useNavigate();
   const state = useCanvasState();
   const [selected, setSelected] = useState<string | null>(null);
@@ -40,8 +48,6 @@ function CanvasPage() {
   const service = state.services.find((s) => s.id === selected);
   const projectName = useProject().data?.name;
 
-  // Hydrate workspace selection from URL param on mount / param change.
-  // This means refreshing /project/:id always loads the right project.
   useEffect(() => {
     if (projectId) selectProject(projectId);
   }, [projectId]);

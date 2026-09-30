@@ -15,6 +15,11 @@ function load() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
   try { sel = { ...sel, ...JSON.parse(localStorage.getItem(KEY) ?? "{}") }; } catch { /* ignore */ }
+  const match = window.location.pathname.match(/\/project\/([^/?#]+)/);
+  if (match?.[1]) {
+    sel.projectId = match[1];
+    try { localStorage.setItem(KEY, JSON.stringify(sel)); } catch { /* ignore */ }
+  }
 }
 function set(next: Partial<Sel>) {
   sel = { ...sel, ...next };
@@ -23,13 +28,25 @@ function set(next: Partial<Sel>) {
 }
 const EMPTY: Sel = { projectId: null, envId: null };
 
-export function selectProject(projectId: string, envId: string | null = null) { set({ projectId, envId }); }
+export function selectProject(projectId: string, envId: string | null = null) {
+  if (sel.projectId === projectId && (envId === null || sel.envId === envId)) return;
+  set({ projectId, envId });
+}
 export function selectEnvironment(envId: string) { set({ envId }); }
 
 export function useSelection() {
   return useSyncExternalStore(
     (cb) => { subs.add(cb); return () => subs.delete(cb); },
-    () => { load(); return sel; },
+    () => {
+      load();
+      if (typeof window !== "undefined") {
+        const match = window.location.pathname.match(/\/project\/([^/?#]+)/);
+        if (match?.[1] && sel.projectId !== match[1]) {
+          sel.projectId = match[1];
+        }
+      }
+      return sel;
+    },
     () => EMPTY,
   );
 }
