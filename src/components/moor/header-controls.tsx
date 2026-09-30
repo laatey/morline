@@ -12,6 +12,7 @@ import { Kbd, Logo } from "./primitives";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { selectProject, timeAgo, useServices } from "@/lib/workspace";
+import { logos, type LogoKey } from "@/lib/platform-data";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -76,7 +77,7 @@ export function SearchButton() {
               <CommandGroup heading="Results">
                 {hits.map((h) => (
                   <CommandItem key={h.type + h.id} value={`${q} ${h.type} ${h.title} ${h.id}`} onSelect={() => openHit(h)}>
-                    {h.logo ? <Logo k={h.logo as never} className="mr-2" /> : <Search className="mr-2 h-4 w-4" />}
+                    {h.logo && h.logo in logos ? <Logo k={h.logo as LogoKey} className="mr-2" /> : <Search className="mr-2 h-4 w-4" />}
                     <span className="truncate">{h.title}</span>
                     <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">{h.subtitle ?? h.type}</span>
                   </CommandItem>
