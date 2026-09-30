@@ -53,16 +53,28 @@ function DomainsPage() {
     finally { setBusy(false); }
   };
   const verify = async (id: string, h: string) => {
-    try { const d = await api<DomainFull>(`/domains/${id}/verify`, { method: "POST" }); toast(d.status === "active" ? `${h} verified` : "Checking DNS — this can take a few minutes"); }
-    catch (e) { toast.error((e as ApiError).message ?? "Verification failed"); }
+    try {
+      const d = await api<DomainFull>(`/domains/${id}/verify`, { method: "POST" });
+      if (d.status === "active") {
+        toast.success(`${h} verified and active`);
+        void qc.invalidateQueries({ queryKey: ["canvas", envId] });
+        void qc.invalidateQueries({ queryKey: ["services", envId] });
+      } else {
+        toast.error(d.error ?? `DNS not yet pointing to edge.morline.space — point a CNAME to edge.morline.space and try again`);
+      }
+    } catch (e) { toast.error((e as ApiError).message ?? "Verification failed"); }
     void refresh();
   };
   const remove = async (id: string, h: string) => {
     const key = ["domains", envId];
     const prev = qc.getQueryData(key);
     qc.setQueryData(key, (old: unknown) => Array.isArray(old) ? old.filter((d: { id: string }) => d.id !== id) : old);
-    try { await api(`/domains/${id}`, { method: "DELETE" }); toast.success(`${h} removed`); }
-    catch (e) { qc.setQueryData(key, prev); toast.error((e as ApiError).message ?? "Could not remove domain"); }
+    try {
+      await api(`/domains/${id}`, { method: "DELETE" });
+      toast.success(`${h} removed`);
+      void qc.invalidateQueries({ queryKey: ["canvas", envId] });
+      void qc.invalidateQueries({ queryKey: ["services", envId] });
+    } catch (e) { qc.setQueryData(key, prev); toast.error((e as ApiError).message ?? "Could not remove domain"); }
     void refresh();
   };
   const name = (id: string) => services.find((s) => s.id === id);
