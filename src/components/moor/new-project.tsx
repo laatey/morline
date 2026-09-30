@@ -172,7 +172,7 @@ export function NewProjectDialog({
               </div>
             </div>
             <DialogFooter className="border-t px-4.5 py-3 sm:px-5">
-              <Button type="button" variant="outline" size="sm" onClick={() => setPending(null)}>Back</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => { setPending(null); if (repo) setPickingRepo(true); }}>Back</Button>
               <Button type="submit" size="sm" disabled={creating}>
                 {creating ? "Creating…" : "Create project"}
               </Button>
