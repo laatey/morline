@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Github } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { AuthLayout } from "@/components/moor/auth-layout";
 import { Logo } from "@/components/moor/primitives";
 import { repos, templates } from "@/lib/platform-data";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
+
+type OnboardingState = { step?: number; completed?: boolean; workspaceName?: string | null; selectedTemplate?: string | null; invitedEmails?: string | null; data?: { githubConnected?: boolean } | null };
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -32,8 +35,37 @@ function OnboardingPage() {
   const [connected, setConnected] = useState(false);
   const [pick, setPick] = useState<string | null>(null);
   const [invites, setInvites] = useState("");
+  const loaded = useRef(false);
   const canNext = [ws.trim().length > 1, true, true, true][step];
-  const next = () => (step < 3 ? setStep(step + 1) : (toast.success(`Welcome to ${ws || "your workspace"}`), navigate({ to: "/projects" })));
+
+  useEffect(() => {
+    api<OnboardingState | { onboarding?: OnboardingState }>("/me/onboarding")
+      .then((r) => {
+        const o = ((r as { onboarding?: OnboardingState })?.onboarding ?? r) as OnboardingState;
+        if (o?.completed) { navigate({ to: "/projects" }); return; }
+        if (typeof o?.step === "number") setStep(Math.min(3, Math.max(0, o.step)));
+        if (o?.workspaceName) setWs(o.workspaceName);
+        if (o?.selectedTemplate) setPick(o.selectedTemplate);
+        if (o?.invitedEmails) setInvites(o.invitedEmails);
+        if (o?.data?.githubConnected) setConnected(true);
+      })
+      .catch(() => {})
+      .finally(() => { loaded.current = true; });
+  }, [navigate]);
+
+  const save = (nextStep: number, completed = false) =>
+    api("/me/onboarding", {
+      method: "PATCH",
+      body: { step: nextStep, workspaceName: ws, ...(pick ? { selectedTemplate: pick } : {}), invitedEmails: invites, completed, data: { githubConnected: connected } },
+    });
+
+  const goTo = (n: number) => { setStep(n); save(n).catch(() => toast.error("Could not save progress")); };
+  const next = async () => {
+    if (step < 3) return goTo(step + 1);
+    try { await save(3, true); } catch { toast.error("Could not save progress"); return; }
+    toast.success(`Welcome to ${ws || "your workspace"}`);
+    navigate({ to: "/projects" });
+  };
   return (
     <AuthLayout aside={
       <ol className="w-full max-w-xs space-y-3">
@@ -85,7 +117,7 @@ function OnboardingPage() {
       ) : null}
 
       <div className="mt-8 flex items-center gap-2">
-        {step > 0 ? <Button variant="ghost" onClick={() => setStep(step - 1)}>Back</Button> : null}
+        {step > 0 ? <Button variant="ghost" onClick={() => goTo(step - 1)}>Back</Button> : null}
         {step > 0 ? <Button variant="ghost" className="ml-auto text-muted-foreground" onClick={next}>Skip</Button> : null}
         <Button className={cn(step === 0 && "ml-auto")} disabled={!canNext} onClick={next}>{step === 3 ? "Finish" : "Continue"}</Button>
       </div>
