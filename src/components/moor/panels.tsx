@@ -214,7 +214,7 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
   const [raw, setRaw] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-  const refresh = () => { void qc.invalidateQueries({ queryKey: ["staged-changes"] }); return qc.invalidateQueries({ queryKey: key }); };
+  const refresh = () => { void qc.invalidateQueries({ queryKey: ["staged-changes"] }); void qc.invalidateQueries({ queryKey: ["canvas"] }); return qc.invalidateQueries({ queryKey: key }); };
   const run = async (fn: () => Promise<unknown>, ok: string) => { try { await fn(); toast.success(ok); await refresh(); } catch (e) { toast.error(errMsg(e, "Could not save variable")); } };
 
   const saveRaw = () => {
