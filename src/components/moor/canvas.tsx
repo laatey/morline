@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Box, Clock, HardDrive, Maximize, Minus, Plus, Redo2, Undo2, Globe } from "lucide-react";
+import { Box, Clock, HardDrive, Maximize, Minus, Plus, Redo2, Undo2, Globe, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { Edge, Service } from "@/lib/platform-data";
 import { api } from "@/lib/api";
 import { toService, useCanvasData, useEnvId } from "@/lib/workspace";
@@ -23,7 +24,23 @@ export function useCanvasState() {
   const [future, setFuture] = useState<Service[][]>([]);
   const revision = useRef<number | undefined>(undefined);
   const serverServices = canvasQ.data?.services;
-  const edges: Edge[] = (canvasQ.data?.connections ?? []).map((c) => ({ from: c.fromServiceId, to: c.toServiceId, label: c.label ?? c.protocol ?? "" }));
+  const edges: (Edge & { id: string })[] = (canvasQ.data?.connections ?? []).map((c) => ({ id: c.id, from: c.fromServiceId, to: c.toServiceId, label: c.label ?? c.protocol ?? "" }));
+  const connect = async (fromServiceId: string, toServiceId: string) => {
+    if (!envId || fromServiceId === toServiceId || edges.some((e) => e.from === fromServiceId && e.to === toServiceId)) return;
+    try {
+      const r = await api<{ injectedVariables?: { key: string }[] }>(`/environments/${envId}/connections`, { method: "POST", body: { fromServiceId, toServiceId } });
+      const keys = (r.injectedVariables ?? []).map((v) => v.key).join(", ");
+      toast.success("Services connected", keys ? { description: `Added ${keys}` } : undefined);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not connect services");
+    }
+    void qc.invalidateQueries({ queryKey: ["canvas", envId] });
+  };
+  const disconnect = async (id: string) => {
+    try { await api(`/connections/${id}`, { method: "DELETE" }); toast.success("Connection removed"); }
+    catch (err) { toast.error(err instanceof Error ? err.message : "Could not remove connection"); }
+    void qc.invalidateQueries({ queryKey: ["canvas", envId] });
+  };
 
   // Sync server state in, keeping local positions for nodes the user moved since the last save.
   useEffect(() => {
@@ -67,7 +84,7 @@ export function useCanvasState() {
     persist(nxt, services);
   };
   const refresh = () => qc.invalidateQueries({ queryKey: ["canvas", envId] });
-  return { services, setServices, edges, commit, undo, redo, refresh, envId, loading: canvasQ.isLoading, canUndo: history.length > 0, canRedo: future.length > 0 };
+  return { services, setServices, edges, connect, disconnect, commit, undo, redo, refresh, envId, loading: canvasQ.isLoading, canUndo: history.length > 0, canRedo: future.length > 0 };
 }
 
 export function Canvas({
@@ -82,7 +99,18 @@ export function Canvas({
   const { services, setServices, edges, commit } = state;
   const [view, setView] = useState({ x: 60, y: 60, k: 1 });
   const ref = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ mode: "pan" | "node"; id?: string | undefined; sx: number; sy: number; ox: number; oy: number; moved: boolean; snapshot?: Service[] } | null>(null);
+  const drag = useRef<{ mode: "pan" | "node" | "link"; id?: string | undefined; sx: number; sy: number; ox: number; oy: number; moved: boolean; snapshot?: Service[] } | null>(null);
+  const [link, setLink] = useState<{ from: string; x: number; y: number } | null>(null);
+  const toWorld = (cx: number, cy: number) => {
+    const r = ref.current!.getBoundingClientRect();
+    return { x: (cx - r.left - view.x) / view.k, y: (cy - r.top - view.y) / view.k };
+  };
+  const startLink = (e: React.PointerEvent, id: string) => {
+    e.stopPropagation();
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    drag.current = { mode: "link", id, sx: e.clientX, sy: e.clientY, ox: 0, oy: 0, moved: false };
+    setLink({ from: id, ...toWorld(e.clientX, e.clientY) });
+  };
 
   const fit = useCallback(() => {
     const el = ref.current;
@@ -203,6 +231,7 @@ export function Canvas({
     const dx = e.clientX - d.sx;
     const dy = e.clientY - d.sy;
     if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true;
+    if (d.mode === "link") { const p = toWorld(e.clientX, e.clientY); setLink((l) => l && { ...l, ...p }); return; }
     if (d.mode === "pan") setView((v) => ({ ...v, x: d.ox + dx, y: d.oy + dy }));
     else setServices((all) => all.map((s) => (s.id === d.id ? { ...s, x: Math.round((d.ox + dx / view.k) / 8) * 8, y: Math.round((d.oy + dy / view.k) / 8) * 8 } : s)));
   };
@@ -218,6 +247,15 @@ export function Canvas({
     const d = drag.current;
     drag.current = null;
     if (!d) return;
+    if (d.mode === "link") {
+      setLink(null);
+      if (e && d.id) {
+        const p = toWorld(e.clientX, e.clientY);
+        const target = services.find((s) => p.x >= s.x && p.x <= s.x + NODE_W && p.y >= s.y && p.y <= s.y + nodeHeight(s));
+        if (target && target.id !== d.id) void state.connect(d.id, target.id);
+      }
+      return;
+    }
     if (d.mode === "node") {
       if (d.moved && d.snapshot) {
         commit(services, d.snapshot);
@@ -241,6 +279,12 @@ export function Canvas({
     >
       <div className="absolute left-0 top-0 origin-top-left" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})` }}>
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={1} height={1}>
+          {link && byId[link.from] ? (() => {
+            const a = byId[link.from]!;
+            const sx = a.x + NODE_W, sy = a.y + NODE_H / 2;
+            const c = Math.max(40, Math.abs(link.x - sx) / 2);
+            return <path d={`M${sx},${sy} C${sx + c},${sy} ${link.x - c},${link.y} ${link.x},${link.y}`} className="fill-none stroke-primary" strokeWidth={1.5} strokeDasharray="4 4" />;
+          })() : null}
           {edges.map((e) => {
             const a = byId[e.from];
             const b = byId[e.to];
@@ -252,15 +296,26 @@ export function Canvas({
             const c = Math.max(60, Math.abs(tx - sx) / 2) * (flip ? -1 : 1);
             const d = `M${sx},${ay} C${sx + c},${ay} ${tx - c},${by} ${tx},${by}`;
             const hot = !related || (related.has(e.from) && related.has(e.to) && (e.from === selected || e.to === selected));
+            const removable = !!selected && (e.from === selected || e.to === selected);
             const mx = (sx + tx) / 2, my = (ay + by) / 2;
             return (
-              <g key={e.from + e.to} className={cn("transition-opacity", hot ? "opacity-100" : "opacity-20")}>
+              <g key={e.id} className={cn("transition-opacity", hot ? "opacity-100" : "opacity-20")}>
                 <path d={d} className="fill-none stroke-border" strokeWidth={1.5} />
                 <path d={d} className={cn("edge-flow fill-none", hot && selected ? "stroke-primary" : "stroke-muted-foreground/60")} strokeWidth={1.5} strokeDasharray="4 6" />
                 <circle cx={tx} cy={by} r={3} className="fill-background stroke-muted-foreground" strokeWidth={1.5} />
-                <foreignObject x={mx - 44} y={my - 10} width={88} height={20}>
-                  <div className="flex h-5 items-center justify-center">
+                <foreignObject x={mx - 60} y={my - 10} width={120} height={20}>
+                  <div className="flex h-5 items-center justify-center gap-0.5">
                     <span className="rounded-sm border bg-background px-1 font-mono text-[9.5px] text-muted-foreground">{e.label}</span>
+                    {removable ? (
+                      <button
+                        aria-label="Remove connection"
+                        title="Remove connection"
+                        className="pointer-events-auto grid h-4 w-4 place-items-center rounded-sm border bg-background text-muted-foreground hover:text-destructive"
+                        onPointerDown={(ev) => ev.stopPropagation()}
+                        onPointerUp={(ev) => ev.stopPropagation()}
+                        onClick={() => { if (window.confirm("Remove this connection?")) void state.disconnect(e.id); }}
+                      ><X className="h-2.5 w-2.5" /></button>
+                    ) : null}
                   </div>
                 </foreignObject>
               </g>
@@ -276,6 +331,7 @@ export function Canvas({
             onPointerDown={(e) => onPointerDown(e, s.id)}
             onPointerUp={(e) => { e.stopPropagation(); onPointerUp(e); }}
             onKeyDown={(e) => e.key === "Enter" && onSelect(s.id)}
+            onLinkStart={(e) => startLink(e, s.id)}
           />
         ))}
       </div>
@@ -307,7 +363,7 @@ function CtrlBtn({ children, label, onClick, disabled }: { children: React.React
 
 const kindIcon = { app: Box, worker: Box, database: HardDrive, cron: Clock };
 
-function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDown }: { s: Service; selected: boolean; dimmed: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void }) {
+function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDown, onLinkStart }: { s: Service; selected: boolean; dimmed: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void; onLinkStart: (e: React.PointerEvent) => void }) {
   const KindIcon = kindIcon[s.kind];
   return (
     <div
@@ -318,12 +374,20 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
       onPointerUp={onPointerUp}
       onKeyDown={onKeyDown}
       className={cn(
-        "absolute cursor-pointer overflow-hidden rounded-xl border bg-card shadow-sm transition-[box-shadow,opacity,border-color] hover:border-foreground/25",
+        "group absolute cursor-pointer rounded-xl border bg-card shadow-sm transition-[box-shadow,opacity,border-color] hover:border-foreground/25",
         selected && "border-primary ring-4 ring-primary/15",
         dimmed && "opacity-40",
       )}
       style={{ left: s.x, top: s.y, width: NODE_W }}
     >
+      <span
+        role="button"
+        aria-label={`Connect ${s.name} to another service`}
+        title="Drag to another service to connect"
+        onPointerDown={onLinkStart}
+        className="absolute -right-2 z-10 grid h-4 w-4 cursor-crosshair place-items-center rounded-full border bg-background opacity-0 transition-opacity hover:border-primary group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+        style={{ top: NODE_H / 2 - 8 }}
+      ><span className="h-1.5 w-1.5 rounded-full bg-primary" /></span>
       <div className="px-3.5 pb-3 pt-3" style={{ height: NODE_H }}>
         <div className="flex items-center gap-2">
           <span className="grid h-7 w-7 place-items-center rounded-md border bg-surface"><Logo k={s.logo} /></span>
@@ -341,7 +405,7 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
         ) : null}
       </div>
       {s.domain || s.volume ? (
-        <div className="flex h-7 items-center gap-1.5 border-t bg-surface/60 px-3.5 font-mono text-[10px] text-muted-foreground">
+        <div className="flex h-7 items-center gap-1.5 rounded-b-xl border-t bg-surface/60 px-3.5 font-mono text-[10px] text-muted-foreground">
           {s.domain ? <Globe className="h-3 w-3" /> : <HardDrive className="h-3 w-3" />}
           <span className="truncate">{s.domain ?? s.volume}</span>
         </div>

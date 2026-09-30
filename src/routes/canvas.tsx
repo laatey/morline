@@ -39,7 +39,7 @@ function CanvasPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest("input,textarea")) return;
-      if (e.key === "n" || ((e.metaKey || e.ctrlKey) && e.key === "k")) { e.preventDefault(); setAdding(true); }
+      if (e.key === "n" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); setAdding(true); }
       if (e.key === "Escape") setSelected(null);
     };
     window.addEventListener("keydown", onKey);
