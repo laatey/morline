@@ -11,9 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Kbd, Logo } from "./primitives";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { timeAgo, useServices } from "@/lib/workspace";
+import { selectProject, timeAgo, useServices } from "@/lib/workspace";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+
+type SearchHit = { type: string; id: string; title: string; subtitle?: string | null; logo?: string | null; projectId?: string | null; environmentId?: string | null };
 
 const pages = [
   { to: "/projects", label: "Projects", icon: LayoutGrid },
@@ -41,6 +43,24 @@ export function SearchButton() {
   }, []);
   const go = (to: string) => { setOpen(false); navigate({ to }); };
   const services = useServices().data ?? [];
+  const { activeTeamId } = useAuth();
+  const [q, setQ] = useState("");
+  const [dq, setDq] = useState("");
+  useEffect(() => { const t = setTimeout(() => setDq(q.trim()), 200); return () => clearTimeout(t); }, [q]);
+  const results = useQuery({
+    queryKey: ["search", activeTeamId, dq],
+    queryFn: () => api<{ data: SearchHit[] }>(`/search?teamId=${activeTeamId}&q=${encodeURIComponent(dq)}`),
+    enabled: open && !!activeTeamId && dq.length > 1,
+    staleTime: 10000,
+  });
+  const hits = results.data?.data ?? [];
+  const openHit = (h: SearchHit) => {
+    setOpen(false);
+    if (h.projectId) selectProject(h.projectId, h.environmentId);
+    if (h.type === "deployment") navigate({ to: "/deployments/$id", params: { id: h.id } });
+    else if (h.type === "domain") navigate({ to: "/domains" });
+    else navigate({ to: "/canvas" });
+  };
   return (
     <>
       <button onClick={() => setOpen(true)} className="hidden h-7 items-center gap-2 rounded-lg border px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground sm:flex">
@@ -48,10 +68,24 @@ export function SearchButton() {
       </button>
       <button onClick={() => setOpen(true)} aria-label="Search" className="rounded-md p-1.5 text-muted-foreground hover:bg-accent sm:hidden"><Search className="h-4 w-4" /></button>
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search pages, services, actions…" />
+        <CommandInput placeholder="Search projects, services, deployments, domains…" value={q} onValueChange={setQ} />
         <CommandList>
-          <CommandEmpty>Nothing found.</CommandEmpty>
-          <CommandGroup heading="Services">
+          <CommandEmpty>{results.isFetching ? "Searching…" : "Nothing found."}</CommandEmpty>
+          {hits.length ? (
+            <>
+              <CommandGroup heading="Results">
+                {hits.map((h) => (
+                  <CommandItem key={h.type + h.id} value={`${q} ${h.type} ${h.title} ${h.id}`} onSelect={() => openHit(h)}>
+                    {h.logo ? <Logo k={h.logo as never} className="mr-2" /> : <Search className="mr-2 h-4 w-4" />}
+                    <span className="truncate">{h.title}</span>
+                    <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">{h.subtitle ?? h.type}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          ) : null}
+          <CommandGroup heading="Services in this project">
             {services.map((s) => (
               <CommandItem key={s.id} value={`service ${s.name}`} onSelect={() => go("/canvas")}>
                 <Logo k={s.logo} className="mr-2" />{s.name}<span className="ml-auto font-mono text-[10px] text-muted-foreground">{s.kind}</span>
