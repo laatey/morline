@@ -358,7 +358,7 @@ function ProjectsPage() {
                 <p className="font-mono text-xs text-muted-foreground">try a different filter or search term</p>
               </div>
             ) : null}
-            <NewProjectCard onClick={() => setAdding(true)} />
+            {projects.length > 0 ? <NewProjectCard onClick={() => setAdding(true)} /> : null}
           </div>
         </section>
       </div>
