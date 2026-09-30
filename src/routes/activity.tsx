@@ -54,7 +54,7 @@ function ActivityPage() {
               <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{a.when}</span>
             </li>
           ))}
-          {q.isLoading ? <li className="py-8 text-center text-sm text-muted-foreground">Loading activity…</li> : !rows.length ? <li className="py-8 text-center text-sm text-muted-foreground">{kind === "all" ? "Nothing has happened yet." : `No ${kind} events.`}</li> : null}
+          {q.isLoading ? <li aria-busy className="space-y-2 py-4">{[0,1,2,3].map((i) => <div key={i} className="h-10 animate-pulse rounded-md bg-muted/60" />)}</li> : !rows.length ? <li className="py-8 text-center text-sm text-muted-foreground">{kind === "all" ? "Nothing has happened yet." : `No ${kind} events.`}</li> : null}
         </ol>
       </div>
     </WorkspaceShell>

@@ -108,7 +108,7 @@ function AccountPage() {
                 {!s.current ? <button aria-label="Sign out device" className="rounded p-1 text-destructive hover:bg-accent" onClick={() => revoke(s.id)}><Trash2 className="h-3.5 w-3.5" /></button> : null}
               </li>
             ))}
-            {sessions.isLoading ? <li className="px-3 py-4 text-center text-xs text-muted-foreground">Loading…</li> : null}
+            {sessions.isLoading ? <li aria-busy className="space-y-2 px-3 py-3">{[0,1].map((i) => <div key={i} className="h-8 animate-pulse rounded-md bg-muted/60" />)}</li> : null}
           </ul>
         </SettingsSection>
         <SettingsSection title="Preferences">

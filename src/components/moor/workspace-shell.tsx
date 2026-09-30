@@ -76,6 +76,9 @@ export function WorkspaceShell({ children, title, actions, onAssistant }: { chil
     };
   }, []);
 
+  // No project chosen: redirect is in flight — don't flash an empty workspace.
+  if (!projectId) return <div className="min-h-screen bg-surface" />;
+
   return (
     <RequireAuth>
     <TooltipProvider delayDuration={150}>
