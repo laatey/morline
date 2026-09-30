@@ -128,6 +128,63 @@ function RelationList({ label, services }: { label: string; services: Service[] 
   );
 }
 
+type SuggestedVar = { key: string; value?: string; secret?: boolean; source?: string };
+
+/** Keys found in the repo's .env.example / .env.sample etc. that aren't set yet. */
+function SuggestedVariables({ serviceId, existing, onAdded }: { serviceId: string; existing: string[]; onAdded: () => unknown }) {
+  const qc = useQueryClient();
+  const key = ["variable-suggestions", serviceId];
+  const { data = [] } = useQuery({
+    queryKey: key,
+    queryFn: async () => {
+      try { return (await api<{ data: SuggestedVar[] }>(`/services/${serviceId}/variables/suggestions`)).data ?? []; }
+      catch (e) { if ((e as ApiError).status === 404) return []; throw e; }
+    },
+    staleTime: 60_000,
+  });
+  const list = data.filter((s) => !existing.includes(s.key));
+  if (!list.length) return null;
+  const drop = (keys: string[]) => qc.setQueryData<SuggestedVar[]>(key, (d = []) => d.filter((s) => !keys.includes(s.key)));
+  const add = async (items: SuggestedVar[]) => {
+    const prev = qc.getQueryData<SuggestedVar[]>(key);
+    drop(items.map((i) => i.key));
+    try {
+      await Promise.all(items.map((i) => api(`/services/${serviceId}/variables`, { method: "POST", body: { key: i.key, value: i.value ?? "", secret: i.secret ?? false } })));
+      toast.success(items.length === 1 ? `${items[0]!.key} added — redeploy to apply` : `${items.length} variables added — redeploy to apply`);
+      await onAdded();
+    } catch (e) { qc.setQueryData(key, prev); toast.error(errMsg(e, "Could not add variables")); }
+  };
+  const dismiss = async (keys: string[]) => {
+    const prev = qc.getQueryData<SuggestedVar[]>(key);
+    drop(keys);
+    try { await api(`/services/${serviceId}/variables/suggestions/dismiss`, { method: "POST", body: { keys } }); }
+    catch (e) { qc.setQueryData(key, prev); toast.error(errMsg(e, "Could not dismiss")); }
+  };
+  const source = list[0]?.source;
+  return (
+    <div className="mx-4 mb-3 rounded-md border bg-muted/20">
+      <div className="flex items-center gap-2 border-b px-3 py-2">
+        <p className="text-xs font-medium">Suggested variables</p>
+        {source ? <span className="font-mono text-[10px] text-muted-foreground">from {source}</span> : null}
+        <div className="ml-auto flex gap-1">
+          <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => void dismiss(list.map((s) => s.key))}>Dismiss all</Button>
+          <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => void add(list)}>Add all</Button>
+        </div>
+      </div>
+      <ul className="divide-y">
+        {list.map((s) => (
+          <li key={s.key} className="group flex h-9 items-center gap-3 px-3 font-mono text-xs">
+            <span className="w-48 shrink-0 truncate">{s.key}</span>
+            <span className="flex-1 truncate text-muted-foreground">{s.value || "—"}</span>
+            <button className="rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => void dismiss([s.key])}>Dismiss</button>
+            <button aria-label={`Add ${s.key}`} className="rounded p-1 hover:bg-accent" onClick={() => void add([s])}><Plus className="h-3.5 w-3.5" /></button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function VariablesTable({ serviceId }: { serviceId: string }) {
   const qc = useQueryClient();
   const key = ["variables", serviceId];
@@ -142,7 +199,7 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
   const [raw, setRaw] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-  const refresh = () => qc.invalidateQueries({ queryKey: key });
+  const refresh = () => { void qc.invalidateQueries({ queryKey: ["staged-changes"] }); return qc.invalidateQueries({ queryKey: key }); };
   const run = async (fn: () => Promise<unknown>, ok: string) => { try { await fn(); toast.success(ok); await refresh(); } catch (e) { toast.error(errMsg(e, "Could not save variable")); } };
 
   const saveRaw = () => {
@@ -173,6 +230,7 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
         <label className="flex shrink-0 items-center gap-1 font-mono text-[10px] text-muted-foreground"><Switch checked={draft.secret} onCheckedChange={(v) => setDraft({ ...draft, secret: v })} className="scale-75" />secret</label>
         <Button size="sm" className="h-7 px-2" onClick={add} aria-label="Add variable"><Plus className="h-3.5 w-3.5" /></Button>
       </div>
+      {!isLoading ? <SuggestedVariables serviceId={serviceId} existing={vars.map((v) => v.key)} onAdded={refresh} /> : null}
       {isLoading ? <ListSkeleton /> : (
         <ul className="divide-y border-t">
           {list.map((v) => {
