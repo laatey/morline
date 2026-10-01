@@ -58,7 +58,7 @@ function resolveActiveTeam(me: Me): string | null {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthState["status"]>("loading");
+  const [status, setStatus] = useState<AuthState["status"]>(() => (getSession() ? "signed-in" : "loading"));
   const [user, setUser] = useState<Me | null>(null);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
 
@@ -144,11 +144,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     if (status === "signed-out") navigate({ to: "/login", replace: true });
   }, [status, navigate]);
   if (status !== "signed-in") {
-    return (
-      <div className="grid min-h-screen place-items-center bg-surface">
-        <p className="font-mono text-xs text-muted-foreground">Loading your workspace…</p>
-      </div>
-    );
+    return <div className="min-h-screen bg-surface" />;
   }
   return <>{children}</>;
 }
