@@ -6,7 +6,36 @@ import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-export type GhRepo = { fullName: string; private: boolean; defaultBranch: string };
+export type GhRepo = { fullName: string; private: boolean; defaultBranch: string; url?: string };
+
+/** Parses github.com/owner/repo(.git)(/tree/branch) into a repo. */
+export function parseGitHubUrl(input: string): GhRepo | null {
+  const m = input.trim().match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/tree\/([^?#]+))?\/?(?:[?#].*)?$/i);
+  if (!m) return null;
+  const fullName = `${m[1]}/${m[2]}`;
+  return { fullName, private: false, defaultBranch: m[3] ?? "main", url: `https://github.com/${fullName}` };
+}
+
+function RepoUrlField({ onPick }: { onPick: (repo: GhRepo) => void }) {
+  const [url, setUrl] = useState("");
+  const parsed = parseGitHubUrl(url);
+  const invalid = url.trim().length > 0 && !parsed;
+  return (
+    <form
+      className="border-b px-3 py-2.5"
+      onSubmit={(e) => { e.preventDefault(); if (parsed) onPick(parsed); }}
+    >
+      <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">Public repository URL</p>
+      <div className="flex gap-2">
+        <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://github.com/owner/repo" className="h-8 font-mono text-base md:text-xs" aria-invalid={invalid} />
+        <Button type="submit" size="sm" className="h-8 px-3 text-xs" disabled={!parsed}>Deploy</Button>
+      </div>
+      <p className={invalid ? "mt-1 text-[11px] text-destructive" : "mt-1 text-[11px] text-muted-foreground"}>
+        {invalid ? "Use a github.com/owner/repo link." : parsed ? `${parsed.fullName} · ${parsed.defaultBranch}` : "Any account. Add /tree/branch to pick a branch."}
+      </p>
+    </form>
+  );
+}
 type GhStatus = { connected: boolean; account: unknown; installUrl: string };
 
 /** Shared GitHub step: leads the user through connecting, then lets them pick a repository. */
@@ -47,6 +76,8 @@ export function GitHubRepoPicker({ onPick }: { onPick: (repo: GhRepo) => void })
 
   if (!connected) {
     return (
+      <div>
+      <RepoUrlField onPick={onPick} />
       <div className="p-5 text-center">
         <span className="mx-auto grid h-10 w-10 place-items-center rounded-xl border bg-surface"><Github className="h-5 w-5" /></span>
         <p className="mt-3 text-sm font-semibold">Connect GitHub first</p>
@@ -69,12 +100,14 @@ export function GitHubRepoPicker({ onPick }: { onPick: (repo: GhRepo) => void })
         </div>
         {waiting ? <p className="mt-3 text-[11px] text-muted-foreground">Waiting for GitHub… finish in the other window.</p> : null}
       </div>
+      </div>
     );
   }
 
   const list = (repos.data ?? []).filter((r) => r.fullName.toLowerCase().includes(q.trim().toLowerCase()));
   return (
     <div>
+      <RepoUrlField onPick={onPick} />
       <div className="flex items-center gap-2 border-b bg-surface/30 px-3 py-2">
         <label className="relative flex flex-1 items-center">
           <Search className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-muted-foreground/70" />

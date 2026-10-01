@@ -165,7 +165,7 @@ function ProjectsPage() {
         if (envId) {
           const repo = input.github.repo;
           try {
-            await api(`/environments/${envId}/services`, { method: "POST", body: { name: repo.split("/")[1] ?? repo, source: { type: "github", repo, branch: input.github.branch }, position: { x: 80, y: 80 } } });
+            await api(`/environments/${envId}/services`, { method: "POST", body: { name: repo.split("/")[1] ?? repo, source: { type: "github", repo, branch: input.github.branch, ...(input.github.url ? { url: input.github.url } : {}) }, position: { x: 80, y: 80 } } });
             return { ...project, serviceCount: Math.max(1, project.serviceCount ?? 0) };
           } catch (e) {
             toast.error(`Project created, but ${repo} could not be added: ${(e as ApiError)?.message ?? "unknown error"}`);
@@ -177,6 +177,7 @@ function ProjectsPage() {
     onSuccess: (created, input) => {
       setLocalProjects((list) => [...(list ?? (projectsQuery.data ?? []).map(mapProject)), mapProject(created)]);
       toast.success(input.source === "github" ? `${created.name} created — first build started` : `Project ${created.name} created`);
+      if (input.source === "github") navigate({ to: `/project/${created.id}` });
     },
     onError: (error) => {
       const message = (error as ApiError)?.message ?? "Could not create the project";
