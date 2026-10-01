@@ -24,8 +24,8 @@ import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TeamRouteImport } from './routes/team'
-import { Route as ProjectProjectIdRouteImport } from './routes/project.$projectId'
 import { Route as DeploymentsIdRouteImport } from './routes/deployments_.$id'
+import { Route as ProjectProjectIdRouteImport } from './routes/project.$projectId'
 import { Route as ApiPublicAiSplatRouteImport } from './routes/api/public/ai/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -103,14 +103,14 @@ const TeamRoute = TeamRouteImport.update({
   path: '/team',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProjectProjectIdRoute = ProjectProjectIdRouteImport.update({
-  id: '/project/$projectId',
-  path: '/project/$projectId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DeploymentsIdRoute = DeploymentsIdRouteImport.update({
   id: '/deployments_/$id',
   path: '/deployments/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectProjectIdRoute = ProjectProjectIdRouteImport.update({
+  id: '/project/$projectId',
+  path: '/project/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicAiSplatRoute = ApiPublicAiSplatRouteImport.update({
@@ -135,8 +135,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/team': typeof TeamRoute
-  '/project/$projectId': typeof ProjectProjectIdRoute
   '/deployments/$id': typeof DeploymentsIdRoute
+  '/project/$projectId': typeof ProjectProjectIdRoute
   '/api/public/ai/$': typeof ApiPublicAiSplatRoute
 }
 export interface FileRoutesByTo {
@@ -155,8 +155,8 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/team': typeof TeamRoute
-  '/project/$projectId': typeof ProjectProjectIdRoute
   '/deployments/$id': typeof DeploymentsIdRoute
+  '/project/$projectId': typeof ProjectProjectIdRoute
   '/api/public/ai/$': typeof ApiPublicAiSplatRoute
 }
 export interface FileRoutesById {
@@ -176,8 +176,8 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/team': typeof TeamRoute
-  '/project/$projectId': typeof ProjectProjectIdRoute
   '/deployments_/$id': typeof DeploymentsIdRoute
+  '/project/$projectId': typeof ProjectProjectIdRoute
   '/api/public/ai/$': typeof ApiPublicAiSplatRoute
 }
 export interface FileRouteTypes {
@@ -198,8 +198,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/team'
-    | '/project/$projectId'
     | '/deployments/$id'
+    | '/project/$projectId'
     | '/api/public/ai/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -218,8 +218,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/team'
-    | '/project/$projectId'
     | '/deployments/$id'
+    | '/project/$projectId'
     | '/api/public/ai/$'
   id:
     | '__root__'
@@ -238,8 +238,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/team'
-    | '/project/$projectId'
     | '/deployments_/$id'
+    | '/project/$projectId'
     | '/api/public/ai/$'
   fileRoutesById: FileRoutesById
 }
@@ -259,8 +259,8 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   TeamRoute: typeof TeamRoute
-  ProjectProjectIdRoute: typeof ProjectProjectIdRoute
   DeploymentsIdRoute: typeof DeploymentsIdRoute
+  ProjectProjectIdRoute: typeof ProjectProjectIdRoute
   ApiPublicAiSplatRoute: typeof ApiPublicAiSplatRoute
 }
 
@@ -371,18 +371,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/project/$projectId': {
-      id: '/project/$projectId'
-      path: '/project/$projectId'
-      fullPath: '/project/$projectId'
-      preLoaderRoute: typeof ProjectProjectIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/deployments_/$id': {
       id: '/deployments_/$id'
       path: '/deployments/$id'
       fullPath: '/deployments/$id'
       preLoaderRoute: typeof DeploymentsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/project/$projectId': {
+      id: '/project/$projectId'
+      path: '/project/$projectId'
+      fullPath: '/project/$projectId'
+      preLoaderRoute: typeof ProjectProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/ai/$': {
@@ -411,8 +411,8 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   TeamRoute: TeamRoute,
-  ProjectProjectIdRoute: ProjectProjectIdRoute,
   DeploymentsIdRoute: DeploymentsIdRoute,
+  ProjectProjectIdRoute: ProjectProjectIdRoute,
   ApiPublicAiSplatRoute: ApiPublicAiSplatRoute,
 }
 export const routeTree = rootRouteImport

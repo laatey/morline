@@ -48,7 +48,7 @@ const choices: Choice[] = [
   },
 ];
 
-export type NewProjectInput = { name: string; source: "empty" | "github"; github?: { repo: string; branch?: string } };
+export type NewProjectInput = { name: string; source: "empty" | "github"; github?: { repo: string; branch?: string; url?: string } };
 
 export function NewProjectDialog({
   open,
@@ -96,9 +96,9 @@ export function NewProjectDialog({
     if (!onCreate || creating) return;
     setCreating(true);
     try {
-      await onCreate(repo ? { name: finalName, source: "github", github: { repo: repo.fullName, branch: repo.defaultBranch } } : { name: finalName, source: "empty" });
+      await onCreate(repo ? { name: finalName, source: "github", github: { repo: repo.fullName, branch: repo.defaultBranch, ...(repo.url ? { url: repo.url } : {}) } } : { name: finalName, source: "empty" });
       onOpenChange(false);
-      navigate({ to: "/projects" });
+      if (!repo) navigate({ to: "/projects" });
     } finally {
       setCreating(false);
     }

@@ -139,7 +139,7 @@ function CanvasPage() {
         open={adding}
         onOpenChange={setAdding}
         onPick={(t) => void addService(t.name, t.logo, t.kind, { templateId: t.id, source: { type: "template", templateId: t.id } }, "first deploy started")}
-        onPickRepo={(r) => void addService(r.fullName.split("/")[1] ?? r.fullName, "github", "app", { name: r.fullName.split("/")[1], source: { type: "github", repo: r.fullName, branch: r.defaultBranch } }, "first build started")}
+        onPickRepo={(r) => void addService(r.fullName.split("/")[1] ?? r.fullName, "github", "app", { name: r.fullName.split("/")[1], source: { type: "github", repo: r.fullName, branch: r.defaultBranch, ...(r.url ? { url: r.url } : {}) } }, "first build started")}
       />
 
     </WorkspaceShell>

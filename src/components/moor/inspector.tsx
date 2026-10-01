@@ -4,15 +4,20 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Service } from "@/lib/platform-data";
 import { Logo, StatusDot } from "./primitives";
+import { DatabaseBackups, DatabaseConnect, DatabaseData } from "./database-panels";
 import { DeploymentList, LogStream, MetricsGrid, NetworkingPanel, ServiceSettings, VariablesTable } from "./panels";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, type ApiError } from "@/lib/api";
 
-const tabs = ["Deploys", "Variables", "Metrics", "Logs", "Network", "Settings"] as const;
+const appTabs = ["Deploys", "Variables", "Metrics", "Logs", "Network", "Settings"] as const;
+const dbTabs = ["Data", "Connect", "Backups", "Variables", "Metrics", "Logs", "Settings"] as const;
+type Tab = (typeof appTabs)[number] | (typeof dbTabs)[number];
 
 export function Inspector({ service, onClose }: { service: Service; onClose: () => void }) {
-  const [tab, setTab] = useState<(typeof tabs)[number]>("Deploys");
+  const isDb = service.kind === "database";
+  const tabs: readonly Tab[] = isDb ? dbTabs : appTabs;
+  const [tab, setTab] = useState<Tab>(isDb ? "Data" : "Deploys");
   const qc = useQueryClient();
   const redeploy = async () => {
     try {
@@ -57,6 +62,9 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
         ))}
       </div>
       <div className="scroll-area min-h-0 flex-1 overflow-y-auto">
+        {tab === "Data" && <DatabaseData key={service.id} service={service} />}
+        {tab === "Connect" && <DatabaseConnect key={service.id} service={service} />}
+        {tab === "Backups" && <DatabaseBackups key={service.id} service={service} />}
         {tab === "Deploys" && <DeploymentList serviceId={service.id} compact />}
         {tab === "Variables" && <VariablesTable key={service.id} serviceId={service.id} />}
         {tab === "Metrics" && <MetricsGrid service={service} />}

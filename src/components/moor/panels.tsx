@@ -243,8 +243,8 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
 
   const handleSelectSuggestion = (s: SuggestedVar) => {
     setDrafts((prev) => {
-      if (prev.length === 1 && !prev[0].key.trim() && !prev[0].value.trim()) {
-        return [{ id: prev[0].id, key: s.key, value: s.value ?? "", secret: Boolean(s.secret) }];
+      if (prev.length === 1 && !prev[0]!.key.trim() && !prev[0]!.value.trim()) {
+        return [{ id: prev[0]!.id, key: s.key, value: s.value ?? "", secret: Boolean(s.secret) }];
       }
       return [...prev.filter((d) => d.key.trim() || d.value.trim()), { id: crypto.randomUUID(), key: s.key, value: s.value ?? "", secret: Boolean(s.secret) }];
     });
@@ -275,7 +275,7 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
     void run(
       () => api(`/services/${serviceId}/variables`, { method: "POST", body: { variables } }),
       variables.length === 1
-        ? `${variables[0].key} added — redeploy to apply`
+        ? `${variables[0]!.key} added — redeploy to apply`
         : `${variables.length} variables added — redeploy to apply`
     );
   };
@@ -539,7 +539,7 @@ export function NetworkingPanel({ service }: { service: Service }) {
   );
 }
 
-type ServiceSettingsData = { settings?: { startCommand?: string | null; healthcheckPath?: string | null; autoDeploy?: boolean; sleepWhenIdle?: boolean; replicas?: number } };
+type ServiceSettingsData = { settings?: { startCommand?: string | null; healthcheckPath?: string | null; autoDeploy?: boolean; sleepWhenIdle?: boolean; replicas?: number; rootDirectory?: string | null; basePath?: string | null } };
 
 export function ServiceSettings({ service, onDeleted }: { service: Service; onDeleted?: () => void }) {
   const qc = useQueryClient();
@@ -572,6 +572,8 @@ export function ServiceSettings({ service, onDeleted }: { service: Service; onDe
       {row("Source", <span className="font-mono text-xs text-muted-foreground">{service.source}</span>)}
       {row("Region", <span className="font-mono text-xs">{service.region}</span>)}
       {row("Replicas", <span className="font-mono text-xs">{detail?.replicas ?? service.replicas}×</span>, "Traffic is balanced across replicas.")}
+      {service.kind !== "database" ? row("Root directory", <Input defaultValue={detail?.rootDirectory ?? ""} onBlur={(e) => e.target.value !== (detail?.rootDirectory ?? "") && save({ rootDirectory: e.target.value || null })} placeholder="/" className="h-7 w-56 font-mono text-xs" />, "Folder in the repo to build from.") : null}
+      {service.kind !== "database" ? row("Public path", <Input defaultValue={detail?.basePath ?? ""} onBlur={(e) => { const v = e.target.value.trim(); const n = v ? (v.startsWith("/") ? v : `/${v}`) : ""; if (n !== (detail?.basePath ?? "")) save({ basePath: n || null }); }} placeholder="/" className="h-7 w-56 font-mono text-xs" />, "Serve this service under a path, e.g. /api.") : null}
       {row("Start command", <Input defaultValue={detail?.startCommand ?? ""} onBlur={(e) => e.target.value !== (detail?.startCommand ?? "") && save({ startCommand: e.target.value || null })} placeholder="from image" className="h-7 w-56 font-mono text-xs" />)}
       {row("Healthcheck path", <Input defaultValue={detail?.healthcheckPath ?? ""} onBlur={(e) => e.target.value !== (detail?.healthcheckPath ?? "") && save({ healthcheckPath: e.target.value || null })} placeholder="/healthz" className="h-7 w-56 font-mono text-xs" />)}
       {row("Deploy on push", <Switch defaultChecked={detail?.autoDeploy ?? true} onCheckedChange={(v) => save({ autoDeploy: v })} />, "Auto-deploy commits to the tracked branch.")}
