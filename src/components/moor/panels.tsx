@@ -539,7 +539,7 @@ export function NetworkingPanel({ service }: { service: Service }) {
   );
 }
 
-type ServiceSettingsData = { settings?: { startCommand?: string | null; healthcheckPath?: string | null; autoDeploy?: boolean; sleepWhenIdle?: boolean; replicas?: number } };
+type ServiceSettingsData = { settings?: { startCommand?: string | null; healthcheckPath?: string | null; autoDeploy?: boolean; sleepWhenIdle?: boolean; replicas?: number; rootDirectory?: string | null; basePath?: string | null } };
 
 export function ServiceSettings({ service, onDeleted }: { service: Service; onDeleted?: () => void }) {
   const qc = useQueryClient();
