@@ -377,8 +377,8 @@ function ProjectsPage() {
             </label>
             {draftName.trim() && draftName.trim() !== projects.find((p) => p.id === renaming)?.name && projects.some((p) => p.name === draftName.trim()) ? <p className="text-xs text-destructive">A project with this name already exists.</p> : null}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setRenaming(null)}>Cancel</Button>
-              <Button type="submit" disabled={!draftName.trim() || (draftName.trim() !== projects.find((p) => p.id === renaming)?.name && projects.some((p) => p.name === draftName.trim()))}>Save name</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setRenaming(null)}>Cancel</Button>
+              <Button type="submit" size="sm" disabled={!draftName.trim() || (draftName.trim() !== projects.find((p) => p.id === renaming)?.name && projects.some((p) => p.name === draftName.trim()))}>Save name</Button>
             </DialogFooter>
           </form>
         </DialogContent>
