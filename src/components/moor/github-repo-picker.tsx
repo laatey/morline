@@ -91,7 +91,7 @@ export function GitHubRepoPicker({ onPick }: { onPick: (repo: GhRepo) => void })
             disabled={!status.data?.installUrl}
             onClick={() => {
               if (!status.data?.installUrl) return;
-              window.open(status.data.installUrl, "morline-github", "width=900,height=760");
+              window.open(status.data.installUrl, "morline-github", `width=560,height=680,left=${Math.round(window.screenX + (window.outerWidth - 560) / 2)},top=${Math.round(window.screenY + (window.outerHeight - 680) / 2)}`);
               setWaiting(true);
             }}
           >
@@ -132,7 +132,7 @@ export function GitHubRepoPicker({ onPick }: { onPick: (repo: GhRepo) => void })
           <div className="px-4 py-6 text-center text-xs text-muted-foreground">
             {q ? "No repository matches." : "No repositories are shared with Morline yet."}
             {status.data?.installUrl ? (
-              <button type="button" className="mt-2 block w-full text-primary hover:underline" onClick={() => { window.open(status.data!.installUrl, "morline-github", "width=900,height=760"); setWaiting(true); }}>
+              <button type="button" className="mt-2 block w-full text-primary hover:underline" onClick={() => { window.open(status.data!.installUrl, "morline-github", `width=560,height=680,left=${Math.round(window.screenX + (window.outerWidth - 560) / 2)},top=${Math.round(window.screenY + (window.outerHeight - 680) / 2)}`); setWaiting(true); }}>
                 Choose repositories on GitHub
               </button>
             ) : null}
