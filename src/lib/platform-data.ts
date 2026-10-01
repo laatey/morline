@@ -30,7 +30,7 @@ export interface Service {
   x: number;
   y: number;
   source: string;
-  sourceType?: string;
+  sourceType?: string | undefined;
   region: string;
   replicas: number;
   port?: number;

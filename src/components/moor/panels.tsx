@@ -243,8 +243,8 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
 
   const handleSelectSuggestion = (s: SuggestedVar) => {
     setDrafts((prev) => {
-      if (prev.length === 1 && !prev[0].key.trim() && !prev[0].value.trim()) {
-        return [{ id: prev[0].id, key: s.key, value: s.value ?? "", secret: Boolean(s.secret) }];
+      if (prev.length === 1 && !prev[0]!.key.trim() && !prev[0]!.value.trim()) {
+        return [{ id: prev[0]!.id, key: s.key, value: s.value ?? "", secret: Boolean(s.secret) }];
       }
       return [...prev.filter((d) => d.key.trim() || d.value.trim()), { id: crypto.randomUUID(), key: s.key, value: s.value ?? "", secret: Boolean(s.secret) }];
     });
@@ -275,7 +275,7 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
     void run(
       () => api(`/services/${serviceId}/variables`, { method: "POST", body: { variables } }),
       variables.length === 1
-        ? `${variables[0].key} added — redeploy to apply`
+        ? `${variables[0]!.key} added — redeploy to apply`
         : `${variables.length} variables added — redeploy to apply`
     );
   };
