@@ -8,7 +8,7 @@ import { Canvas, useCanvasState } from "@/components/moor/canvas";
 import { Inspector } from "@/components/moor/inspector";
 import { NewServiceDialog } from "@/components/moor/new-service";
 import { AiAssistant } from "@/components/moor/ai-assistant";
-import { Kbd, StatusDot } from "@/components/moor/primitives";
+import { StatusDot } from "@/components/moor/primitives";
 import { cn } from "@/lib/utils";
 import { api, type ApiError } from "@/lib/api";
 import { selectProject, useProject } from "@/lib/workspace";
@@ -117,7 +117,6 @@ function CanvasPage() {
         <Button size="sm" className="h-7 gap-1 px-2.5 text-xs sm:h-8 sm:gap-1.5 sm:px-3" onClick={() => setAdding(true)}>
           <Plus className="h-3.5 w-3.5" />
           <span>Add</span>
-          <Kbd className="hidden sm:inline-block">N</Kbd>
         </Button>
       </div>
       {state.loading ? (
