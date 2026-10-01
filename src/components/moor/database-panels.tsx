@@ -98,7 +98,7 @@ export function DatabaseData({ service }: { service: Service }) {
 /* ---------------- Connect ---------------- */
 type Conn = { host?: string; port?: number; user?: string; password?: string; database?: string; url?: string; publicUrl?: string | null };
 
-function Field({ label, value, secret }: { label: string; value?: string | number | null; secret?: boolean }) {
+function Field({ label, value, secret }: { label: string; value?: string | number | null | undefined; secret?: boolean }) {
   const [show, setShow] = useState(false);
   if (value === undefined || value === null || value === "") return null;
   const v = String(value);
@@ -175,7 +175,7 @@ export function DatabaseBackups({ service }: { service: Service }) {
         <div className="divide-y divide-border/50">
           {items.map((b) => (
             <div key={b.id} className="flex items-center gap-3 px-4 py-2.5 text-xs">
-              <span className={cn("h-1.5 w-1.5 rounded-full", b.status === "running" ? "animate-pulse bg-warning" : b.status === "failed" ? "bg-destructive" : "bg-success")} />
+              <span className={cn("h-1.5 w-1.5 rounded-full", b.status === "running" ? "animate-pulse bg-muted-foreground" : b.status === "failed" ? "bg-destructive" : "bg-primary")} />
               <span>{timeAgo(b.createdAt)}</span>
               <span className="font-mono text-[10px] text-muted-foreground">{b.kind ?? "scheduled"}</span>
               <span className="ml-auto font-mono text-[10px] text-muted-foreground">{b.size ?? ""}</span>
