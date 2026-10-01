@@ -176,7 +176,7 @@ function ProjectsPage() {
     },
     onSuccess: (created, input) => {
       setLocalProjects((list) => [...(list ?? (projectsQuery.data ?? []).map(mapProject)), mapProject(created)]);
-      toast.success(input.source === "github" ? `${created.name} created — first build started` : `Project ${created.name} created`);
+      toast.success(input.source === "github" ? `${created.name} created — configure variables and settings, then deploy` : `Project ${created.name} created`);
       if (input.source === "github") navigate({ to: `/project/${created.id}` });
     },
     onError: (error) => {

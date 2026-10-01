@@ -9,6 +9,7 @@ import { DeploymentList, LogStream, MetricsGrid, NetworkingPanel, ServiceSetting
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, type ApiError } from "@/lib/api";
+import { useEnvId } from "@/lib/workspace";
 
 const appTabs = ["Deploys", "Variables", "Metrics", "Logs", "Network", "Settings"] as const;
 const dbTabs = ["Data", "Connect", "Backups", "Variables", "Metrics", "Logs", "Settings"] as const;
@@ -19,12 +20,14 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
   const tabs: readonly Tab[] = isDb ? dbTabs : appTabs;
   const [tab, setTab] = useState<Tab>(isDb ? "Data" : "Deploys");
   const qc = useQueryClient();
+  const envId = useEnvId();
   const redeploy = async () => {
     try {
       await api(`/services/${service.id}/deployments`, { method: "POST", body: {} });
       toast.success(`Redeploying ${service.name}`);
       void qc.invalidateQueries({ queryKey: ["deployments"] });
       void qc.invalidateQueries({ queryKey: ["canvas"] });
+      void qc.invalidateQueries({ queryKey: ["staged-changes", envId] });
     } catch (e) { toast.error((e as ApiError).message ?? "Could not redeploy"); }
   };
   return (
