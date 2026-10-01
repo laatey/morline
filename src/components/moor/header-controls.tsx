@@ -237,7 +237,7 @@ export function NewEnvironmentDialog({ open, onOpenChange, onCreate, environment
   const [from, setFrom] = useState<string | null>(null);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>New environment</DialogTitle>
           <DialogDescription>Copies services and variables from an existing environment.</DialogDescription>

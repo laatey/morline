@@ -403,7 +403,7 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
         />
       </div>
       <Dialog open={raw !== null} onOpenChange={(o) => !o && setRaw(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent>
           <DialogHeader><DialogTitle>Raw editor</DialogTitle><DialogDescription>Paste a .env file. Saving replaces all variables on this service.</DialogDescription></DialogHeader>
           <Textarea value={raw ?? ""} onChange={(e) => setRaw(e.target.value)} rows={12} className="font-mono text-xs" />
           <DialogFooter><Button variant="outline" size="sm" onClick={() => setRaw(null)}>Cancel</Button><Button size="sm" onClick={saveRaw}>Update variables</Button></DialogFooter>
