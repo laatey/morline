@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import type { Service } from "@/lib/platform-data";
 import { Logo, StatusDot } from "./primitives";
 import { DatabaseBackups, DatabaseConnect, DatabaseData } from "./database-panels";
-import { DeploymentList, LogStream, MetricsGrid, NetworkingPanel, ServiceSettings, VariablesTable } from "./panels";
+import { DeploymentList, LogStream, MetricsGrid, NetworkingPanel, ServiceSettings, VariablesTable, deployState, normalizeDeployments } from "./panels";
+import { DeploymentPanel, DiagnosisCard } from "./deployment-panel";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, type ApiError } from "@/lib/api";
-import { useEnvId } from "@/lib/workspace";
+import { useDeployments, useEnvId, type ApiDeployment } from "@/lib/workspace";
 
 const appTabs = ["Deploys", "Variables", "Metrics", "Logs", "Network", "Settings"] as const;
 const dbTabs = ["Data", "Connect", "Backups", "Variables", "Metrics", "Logs", "Settings"] as const;
@@ -19,8 +20,10 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
   const isDb = service.kind === "database";
   const tabs: readonly Tab[] = isDb ? dbTabs : appTabs;
   const [tab, setTab] = useState<Tab>(isDb ? "Data" : "Deploys");
+  const [openDeploy, setOpenDeploy] = useState<ApiDeployment | null>(null);
   const qc = useQueryClient();
   const envId = useEnvId();
+  const latest = normalizeDeployments(useDeployments(service.id).data ?? [])[0];
   const redeploy = async () => {
     try {
       await api(`/services/${service.id}/deployments`, { method: "POST", body: {} });
@@ -30,8 +33,12 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
       void qc.invalidateQueries({ queryKey: ["staged-changes", envId] });
     } catch (e) { toast.error((e as ApiError).message ?? "Could not redeploy"); }
   };
+  const shell = "absolute inset-x-0 bottom-0 top-0 z-20 flex flex-col overflow-hidden rounded-t-2xl border-t bg-card shadow-2xl animate-in slide-in-from-bottom-4 duration-200 sm:inset-auto sm:bottom-3 sm:right-3 sm:top-3 sm:z-10 sm:w-[calc(100%-1.5rem)] sm:max-w-[560px] sm:rounded-xl sm:border sm:slide-in-from-right-8";
+  if (openDeploy) {
+    return <aside className={shell}><DeploymentPanel key={openDeploy.id} service={service} deployment={openDeploy} onBack={() => setOpenDeploy(null)} onClose={onClose} /></aside>;
+  }
   return (
-    <aside className="absolute inset-x-0 bottom-0 top-0 z-20 flex flex-col overflow-hidden rounded-t-2xl border-t bg-card shadow-2xl animate-in slide-in-from-bottom-4 duration-200 sm:inset-auto sm:bottom-3 sm:right-3 sm:top-3 sm:z-10 sm:w-[calc(100%-1.5rem)] sm:max-w-[560px] sm:rounded-xl sm:border sm:slide-in-from-right-8">
+    <aside className={shell}>
       <div className="flex items-start gap-2.5 px-3.5 pb-2.5 pt-3.5 sm:gap-3 sm:px-4 sm:pb-3 sm:pt-4">
         <span className="grid h-8 w-8 place-items-center rounded-md border bg-surface sm:h-9 sm:w-9"><Logo k={service.logo} className="h-4 w-4 sm:h-5 sm:w-5" /></span>
         <div className="min-w-0 flex-1">
@@ -68,7 +75,14 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
         {tab === "Data" && <DatabaseData key={service.id} service={service} />}
         {tab === "Connect" && <DatabaseConnect key={service.id} service={service} />}
         {tab === "Backups" && <DatabaseBackups key={service.id} service={service} />}
-        {tab === "Deploys" && <DeploymentList serviceId={service.id} compact />}
+        {tab === "Deploys" && (
+          <DeploymentList
+            serviceId={service.id}
+            compact
+            onOpen={setOpenDeploy}
+            header={latest && deployState(latest.state) === "failed" ? <DiagnosisCard compact key={latest.id} deploymentId={latest.id} serviceName={service.name} errorSummary={latest.errorSummary} /> : null}
+          />
+        )}
         {tab === "Variables" && <VariablesTable key={service.id} serviceId={service.id} />}
         {tab === "Metrics" && <MetricsGrid service={service} />}
         {tab === "Logs" && <div className="h-full"><LogStream serviceId={service.id} dense /></div>}

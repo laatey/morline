@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -36,9 +36,23 @@ export function duration(d: ApiDeployment) {
   return sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`;
 }
 
-export function DeploymentList({ serviceId, compact }: { serviceId?: string | undefined; compact?: boolean }) {
+// Only the newest active deployment per service is live; older "active" rows were superseded.
+export function normalizeDeployments(rows: ApiDeployment[]): ApiDeployment[] {
+  const seen = new Set<string>();
+  return [...rows]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((d) => {
+      if (d.state !== "active") return d;
+      if (seen.has(d.serviceId)) return { ...d, state: "removed" };
+      seen.add(d.serviceId);
+      return d;
+    });
+}
+
+export function DeploymentList({ serviceId, compact, onOpen, header }: { serviceId?: string | undefined; compact?: boolean; onOpen?: (d: ApiDeployment) => void; header?: ReactNode }) {
   const qc = useQueryClient();
-  const { data: rows, isLoading, isError } = useDeployments(serviceId);
+  const { data: raw, isLoading, isError } = useDeployments(serviceId);
+  const rows = raw ? normalizeDeployments(raw) : raw;
   const act = async (d: ApiDeployment, action: "redeploy" | "rollback" | "cancel") => {
     try {
       await api(`/deployments/${d.id}/${action}`, { method: "POST" });
@@ -49,6 +63,7 @@ export function DeploymentList({ serviceId, compact }: { serviceId?: string | un
   return (
     <div>
       {compact && serviceId ? <ServiceTopology serviceId={serviceId} /> : null}
+      {header}
       {isLoading ? <ListSkeleton /> : isError ? <p className="px-4 py-6 text-sm text-destructive">Could not load deployments.</p> : !rows?.length ? <p className="px-4 py-6 text-sm text-muted-foreground">No deployments yet.</p> : (
         <ul className="divide-y border-t">
           {rows.map((d) => {
@@ -57,7 +72,11 @@ export function DeploymentList({ serviceId, compact }: { serviceId?: string | un
               <li key={d.id} className="group flex items-center gap-3 px-4 py-2.5 hover:bg-accent/40">
                 <DeployBadge state={st} />
                 <div className="min-w-0 flex-1">
-                  <Link to="/deployments/$id" params={{ id: d.id }} className={cn("block truncate text-sm hover:underline", st === "removed" && "text-muted-foreground")}>{deployTitle(d)}</Link>
+                  {onOpen ? (
+                    <button onClick={() => onOpen(d)} className={cn("block w-full truncate text-left text-sm hover:underline", st === "removed" && "text-muted-foreground")}>{deployTitle(d)}</button>
+                  ) : (
+                    <Link to="/deployments/$id" params={{ id: d.id }} className={cn("block truncate text-sm hover:underline", st === "removed" && "text-muted-foreground")}>{deployTitle(d)}</Link>
+                  )}
                   <p className="mt-0.5 flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
                     {!compact ? <span className="text-foreground/80">{d.serviceName}</span> : null}
                     {d.commit?.sha ? <span className="inline-flex items-center gap-1"><GitCommitHorizontal className="h-3 w-3" />{d.commit.sha.slice(0, 7)}</span> : null}
@@ -72,7 +91,7 @@ export function DeploymentList({ serviceId, compact }: { serviceId?: string | un
                     <MoreHorizontal className="h-4 w-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild><Link to="/deployments/$id" params={{ id: d.id }}>View build logs</Link></DropdownMenuItem>
+                    {onOpen ? <DropdownMenuItem onClick={() => onOpen(d)}>View details</DropdownMenuItem> : <DropdownMenuItem asChild><Link to="/deployments/$id" params={{ id: d.id }}>View build logs</Link></DropdownMenuItem>}
                     <DropdownMenuItem onClick={() => act(d, "redeploy")}><RotateCcw className="mr-2 h-3.5 w-3.5" />Redeploy</DropdownMenuItem>
                     {d.rollbackable && st !== "active" ? <DropdownMenuItem onClick={() => act(d, "rollback")}>Roll back to this</DropdownMenuItem> : null}
                     {st === "building" || st === "queued" ? <DropdownMenuItem className="text-destructive" onClick={() => act(d, "cancel")}>Cancel</DropdownMenuItem> : null}
@@ -458,13 +477,13 @@ export function MetricsGrid({ service }: { service?: Service }) {
 
 const levelTone: Record<LogLevel, string> = { info: "text-muted-foreground", debug: "text-chart-5", warn: "text-score-mid", error: "text-destructive" };
 
-export function LogStream({ serviceId, dense, deploymentId }: { serviceId?: string; dense?: boolean; deploymentId?: string }) {
+export function LogStream({ serviceId, dense, deploymentId, phase }: { serviceId?: string; dense?: boolean; deploymentId?: string; phase?: "build" | "deploy" }) {
   const [q, setQ] = useState("");
   const [levels, setLevels] = useState<Set<LogLevel>>(new Set(["info", "debug", "warn", "error"]));
   const envLogs = useLogs(serviceId);
   const depLogs = useQuery({
-    queryKey: ["deployment-logs", deploymentId],
-    queryFn: async () => (await api<{ data: { timestamp: string; level: LogLevel; message: string; serviceName?: string }[] }>(`/deployments/${deploymentId}/logs`)).data,
+    queryKey: ["deployment-logs", deploymentId, phase],
+    queryFn: async () => (await api<{ data: { timestamp: string; level: LogLevel; message: string; serviceName?: string }[] }>(`/deployments/${deploymentId}/logs${phase ? `?phase=${phase}` : ""}`)).data,
     enabled: !!deploymentId,
     refetchInterval: 3000,
   });
