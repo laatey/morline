@@ -19,7 +19,7 @@ const toThread = (t: RawThread): Thread => ({ id: t.id, title: t.title || "New c
 const unwrap = (r: unknown): RawThread[] => Array.isArray(r) ? r : ((r as { threads?: RawThread[]; data?: RawThread[] })?.threads ?? (r as { data?: RawThread[] })?.data ?? []);
 const fresh = (): Thread => ({ id: crypto.randomUUID(), title: "New conversation", when: "now", messages: [] });
 
-export function AiAssistant({ onClose }: { onClose: () => void }) {
+export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; initialPrompt?: { text: string; key: number } | null }) {
   const [threads, setThreads] = useState<Thread[]>(() => [fresh()]);
   const [activeId, setActiveId] = useState(() => threads[0]!.id);
   const [view, setView] = useState<"chat" | "history">("chat");
@@ -37,15 +37,30 @@ export function AiAssistant({ onClose }: { onClose: () => void }) {
     const list = unwrap(await api("/assistant/threads")).map(toThread);
     return list;
   };
+  const seeded = useRef(false);
   useEffect(() => {
-    load().then((list) => { if (list.length) { setThreads(list); setActiveId(list[0]!.id); } }).catch(() => toast.error("Could not load conversations"));
+    load().then((list) => {
+      if (!list.length) return;
+      if (seeded.current) setThreads((l) => [...l.filter((t) => t.messages.length && !list.some((x) => x.id === t.id)), ...list.filter((x) => !l.some((t) => t.id === x.id)), ...l.filter((t) => list.some((x) => x.id === t.id))]);
+      else { setThreads(list); setActiveId(list[0]!.id); }
+    }).catch(() => toast.error("Could not load conversations"));
   }, []);
+  useEffect(() => {
+    if (!initialPrompt?.text) return;
+    seeded.current = true;
+    const t = fresh();
+    setThreads((l) => [t, ...l]);
+    setActiveId(t.id);
+    setView("chat");
+    send(initialPrompt.text, t.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt?.key]);
 
   const update = (id: string, fn: (t: Thread) => Thread) => setThreads((l) => l.map((t) => (t.id === id ? fn(t) : t)));
-  const send = (text: string) => {
+  const send = (text: string, threadId?: string) => {
     const q = text.trim();
-    if (!q || thinking) return;
-    const id = active.id;
+    if (!q || (thinking && !threadId)) return;
+    const id = threadId ?? active.id;
     update(id, (t) => ({ ...t, title: t.messages.length ? t.title : q.slice(0, 40), when: "now", messages: [...t.messages, { role: "user", text: q }] }));
     setInput("");
     setThinking(true);
