@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -49,7 +49,7 @@ export function normalizeDeployments(rows: ApiDeployment[]): ApiDeployment[] {
     });
 }
 
-export function DeploymentList({ serviceId, compact, onOpen, header }: { serviceId?: string | undefined; compact?: boolean; onOpen?: (d: ApiDeployment) => void; header?: React.ReactNode }) {
+export function DeploymentList({ serviceId, compact, onOpen, header }: { serviceId?: string | undefined; compact?: boolean; onOpen?: (d: ApiDeployment) => void; header?: ReactNode }) {
   const qc = useQueryClient();
   const { data: raw, isLoading, isError } = useDeployments(serviceId);
   const rows = raw ? normalizeDeployments(raw) : raw;
