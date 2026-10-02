@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, ChevronRight, CircleAlert, GitBranch, GitPullRequest, Loader2, MessageSquare, MoreHorizontal, RotateCcw, Sparkles as _unused, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, CircleAlert, GitBranch, GitPullRequest, Loader2, MessageSquare, MoreHorizontal, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -11,7 +11,6 @@ import { DeployBadge, Logo } from "./primitives";
 import { LogStream, deployState, deployTitle, duration } from "./panels";
 import { cn } from "@/lib/utils";
 
-void _unused;
 
 type Phase = { name: string; status: "pending" | "running" | "succeeded" | "failed" | "skipped"; startedAt: string | null; finishedAt: string | null };
 type DeployVar = { key: string; value?: string; secret?: boolean };
