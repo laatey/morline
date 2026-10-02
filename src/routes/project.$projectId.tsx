@@ -45,12 +45,25 @@ function CanvasPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantPrompt, setAssistantPrompt] = useState<{ text: string; key: number } | null>(null);
   const service = state.services.find((s) => s.id === selected);
   const projectName = useProject().data?.name;
 
   useEffect(() => {
     if (projectId) selectProject(projectId);
   }, [projectId]);
+
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const text = (e as CustomEvent<{ text: string }>).detail?.text;
+      if (!text) return;
+      setSelected(null);
+      setAssistantPrompt({ text, key: Date.now() });
+      setAssistantOpen(true);
+    };
+    window.addEventListener("morline:assistant", onAsk);
+    return () => window.removeEventListener("morline:assistant", onAsk);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -133,7 +146,7 @@ function CanvasPage() {
       ) : null}
       <PendingChangesBar />
       {service ? <Inspector service={service} onClose={() => setSelected(null)} /> : null}
-      {assistantOpen && !service ? <AiAssistant onClose={() => setAssistantOpen(false)} /> : null}
+      {assistantOpen && !service ? <AiAssistant initialPrompt={assistantPrompt} onClose={() => { setAssistantOpen(false); setAssistantPrompt(null); }} /> : null}
       <NewServiceDialog
         open={adding}
         onOpenChange={setAdding}
