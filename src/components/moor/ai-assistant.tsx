@@ -41,7 +41,7 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
   useEffect(() => {
     load().then((list) => {
       if (!list.length) return;
-      if (seeded.current) setThreads((l) => [...l.filter((t) => t.messages.length && !list.some((x) => x.id === t.id)), ...list.filter((x) => !l.some((t) => t.id === x.id)), ...l.filter((t) => list.some((x) => x.id === t.id))]);
+      if (seeded.current) setThreads((l) => [...l.filter((t) => t.messages.length && !list.some((x) => x.id === t.id)), ...list]);
       else { setThreads(list); setActiveId(list[0]!.id); }
     }).catch(() => toast.error("Could not load conversations"));
   }, []);
