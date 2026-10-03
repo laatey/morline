@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Eye, EyeOff, GitCommitHorizontal, Link2, MoreHorizontal, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, Eye, EyeOff, GitCommitHorizontal, Link2, MoreHorizontal, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -480,6 +480,7 @@ const levelTone: Record<LogLevel, string> = { info: "text-muted-foreground", deb
 export function LogStream({ serviceId, dense, deploymentId, phase }: { serviceId?: string; dense?: boolean; deploymentId?: string; phase?: "build" | "deploy" }) {
   const [q, setQ] = useState("");
   const [levels, setLevels] = useState<Set<LogLevel>>(new Set(["info", "debug", "warn", "error"]));
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
   const envLogs = useLogs(serviceId);
   const depLogs = useQuery({
     queryKey: ["deployment-logs", deploymentId, phase],
