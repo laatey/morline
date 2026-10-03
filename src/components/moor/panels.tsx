@@ -511,14 +511,80 @@ export function LogStream({ serviceId, dense, deploymentId, phase }: { serviceId
       </div>
       <div className="scroll-area min-h-0 flex-1 overflow-auto bg-surface py-1 font-mono text-[11.5px] leading-5">
         {lines.map((l, i) => (
-          <div key={i} className={cn("flex gap-3 px-4 hover:bg-accent/40", l.level === "error" && "bg-destructive/5")}>
+          <button
+            type="button"
+            key={i}
+            onClick={() => setOpenIdx(openIdx === i ? null : i)}
+            className={cn("flex w-full gap-3 px-4 text-left hover:bg-accent/40", l.level === "error" && "bg-destructive/5", openIdx === i && "bg-accent/60")}
+          >
             <span className="shrink-0 text-muted-foreground/60">{new Date(l.timestamp).toLocaleTimeString([], { hour12: false })}</span>
             {!serviceId && !deploymentId ? <span className="w-24 shrink-0 truncate text-primary">{l.serviceName}</span> : null}
             <span className={cn("w-10 shrink-0 uppercase", levelTone[l.level])}>{l.level}</span>
             <span className={cn("min-w-0", dense ? "truncate" : "break-all", l.level === "error" && "text-destructive")}>{l.message}</span>
-          </div>
+          </button>
         ))}
-        {source.isLoading ? <p className="px-4 py-6 text-muted-foreground">Loading logs…</p> : !lines.length ? <p className="px-4 py-6 text-muted-foreground">{source.data?.length ? "No lines match." : "No logs yet."}</p> : null}
+        {source.isLoading ? <div className="space-y-1.5 px-4 py-3">{[70, 90, 55, 80].map((w) => <div key={w} className="h-3 animate-pulse rounded bg-muted/60" style={{ width: `${w}%` }} />)}</div> : !lines.length ? <p className="px-4 py-6 text-muted-foreground">{source.data?.length ? "No lines match." : "No logs yet."}</p> : null}
+      </div>
+      {openIdx != null && lines[openIdx] ? (
+        <LogDetail
+          line={lines[openIdx] as Record<string, unknown> & { timestamp: string; level: LogLevel; message: string }}
+          onClose={() => setOpenIdx(null)}
+          onPrev={openIdx > 0 ? () => setOpenIdx(openIdx - 1) : undefined}
+          onNext={openIdx < lines.length - 1 ? () => setOpenIdx(openIdx + 1) : undefined}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** Full log line + every attribute the API sent with it. Shown under the stream, no navigation. */
+function LogDetail({ line, onClose, onPrev, onNext }: { line: Record<string, unknown> & { timestamp: string; level: LogLevel; message: string }; onClose: () => void; onPrev?: (() => void) | undefined; onNext?: (() => void) | undefined }) {
+  const [view, setView] = useState<"attrs" | "raw">("attrs");
+  const { message, ...rest } = line;
+  const flat: [string, string][] = [];
+  const walk = (o: Record<string, unknown>, p = "") => {
+    for (const [k, v] of Object.entries(o)) {
+      if (v == null || v === "") continue;
+      if (typeof v === "object" && !Array.isArray(v)) walk(v as Record<string, unknown>, `${p}${k}.`);
+      else flat.push([`${p}${k}`, Array.isArray(v) ? JSON.stringify(v) : String(v)]);
+    }
+  };
+  walk(rest);
+  const copy = (t: string) => { void navigator.clipboard?.writeText(t); toast.success("Copied"); };
+  const ts = new Date(line.timestamp);
+  return (
+    <div className="flex max-h-[55%] min-h-0 shrink-0 flex-col border-t bg-card animate-in slide-in-from-bottom-2 duration-150">
+      <div className="flex items-center gap-2 px-4 pt-2.5">
+        <div className="flex rounded-md border">
+          <button aria-label="Previous line" disabled={!onPrev} onClick={onPrev} className="px-1.5 py-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><ChevronUp className="h-3.5 w-3.5" /></button>
+          <button aria-label="Next line" disabled={!onNext} onClick={onNext} className="border-l px-1.5 py-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><ChevronDown className="h-3.5 w-3.5" /></button>
+        </div>
+        <span className="font-mono text-xs">{isNaN(ts.getTime()) ? line.timestamp : `${ts.toISOString().slice(0, 10)} ${ts.toLocaleTimeString([], { hour12: false })}`}</span>
+        <span className={cn("rounded-sm border px-1.5 font-mono text-[10px] uppercase", levelTone[line.level])}>{line.level}</span>
+        <div className="ml-auto flex rounded-md border p-0.5 text-[11px]">
+          {(["attrs", "raw"] as const).map((v) => <button key={v} onClick={() => setView(v)} className={cn("rounded px-2 py-0.5 text-muted-foreground", view === v && "bg-accent text-foreground")}>{v === "attrs" ? "Attributes" : "Raw"}</button>)}
+        </div>
+        <button aria-label="Close details" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+      </div>
+      <div className="scroll-area min-h-0 flex-1 space-y-2.5 overflow-y-auto p-4 pt-2.5">
+        {view === "attrs" ? (
+          <>
+            <div className="group relative rounded-lg border bg-surface p-3 pr-9">
+              <pre className="whitespace-pre-wrap break-words font-mono text-[11.5px] leading-5">{message}</pre>
+              <button aria-label="Copy line" onClick={() => copy(message)} className="absolute right-2 top-2 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><Copy className="h-3.5 w-3.5" /></button>
+            </div>
+            {flat.length ? (
+              <dl className="divide-y rounded-lg border font-mono text-[11px]">
+                {flat.map(([k, v]) => <div key={k} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 px-3 py-1.5"><dt className="truncate text-muted-foreground">{k}</dt><dd className="break-all">{v}</dd></div>)}
+              </dl>
+            ) : null}
+          </>
+        ) : (
+          <div className="relative">
+            <pre className="overflow-x-auto rounded-lg border bg-surface p-3 font-mono text-[11px]">{JSON.stringify(line, null, 2)}</pre>
+            <button aria-label="Copy JSON" onClick={() => copy(JSON.stringify(line, null, 2))} className="absolute right-2 top-2 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><Copy className="h-3.5 w-3.5" /></button>
+          </div>
+        )}
       </div>
     </div>
   );
