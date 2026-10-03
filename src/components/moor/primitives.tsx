@@ -10,6 +10,7 @@ const statusMeta: Record<Status, { label: string; dot: string; text: string }> =
   deploying: { label: "Deploying", dot: "bg-score-mid animate-pulse", text: "text-score-mid" },
   crashed: { label: "Crashed", dot: "bg-destructive", text: "text-destructive" },
   sleeping: { label: "Sleeping", dot: "bg-muted-foreground", text: "text-muted-foreground" },
+  idle: { label: "Not deployed", dot: "border border-primary bg-transparent", text: "text-primary" },
 };
 
 export function StatusDot({ status, withLabel }: { status: Status; withLabel?: boolean }) {
@@ -27,6 +28,7 @@ export const statusRail: Record<Status, string> = {
   deploying: "bg-score-mid",
   crashed: "bg-destructive",
   sleeping: "bg-muted-foreground/50",
+  idle: "bg-primary/60",
 };
 
 const deployTone: Record<DeployState, string> = {
