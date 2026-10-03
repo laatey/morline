@@ -481,7 +481,6 @@ export function LogStream({ serviceId, dense, deploymentId, phase }: { serviceId
   const [q, setQ] = useState("");
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [levels, setLevels] = useState<Set<LogLevel>>(new Set(["info", "debug", "warn", "error"]));
-  const [openIdx, setOpenIdx] = useState<number | null>(null);
   const envLogs = useLogs(serviceId);
   const depLogs = useQuery({
     queryKey: ["deployment-logs", deploymentId, phase],
