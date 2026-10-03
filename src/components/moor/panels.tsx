@@ -479,6 +479,7 @@ const levelTone: Record<LogLevel, string> = { info: "text-muted-foreground", deb
 
 export function LogStream({ serviceId, dense, deploymentId, phase }: { serviceId?: string; dense?: boolean; deploymentId?: string; phase?: "build" | "deploy" }) {
   const [q, setQ] = useState("");
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [levels, setLevels] = useState<Set<LogLevel>>(new Set(["info", "debug", "warn", "error"]));
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const envLogs = useLogs(serviceId);
