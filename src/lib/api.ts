@@ -118,7 +118,9 @@ export async function api<T = unknown>(
     if (next) res = await doFetch(next);
   }
 
-  if (res.status === 204) return undefined as T;
+  // Lets listeners (e.g. the unapplied-changes bar) refresh right after any write.
+  const notify = () => { if (method !== "GET" && res.ok && typeof window !== "undefined") window.dispatchEvent(new CustomEvent("morline:mutated", { detail: { path } })); };
+  if (res.status === 204) { notify(); return undefined as T; }
 
   const text = await res.text();
   let data: unknown = null;
@@ -129,6 +131,7 @@ export async function api<T = unknown>(
   }
 
   if (!res.ok) throw new ApiError(res.status, data as ApiErrorBody | null);
+  notify();
   return data as T;
 }
 

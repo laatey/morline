@@ -92,11 +92,30 @@ export function serviceStatus(s: string): Status {
   if (["online", "active", "healthy", "running"].includes(s)) return "online";
   if (["sleeping", "stopped", "idle"].includes(s)) return "sleeping";
   if (["crashed", "failed", "unhealthy", "error"].includes(s)) return "crashed";
-  return "deploying";
+  if (["deploying", "building", "queued", "initializing", "starting", "restarting"].includes(s)) return "deploying";
+  // created / draft / not_deployed / pending_config / unknown: nothing has started yet.
+  return "idle";
+}
+
+const logoAliases: Record<string, LogoKey> = {
+  next: "nextjs", nextjs: "nextjs", "next.js": "nextjs", vite: "vite", react: "vite", vue: "vite", svelte: "vite", astro: "vite",
+  node: "js", nodejs: "js", "node.js": "js", javascript: "js", typescript: "js", js: "js", ts: "js", bun: "js", deno: "js", express: "js", nestjs: "js",
+  go: "go", golang: "go", python: "python", django: "python", flask: "python", fastapi: "python", rust: "rust", cargo: "rust",
+  docker: "docker", dockerfile: "docker", postgres: "postgres", postgresql: "postgres", mysql: "mysql", mariadb: "mysql",
+  mongo: "mongodb", mongodb: "mongodb", redis: "redis", sqlite: "sqlite", strapi: "strapi", n8n: "n8n", metabase: "metabase",
+};
+
+/** Most specific signal wins: framework → runtime/language → backend logo. Unknown → neutral icon, never Node. */
+export function detectLogo(s: ApiService & { framework?: string | null; runtime?: string | null; language?: string | null }): LogoKey {
+  for (const c of [s.framework, s.runtime, s.language, s.logo]) {
+    const k = c ? logoAliases[c.toLowerCase()] ?? (c in logos ? (c as LogoKey) : undefined) : undefined;
+    if (k && k !== "github") return k;
+  }
+  return "generic";
 }
 
 export function toService(s: ApiService): Service {
-  const logo = (s.logo in logos ? s.logo : "docker") as LogoKey;
+  const logo = detectLogo(s);
   const cpu = s.usage?.cpu ?? (s.usage?.cpuPercent ?? 0) / 100;
   return {
     id: s.id, name: s.name, kind: s.kind, logo, status: serviceStatus(s.status),

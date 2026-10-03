@@ -14,11 +14,13 @@ import rust from "@/assets/stack/rust.svg";
 import sqlite from "@/assets/stack/sqlite.svg";
 import strapi from "@/assets/stack/strapi.svg";
 import vite from "@/assets/stack/vite.svg";
+import generic from "@/assets/stack/generic.svg";
 
-export const logos = { docker, github, go, js, metabase, mongodb, mysql, n8n, nextjs, postgres, python, redis, rust, sqlite, strapi, vite };
+export const logos = { docker, github, go, js, metabase, mongodb, mysql, n8n, nextjs, postgres, python, redis, rust, sqlite, strapi, vite, generic };
 export type LogoKey = keyof typeof logos;
 
-export type Status = "online" | "deploying" | "crashed" | "sleeping";
+/** idle = created but never deployed (waiting for the user to deploy). */
+export type Status = "online" | "deploying" | "crashed" | "sleeping" | "idle";
 export type Kind = "app" | "database" | "worker" | "cron";
 
 export interface Service {

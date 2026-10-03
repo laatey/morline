@@ -431,7 +431,7 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
         <div>
           <div className="flex items-center justify-between">
             <StatusDot status={s.status} withLabel />
-            <span className="font-mono text-[10px] text-muted-foreground">{s.status === "deploying" ? "building..." : s.lastDeploy}</span>
+            <span className={cn("font-mono text-[10px]", s.status === "idle" ? "text-primary" : "text-muted-foreground")}>{s.status === "deploying" ? "building..." : s.status === "idle" ? "ready to deploy" : s.lastDeploy}</span>
           </div>
           {s.status === "deploying" ? (
             <div className="mt-2 h-0.5 overflow-hidden rounded-full bg-muted"><div className="deploy-bar h-full w-1/3 bg-score-mid" /></div>
