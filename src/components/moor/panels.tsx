@@ -558,7 +558,7 @@ export function NetworkingPanel({ service }: { service: Service }) {
   );
 }
 
-type ServiceSettingsData = { settings?: { startCommand?: string | null; healthcheckPath?: string | null; autoDeploy?: boolean; sleepWhenIdle?: boolean; replicas?: number; rootDirectory?: string | null; basePath?: string | null } };
+type ServiceSettingsData = { settings?: { startCommand?: string | null; runtimeVersion?: string | null; healthcheckPath?: string | null; autoDeploy?: boolean; sleepWhenIdle?: boolean; replicas?: number; rootDirectory?: string | null; basePath?: string | null } };
 
 export function ServiceSettings({ service, onDeleted }: { service: Service; onDeleted?: () => void }) {
   const qc = useQueryClient();
@@ -593,6 +593,7 @@ export function ServiceSettings({ service, onDeleted }: { service: Service; onDe
       {row("Replicas", <span className="font-mono text-xs">{detail?.replicas ?? service.replicas}×</span>, "Traffic is balanced across replicas.")}
       {service.kind !== "database" ? row("Root directory", <Input defaultValue={detail?.rootDirectory ?? ""} onBlur={(e) => e.target.value !== (detail?.rootDirectory ?? "") && save({ rootDirectory: e.target.value || null })} placeholder="/" className="h-7 w-56 font-mono text-xs" />, "Folder in the repo to build from.") : null}
       {service.kind !== "database" ? row("Public path", <Input defaultValue={detail?.basePath ?? ""} onBlur={(e) => { const v = e.target.value.trim(); const n = v ? (v.startsWith("/") ? v : `/${v}`) : ""; if (n !== (detail?.basePath ?? "")) save({ basePath: n || null }); }} placeholder="/" className="h-7 w-56 font-mono text-xs" />, "Serve this service under a path, e.g. /api.") : null}
+      {service.kind !== "database" ? row("Runtime version", <Input defaultValue={detail?.runtimeVersion ?? ""} onBlur={(e) => { const v = e.target.value.trim(); if (v !== (detail?.runtimeVersion ?? "")) save({ runtimeVersion: v || null }); }} placeholder="auto-detect" className="h-7 w-56 font-mono text-xs" />, "Optional override, e.g. 20.x. Project requirements are still validated.") : null}
       {row("Start command", <Input defaultValue={detail?.startCommand ?? ""} onBlur={(e) => e.target.value !== (detail?.startCommand ?? "") && save({ startCommand: e.target.value || null })} placeholder="from image" className="h-7 w-56 font-mono text-xs" />)}
       {row("Healthcheck path", <Input defaultValue={detail?.healthcheckPath ?? ""} onBlur={(e) => e.target.value !== (detail?.healthcheckPath ?? "") && save({ healthcheckPath: e.target.value || null })} placeholder="/healthz" className="h-7 w-56 font-mono text-xs" />)}
       {row("Deploy on push", <Switch defaultChecked={detail?.autoDeploy ?? true} onCheckedChange={(v) => save({ autoDeploy: v })} />, "Auto-deploy commits to the tracked branch.")}
