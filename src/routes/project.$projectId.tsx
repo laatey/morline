@@ -84,7 +84,7 @@ function CanvasPage() {
     const maxY = state.services.length ? Math.max(...state.services.map((s) => s.y)) : -100;
     const position = { x: 80, y: maxY + 180 };
     const tempId = `tmp_${crypto.randomUUID()}`;
-    const isRepo = (body.source as { type?: string } | undefined)?.type === "github";
+    const isRepo = (body['source'] as { type?: string } | undefined)?.type === "github";
     state.setServices((all) => [...all, { id: tempId, name, kind, logo, status: isRepo ? "idle" : "deploying", x: position.x, y: position.y, source: name, region: "us-east", replicas: 1, cpu: 0, mem: 0, lastDeploy: "just now" }]);
     try {
       const res = await api<{ service?: { id: string; name: string }; id?: string; name?: string; data?: { id: string; name: string } }>(`/environments/${state.envId}/services`, { method: "POST", body: { ...body, position } });
