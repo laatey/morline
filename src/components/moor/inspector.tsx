@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExternalLink, RotateCcw, X } from "lucide-react";
+import { ExternalLink, Loader2, Rocket, RotateCcw, Square, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Service } from "@/lib/platform-data";
@@ -24,15 +24,36 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
   const qc = useQueryClient();
   const envId = useEnvId();
   const latest = normalizeDeployments(useDeployments(service.id).data ?? [])[0];
+  const [deploying, setDeploying] = useState(false);
+  const [stopStep, setStopStep] = useState<"idle" | "confirm" | "busy">("idle");
+  const idle = service.status === "idle";
   const redeploy = async () => {
+    if (deploying) return;
+    setDeploying(true);
     try {
       await api(`/services/${service.id}/deployments`, { method: "POST", body: {} });
-      toast.success(`Redeploying ${service.name}`);
+      toast.success(idle ? `Deploying ${service.name}` : `Redeploying ${service.name}`);
       void qc.invalidateQueries({ queryKey: ["deployments"] });
       void qc.invalidateQueries({ queryKey: ["canvas"] });
       void qc.invalidateQueries({ queryKey: ["staged-changes", envId] });
-    } catch (e) { toast.error((e as ApiError).message ?? "Could not redeploy"); }
+    } catch (e) { toast.error((e as ApiError).message ?? "Could not deploy"); }
+    finally { setDeploying(false); }
   };
+  // Real backend call; the canvas only flips once the server confirms.
+  const stop = async () => {
+    if (stopStep === "busy") return;
+    setStopStep("busy");
+    try {
+      await api(`/services/${service.id}/stop`, { method: "POST", body: {} });
+      toast.success(`${service.name} stopped`);
+      await qc.invalidateQueries({ queryKey: ["canvas"] });
+      void qc.invalidateQueries({ queryKey: ["deployments"] });
+    } catch (e) {
+      const err = e as ApiError;
+      toast.error(err.status === 404 ? "Stopping services isn't available yet" : err.message ?? "Could not stop the service");
+    } finally { setStopStep("idle"); }
+  };
+  const canStop = service.status === "online" || service.status === "deploying";
   const shell = "absolute inset-x-0 bottom-0 top-0 z-20 flex flex-col overflow-hidden rounded-t-2xl border-t bg-card shadow-2xl animate-in slide-in-from-bottom-4 duration-200 sm:inset-auto sm:bottom-3 sm:right-3 sm:top-3 sm:z-10 sm:w-[calc(100%-1.5rem)] sm:max-w-[560px] sm:rounded-xl sm:border sm:slide-in-from-right-8";
   if (openDeploy) {
     return <aside className={shell}><DeploymentPanel key={openDeploy.id} service={service} deployment={openDeploy} onBack={() => setOpenDeploy(null)} onClose={onClose} /></aside>;
@@ -49,7 +70,19 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
             <span>{service.region}</span>
           </div>
         </div>
-        <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs sm:px-2.5" onClick={redeploy}><RotateCcw className="h-3 w-3" /><span className="hidden sm:inline">Redeploy</span></Button>
+        {canStop ? (
+          stopStep === "idle" ? (
+            <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-destructive" onClick={() => setStopStep("confirm")}><Square className="h-3 w-3" /><span className="hidden sm:inline">Stop</span></Button>
+          ) : (
+            <div className="flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/5 p-0.5">
+              <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={stopStep === "busy"} onClick={() => setStopStep("idle")}>Keep</Button>
+              <Button size="sm" variant="destructive" className="h-6 gap-1 px-2 text-xs" disabled={stopStep === "busy"} onClick={() => void stop()}>
+                {stopStep === "busy" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Square className="h-3 w-3" />}Stop service
+              </Button>
+            </div>
+          )
+        ) : null}
+        {!idle && stopStep === "idle" ? <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs sm:px-2.5" disabled={deploying} onClick={redeploy}>{deploying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}<span className="hidden sm:inline">Redeploy</span></Button> : null}
         {service.domain ? (
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" asChild>
             <a href={`https://${service.domain}`} target="_blank" rel="noreferrer" aria-label="Open domain"><ExternalLink className="h-3.5 w-3.5" /></a>
@@ -57,6 +90,18 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
         ) : null}
         <button aria-label="Close panel" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground sm:p-1.5"><X className="h-4 w-4" /></button>
       </div>
+      {idle ? (
+        <div className="mx-3.5 mb-3 flex items-center gap-3 rounded-lg border border-primary/50 bg-primary/5 p-3 ring-4 ring-primary/5 sm:mx-4">
+          <Rocket className="h-4 w-4 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium leading-tight">Ready to deploy</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Nothing is running yet. Check variables and settings, then deploy.</p>
+          </div>
+          <Button size="sm" className="h-8 gap-1.5 px-3 text-xs" disabled={deploying} onClick={redeploy}>
+            {deploying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}{deploying ? "Starting…" : "Deploy"}
+          </Button>
+        </div>
+      ) : null}
       <div role="tablist" className="no-scrollbar flex gap-4 overflow-x-auto border-b px-4">
         {tabs.map((t) => (
           <button
