@@ -115,7 +115,7 @@ function DetailsTab({ d, service }: { d: DeploymentDetail; service: Service }) {
   const [view, setView] = useState<"pretty" | "code">("pretty");
   const config = d.config ?? null;
   const tone = st === "failed" ? "text-destructive" : st === "building" || st === "queued" ? "text-score-mid" : st === "removed" ? "text-muted-foreground" : "text-score";
-  const facts: [string, React.ReactNode][] = [
+  const facts: [string, string][] = [
     ["Started", stamp(d.createdAt)],
     ["Duration", duration(d) || "—"],
     ["Trigger", d.commit ? "GitHub push" : d.image ? "Image" : (d.trigger ?? "Manual")],
@@ -150,13 +150,12 @@ function DetailsTab({ d, service }: { d: DeploymentDetail; service: Service }) {
         <section>
           <p className="mb-2 text-sm font-medium">Build steps</p>
           <ol className="flex items-center gap-1.5">
-            {d.phases.map((p, i) => (
+            {d.phases.map((p) => (
               <li key={p.name} className="flex min-w-0 flex-1 items-center gap-1.5">
                 <div className="min-w-0 flex-1">
                   <div className={cn("h-1 rounded-full", p.status === "succeeded" ? "bg-score" : p.status === "running" ? "animate-pulse bg-score-mid" : p.status === "failed" ? "bg-destructive" : "bg-border")} />
                   <p className={cn("mt-1.5 truncate font-mono text-[10px] capitalize", p.status === "failed" ? "text-destructive" : "text-muted-foreground", p.status === "skipped" && "line-through")}>{p.name}</p>
                 </div>
-                {i < d.phases!.length - 1 ? null : null}
               </li>
             ))}
           </ol>
