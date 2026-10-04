@@ -110,10 +110,14 @@ export function DeploymentPanel({ service, deployment, onBack, onClose }: { serv
             </button>
           ))}
         </div>
-        {st === "failed" ? <DiagnosisCard deploymentId={d.id} serviceName={service.name} errorSummary={d.errorSummary} onOpenLogs={() => setTab("Build Logs")} /> : null}
       </div>
       <div className="scroll-area min-h-0 flex-1 overflow-y-auto">
-        {tab === "Details" && <DetailsTab d={d} service={service} />}
+        {tab === "Details" && (
+          <div>
+            {st === "failed" ? <DiagnosisCard deploymentId={d.id} serviceName={service.name} errorSummary={d.errorSummary} onOpenLogs={() => setTab("Build Logs")} /> : null}
+            <DetailsTab d={d} service={service} />
+          </div>
+        )}
         {tab === "Build Logs" && <div className="h-full"><LogStream key="b" deploymentId={d.id} phase="build" dense /></div>}
         {tab === "Deploy Logs" && <div className="h-full"><LogStream key="d" deploymentId={d.id} phase="deploy" dense /></div>}
       </div>
@@ -255,7 +259,7 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
   const title = dx?.status === "completed" ? dx.summary ?? "Here's what went wrong" : "This deployment crashed";
 
   return (
-    <div className="border-t border-destructive/15 bg-destructive/5 px-4 py-3">
+    <div className="border-b border-destructive/15 bg-destructive/5 px-4 py-3">
       {/* Top row: Title on left, Action buttons on right */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex min-w-0 items-center gap-2.5">
