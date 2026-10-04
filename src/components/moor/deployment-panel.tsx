@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, ChevronRight, CircleAlert, GitBranch, GitPullRequest, Loader2, MessageSquare, MoreHorizontal, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, ChevronRight, ChevronUp, CircleAlert, GitBranch, GitPullRequest, Loader2, MessageSquare, MoreHorizontal, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -91,15 +91,17 @@ export function DeploymentPanel({ service, deployment, onBack, onClose }: { serv
         </DropdownMenu>
         <button aria-label="Close panel" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><X className="h-4 w-4" /></button>
       </div>
-      <div role="tablist" className="no-scrollbar flex gap-4 overflow-x-auto border-b px-4">
-        {tabs.map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cn("relative h-9 shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground", tab === t && "text-foreground")}>
-            {t}
-            {tab === t ? <span className="absolute inset-x-0 -bottom-px h-0.5 bg-primary" /> : null}
-          </button>
-        ))}
+      <div className="border-b">
+        <div role="tablist" className="no-scrollbar flex gap-4 overflow-x-auto px-4">
+          {tabs.map((t) => (
+            <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cn("relative h-9 shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground", tab === t && "text-foreground")}>
+              {t}
+              {tab === t ? <span className="absolute inset-x-0 -bottom-px h-0.5 bg-primary" /> : null}
+            </button>
+          ))}
+        </div>
+        {st === "failed" ? <DiagnosisCard deploymentId={d.id} serviceName={service.name} errorSummary={d.errorSummary} /> : null}
       </div>
-      {st === "failed" ? <div className="border-b px-4 py-3"><DiagnosisCard deploymentId={d.id} serviceName={service.name} errorSummary={d.errorSummary} compact /></div> : null}
       <div className="scroll-area min-h-0 flex-1 overflow-y-auto">
         {tab === "Details" && <DetailsTab d={d} service={service} />}
         {tab === "Build Logs" && <div className="h-full"><LogStream key="b" deploymentId={d.id} phase="build" dense /></div>}
@@ -215,11 +217,12 @@ function DetailsTab({ d, service }: { d: DeploymentDetail; service: Service }) {
   );
 }
 
-/** AI crash analysis for a failed deployment, with an optional fix pull request. */
-export function DiagnosisCard({ deploymentId, serviceName, errorSummary, compact }: { deploymentId: string; serviceName: string; errorSummary?: string | null | undefined; compact?: boolean }) {
+/** AI crash analysis — compact 2-line strip anchored to the tab bar. Expands on demand. */
+export function DiagnosisCard({ deploymentId, serviceName, errorSummary }: { deploymentId: string; serviceName: string; errorSummary?: string | null }) {
   const qc = useQueryClient();
   const key = ["diagnosis", deploymentId];
   const [hidden, setHidden] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const q = useQuery({
     queryKey: key,
     queryFn: async () => {
@@ -232,7 +235,7 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, compact
   const analyze = useMutation({
     mutationFn: () => api<Diagnosis>(`/deployments/${deploymentId}/diagnosis`, { method: "POST", body: {} }),
     onMutate: () => qc.setQueryData(key, { status: "running" } satisfies Diagnosis),
-    onSuccess: (data) => qc.setQueryData(key, data ?? { status: "running" }),
+    onSuccess: (data) => { qc.setQueryData(key, data ?? { status: "running" }); setCollapsed(false); },
     onError: (e) => { qc.setQueryData(key, null); toast.error((e as ApiError).message ?? "Could not analyze this deployment"); },
   });
   const pr = useMutation({
@@ -252,39 +255,65 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, compact
   if (hidden || dx?.dismissed) return null;
   const busy = dx?.status === "pending" || dx?.status === "running";
   const chatPrompt = `My service "${serviceName}" failed to deploy (deployment ${deploymentId}).${errorSummary ? ` Error: ${errorSummary}.` : ""}${dx?.rootCause ? ` Your analysis said: ${dx.rootCause}` : ""} Help me fix it.`;
+  const title = dx?.status === "completed" ? dx.summary ?? "Here's what went wrong" : "This deployment crashed";
 
   return (
-    <div className={cn("rounded-lg border border-destructive/30 bg-destructive/5 p-3", compact && "mx-4 my-3")}>
-      <div className="flex items-start gap-2">
-        <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{dx?.status === "completed" ? dx.summary ?? "Here's what went wrong" : "This deployment crashed"}</p>
-          {!dx && errorSummary ? <p className="mt-0.5 truncate font-mono text-[11px] text-destructive">{errorSummary}</p> : null}
-          {busy ? <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Reading build and deploy logs…</p> : null}
-          {dx?.status === "failed" ? <p className="mt-1 text-xs text-muted-foreground">The analysis couldn't finish. Try again.</p> : null}
-          {dx?.status === "completed" ? (
-            <div className="mt-2 space-y-2 text-xs">
-              {dx.rootCause ? <p><span className="text-muted-foreground">Cause · </span>{dx.rootCause}</p> : null}
-              {dx.suggestedFix ? <p><span className="text-muted-foreground">Fix · </span>{dx.suggestedFix}</p> : null}
-              {dx.fix?.files?.length ? (
-                <details className="rounded-md border bg-card">
-                  <summary className="cursor-pointer px-2 py-1.5 font-mono text-[11px] text-muted-foreground">{dx.fix.files.length} file{dx.fix.files.length > 1 ? "s" : ""} changed</summary>
-                  {dx.fix.files.map((f) => (
-                    <div key={f.path} className="border-t">
-                      <p className="px-2 py-1 font-mono text-[11px]">{f.path}</p>
-                      <pre className="max-h-48 overflow-auto px-2 pb-2 font-mono text-[10px] leading-relaxed">
-                        {f.diff.split("\n").map((l, i) => <span key={i} className={cn("block", l.startsWith("+") && "text-score", l.startsWith("-") && "text-destructive")}>{l}</span>)}
-                      </pre>
-                    </div>
-                  ))}
-                </details>
-              ) : null}
-            </div>
-          ) : null}
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {!dx || dx.status === "failed" ? (
-              <Button size="sm" className="h-7 text-xs" onClick={() => analyze.mutate()} disabled={analyze.isPending}>Analyze with AI</Button>
+    <div className="bg-destructive/5">
+      {/* Row 1 — always visible */}
+      <div className="flex items-center gap-1.5 px-4 py-1.5">
+        {busy
+          ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-destructive" />
+          : <CircleAlert className="h-3.5 w-3.5 shrink-0 text-destructive" />}
+        <span className="flex-1 truncate text-xs font-medium leading-none">{title}</span>
+        {!dx || dx.status === "failed" ? (
+          <Button size="sm" className="h-6 shrink-0 px-2 text-[11px]" onClick={() => analyze.mutate()} disabled={analyze.isPending}>
+            Analyze with AI
+          </Button>
+        ) : null}
+        <Button size="sm" variant="ghost" className="h-6 w-6 shrink-0 p-0 text-muted-foreground hover:text-foreground" onClick={() => openAssistantWith(chatPrompt)} aria-label="Open in chat">
+          <MessageSquare className="h-3 w-3" />
+        </Button>
+        <button
+          className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={collapsed ? "Expand" : "Collapse"}
+        >
+          {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+      {/* Row 2 — error summary, always visible */}
+      {!dx && errorSummary ? (
+        <p className="truncate px-4 pb-1.5 pl-9 font-mono text-[10px] leading-none text-destructive/80">{errorSummary}</p>
+      ) : null}
+      {/* Expanded detail */}
+      {!collapsed ? (
+        <div className="border-t px-4 py-2.5">
+          <div className="space-y-2 text-xs">
+            {dx?.status === "completed" ? (
+              <>
+                {dx.rootCause ? <p><span className="text-muted-foreground">Cause · </span>{dx.rootCause}</p> : null}
+                {dx.suggestedFix ? <p><span className="text-muted-foreground">Fix · </span>{dx.suggestedFix}</p> : null}
+                {dx.fix?.files?.length ? (
+                  <details className="rounded-md border bg-card">
+                    <summary className="cursor-pointer px-2 py-1.5 font-mono text-[11px] text-muted-foreground">{dx.fix.files.length} file{dx.fix.files.length > 1 ? "s" : ""} changed</summary>
+                    {dx.fix.files.map((f) => (
+                      <div key={f.path} className="border-t">
+                        <p className="px-2 py-1 font-mono text-[11px]">{f.path}</p>
+                        <pre className="max-h-48 overflow-auto px-2 pb-2 font-mono text-[10px] leading-relaxed">
+                          {f.diff.split("\n").map((l, i) => <span key={i} className={cn("block", l.startsWith("+") && "text-score", l.startsWith("-") && "text-destructive")}>{l}</span>)}
+                        </pre>
+                      </div>
+                    ))}
+                  </details>
+                ) : null}
+              </>
+            ) : dx?.status === "failed" ? (
+              <p className="text-muted-foreground">The analysis couldn't finish. Try again.</p>
+            ) : busy ? (
+              <p className="flex items-center gap-1.5 text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Reading build and deploy logs…</p>
             ) : null}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {dx?.status === "completed" && dx.canAutoFix && !dx.pullRequest ? (
               <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={() => pr.mutate()} disabled={pr.isPending}>
                 {pr.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <GitPullRequest className="h-3 w-3" />}Create pull request
@@ -295,11 +324,10 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, compact
                 <a href={dx.pullRequest.url} target="_blank" rel="noreferrer"><GitPullRequest className="h-3 w-3" />View PR{dx.pullRequest.number ? ` #${dx.pullRequest.number}` : ""}</a>
               </Button>
             ) : null}
-            <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" onClick={() => openAssistantWith(chatPrompt)}><MessageSquare className="h-3 w-3" />Open in chat</Button>
             {dx?.status === "completed" ? <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={dismiss}>Ignore</Button> : null}
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
