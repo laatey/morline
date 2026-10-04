@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Laptop, Trash2 } from "lucide-react";
+import { Laptop, Trash } from "fluid-icons/react";
+
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,7 +106,7 @@ function AccountPage() {
                 <span>{deviceName(s.userAgent)}</span>
                 {s.current ? <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">this device</span> : null}
                 <span className="ml-auto font-mono text-muted-foreground">{s.ip ?? ""} · active {timeAgo(s.lastActiveAt)}</span>
-                {!s.current ? <button aria-label="Sign out device" className="rounded p-1 text-destructive hover:bg-accent" onClick={() => revoke(s.id)}><Trash2 className="h-3.5 w-3.5" /></button> : null}
+                {!s.current ? <button aria-label="Sign out device" className="rounded p-1 text-destructive hover:bg-accent" onClick={() => revoke(s.id)}><Trash className="h-3.5 w-3.5" /></button> : null}
               </li>
             ))}
             {sessions.isLoading ? <li aria-busy className="space-y-2 px-3 py-3">{[0,1].map((i) => <div key={i} className="h-8 animate-pulse rounded-md bg-muted/60" />)}</li> : null}

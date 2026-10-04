@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Copy, Database, Eye, EyeOff, HardDriveDownload, RotateCcw } from "lucide-react";
+import { ChevronLeft, Copy, Database, Eye, EyeOff, Download, RotateCw } from "fluid-icons/react";
+
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -169,7 +170,7 @@ export function DatabaseBackups({ service }: { service: Service }) {
     <div>
       <div className="flex items-center justify-between border-b px-4 py-2.5">
         <p className="text-xs text-muted-foreground">Daily snapshots, kept 7 days.</p>
-        <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => create.mutate()} disabled={create.isPending}><HardDriveDownload className="h-3.5 w-3.5" />Back up now</Button>
+        <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => create.mutate()} disabled={create.isPending}><Download className="h-3.5 w-3.5" />Back up now</Button>
       </div>
       {q.isLoading ? <Skeleton /> : q.isError ? <Empty title="Backups unavailable" note={errMsg(q.error, "Try again in a moment.")} /> : !items.length ? <Empty title="No backups yet" note="The first scheduled snapshot runs tonight." /> : (
         <div className="divide-y divide-border/50">
@@ -179,7 +180,7 @@ export function DatabaseBackups({ service }: { service: Service }) {
               <span>{timeAgo(b.createdAt)}</span>
               <span className="font-mono text-[10px] text-muted-foreground">{b.kind ?? "scheduled"}</span>
               <span className="ml-auto font-mono text-[10px] text-muted-foreground">{b.size ?? ""}</span>
-              <Button size="sm" variant="ghost" className="h-6 gap-1 px-2 text-[11px]" disabled={b.status === "running" || b.id.startsWith("tmp-")} onClick={() => setRestore(b)}><RotateCcw className="h-3 w-3" />Restore</Button>
+              <Button size="sm" variant="ghost" className="h-6 gap-1 px-2 text-[11px]" disabled={b.status === "running" || b.id.startsWith("tmp-")} onClick={() => setRestore(b)}><RotateCw className="h-3 w-3" />Restore</Button>
             </div>
           ))}
         </div>

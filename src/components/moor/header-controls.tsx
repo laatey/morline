@@ -1,6 +1,8 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Activity, AlertTriangle, Bell, Check, ChevronsUpDown, CircleUser, Github, Globe, Info, LayoutGrid, LogOut, Plus, Rocket, ScrollText, Search, Settings, Users, Waypoints } from "lucide-react";
+import { Activity, Alert, Bell, Check, ChevronsUpDown, UserCircle, Globe, Info, Grid, Logout, Plus, Rocket, FileText, Search, Settings, Users, Network } from "fluid-icons/react";
+import { Github } from "lucide-react";
+
 import { toast } from "sonner";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -19,15 +21,15 @@ import { cn } from "@/lib/utils";
 type SearchHit = { type: string; id: string; title: string; subtitle?: string | null; logo?: string | null; projectId?: string | null; environmentId?: string | null };
 
 const pages = [
-  { to: "/projects", label: "Projects", icon: LayoutGrid },
+  { to: "/projects", label: "Projects", icon: Grid },
   { to: "/deployments", label: "Deployments", icon: Rocket },
-  { to: "/logs", label: "Logs", icon: ScrollText },
+  { to: "/logs", label: "Logs", icon: FileText },
   { to: "/metrics", label: "Metrics", icon: Activity },
   { to: "/domains", label: "Networking", icon: Globe },
   { to: "/activity", label: "Activity", icon: Activity },
   { to: "/integrations", label: "GitHub integration", icon: Github },
   { to: "/team", label: "Team", icon: Users },
-  { to: "/account", label: "Account", icon: CircleUser },
+  { to: "/account", label: "Account", icon: UserCircle },
   { to: "/settings", label: "Project settings", icon: Settings },
 ] as const;
 
@@ -117,7 +119,7 @@ export function SearchButton() {
   );
 }
 
-const toneIcon = { error: AlertTriangle, warn: AlertTriangle, info: Info } as const;
+const toneIcon = { error: Alert, warn: Alert, info: Info } as const;
 const toneText = { error: "text-destructive", warn: "text-score-mid", info: "text-primary" } as const;
 
 type ApiNotification = { id: string; type: string; title: string; body: string; targetUrl: string | null; read: boolean; createdAt: string };
@@ -195,12 +197,12 @@ export function ProfileMenu() {
           <p className="font-mono text-[10px] font-normal text-muted-foreground">{user?.email}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate({ to: "/account" })}><CircleUser className="mr-2 h-3.5 w-3.5" />Account</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate({ to: "/account" })}><UserCircle className="mr-2 h-3.5 w-3.5" />Account</DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate({ to: "/team" })}><Users className="mr-2 h-3.5 w-3.5" />Team</DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate({ to: "/integrations" })}><Github className="mr-2 h-3.5 w-3.5" />GitHub</DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate({ to: "/activity" })}><Activity className="mr-2 h-3.5 w-3.5" />Activity</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => { void signOut().then(() => navigate({ to: "/login" })); }}><LogOut className="mr-2 h-3.5 w-3.5" />Sign out</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => { void signOut().then(() => navigate({ to: "/login" })); }}><Logout className="mr-2 h-3.5 w-3.5" />Sign out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

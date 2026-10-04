@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Github, Lock, RefreshCw } from "lucide-react";
+import { Lock, Refresh } from "fluid-icons/react";
+import { Github } from "lucide-react";
+
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -66,7 +68,7 @@ function IntegrationsPage() {
           </div>
           {connected ? (
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => { void repos.refetch(); toast("Repositories refreshed"); }}><RefreshCw className="h-3.5 w-3.5" />Refresh</Button>
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => { void repos.refetch(); toast("Repositories refreshed"); }}><Refresh className="h-3.5 w-3.5" />Refresh</Button>
               <Button size="sm" variant="outline" className="h-8 text-xs text-destructive" onClick={disconnect}>Disconnect</Button>
             </div>
           ) : <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => { if (status.data?.installUrl) window.location.href = status.data.installUrl; }} disabled={!status.data?.installUrl}><Github className="h-3.5 w-3.5" />Connect GitHub</Button>}

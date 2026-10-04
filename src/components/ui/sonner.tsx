@@ -1,5 +1,5 @@
 import { Toaster as Sonner } from "sonner";
-import { AlertCircle, Check, Info, Loader2, TriangleAlert } from "lucide-react";
+import { AlertCircle, Check, Info, Loader, Alert } from "fluid-icons/react";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
@@ -18,9 +18,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       icons={{
         success: <Check className="h-3.5 w-3.5 text-score" />,
         error: <AlertCircle className="h-3.5 w-3.5 text-destructive" />,
-        warning: <TriangleAlert className="h-3.5 w-3.5 text-score-mid" />,
+        warning: <Alert className="h-3.5 w-3.5 text-score-mid" />,
         info: <Info className="h-3.5 w-3.5 text-muted-foreground" />,
-        loading: <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />,
+        loading: <Loader className="h-3.5 w-3.5 animate-spin text-muted-foreground" />,
       }}
       toastOptions={{
         unstyled: true,

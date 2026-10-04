@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, Github, Lock, RefreshCw, Search } from "lucide-react";
+import { ArrowUpRight, Lock, Refresh, Search } from "fluid-icons/react";
+import { Github } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
@@ -114,7 +116,7 @@ export function GitHubRepoPicker({ onPick }: { onPick: (repo: GhRepo) => void })
           <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search repositories…" className="h-8 border-0 bg-surface/80 pl-8 text-base shadow-none md:text-xs" />
         </label>
         <button type="button" aria-label="Refresh repositories" onClick={() => void repos.refetch()} className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
-          <RefreshCw className={repos.isFetching ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
+          <Refresh className={repos.isFetching ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
         </button>
       </div>
       <div className="max-h-[45vh] divide-y divide-border/50 overflow-y-auto">

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Trash } from "fluid-icons/react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { api, type ApiError } from "@/lib/api";
 import { toast } from "sonner";
@@ -72,7 +72,7 @@ function SettingsPage() {
               <li key={e.id} className="group flex items-center justify-between gap-2 px-3 py-2 font-mono text-xs">
                 {e.name}
                 <span className="ml-auto text-muted-foreground">{e.protected ? "protected" : e.type === "preview" ? "auto-deletes on merge" : `${e.serviceCount} services`}</span>
-                {!e.protected ? <button aria-label={`Delete ${e.name}`} onClick={() => removeEnv(e.id, e.name)} className="rounded p-1 text-destructive opacity-0 hover:bg-accent group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button> : null}
+                {!e.protected ? <button aria-label={`Delete ${e.name}`} onClick={() => removeEnv(e.id, e.name)} className="rounded p-1 text-destructive opacity-0 hover:bg-accent group-hover:opacity-100"><Trash className="h-3.5 w-3.5" /></button> : null}
               </li>
             ))}
           </ul>

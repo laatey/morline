@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus } from "fluid-icons/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { WorkspaceShell } from "@/components/moor/workspace-shell";

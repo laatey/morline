@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, ChevronDown, Globe, Layers3, MoreHorizontal, Plus, Rocket, ScrollText, Search, Settings, Waypoints } from "lucide-react";
+import { Activity, ChevronDown, Globe, Layers, More, Plus, Rocket, FileText, Search, Settings, Network } from "fluid-icons/react";
+
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -259,7 +260,7 @@ function ProjectsPage() {
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="label-caps">Navigation</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => navigate({ to: lastProjectId ? `/project/${lastProjectId}` : "/projects" })} className="flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-medium cursor-pointer">
-                <Waypoints className="h-4 w-4 text-muted-foreground" />
+                <Network className="h-4 w-4 text-muted-foreground" />
                 <span>Canvas</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate({ to: "/deployments" })} className="flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-medium cursor-pointer">
@@ -267,7 +268,7 @@ function ProjectsPage() {
                 <span>Deployments</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate({ to: "/logs" })} className="flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-medium cursor-pointer">
-                <ScrollText className="h-4 w-4 text-muted-foreground" />
+                <FileText className="h-4 w-4 text-muted-foreground" />
                 <span>Logs</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate({ to: "/metrics" })} className="flex items-center gap-2.5 rounded-md px-2 py-2 text-xs font-medium cursor-pointer">
@@ -348,7 +349,7 @@ function ProjectsPage() {
                 ))}
             {!projectsQuery.isLoading && projects.length === 0 ? (
               <div className="col-span-full flex flex-col items-center gap-3 py-16 text-center">
-                <span className="grid h-11 w-11 place-items-center rounded-full border bg-card"><Layers3 className="h-5 w-5 text-muted-foreground" /></span>
+                <span className="grid h-11 w-11 place-items-center rounded-full border bg-card"><Layers className="h-5 w-5 text-muted-foreground" /></span>
                 <p className="font-display text-lg font-semibold">No projects yet</p>
                 <p className="max-w-sm font-mono text-xs text-muted-foreground">create your first project to start mapping services on the canvas</p>
                 <Button size="sm" variant="outline" className="mt-1" onClick={() => setAdding(true)}><Plus className="mr-1.5 h-3.5 w-3.5" />New project</Button>
@@ -408,7 +409,7 @@ function ProjectCard({ p, onRemove, onRename }: { p: Project; onRemove: () => vo
         <h3 className="truncate font-display text-sm font-semibold">{p.name}</h3>
         <span className="flex shrink-0 items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
           <DropdownMenu>
-            <DropdownMenuTrigger aria-label={`${p.name} actions`} onClick={(e) => e.preventDefault()} className="rounded p-0.5 opacity-0 hover:bg-accent group-hover:opacity-100 focus-visible:opacity-100"><MoreHorizontal className="h-3.5 w-3.5" /></DropdownMenuTrigger>
+            <DropdownMenuTrigger aria-label={`${p.name} actions`} onClick={(e) => e.preventDefault()} className="rounded p-0.5 opacity-0 hover:bg-accent group-hover:opacity-100 focus-visible:opacity-100"><More className="h-3.5 w-3.5" /></DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={onRename}>Rename</DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -421,7 +422,7 @@ function ProjectCard({ p, onRemove, onRename }: { p: Project; onRemove: () => vo
       </div>
       <div className="auth-grid relative mt-2.5 grid min-h-[105px] flex-1 place-items-center overflow-hidden rounded-lg border bg-surface/35">
         <span className="relative grid h-9 w-9 place-items-center rounded-lg border bg-card shadow-sm transition-transform group-hover:scale-105">
-          <Layers3 className="h-4 w-4 text-muted-foreground" />
+          <Layers className="h-4 w-4 text-muted-foreground" />
           {p.status === "crashed" ? <span className="absolute mb-[-28px] ml-[28px] h-1.5 w-1.5 rounded-full bg-destructive ring-2 ring-card" /> : null}
         </span>
       </div>

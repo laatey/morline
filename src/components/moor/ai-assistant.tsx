@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Bot, Check, Clock3, History, Plus, Send, Square, Trash2, X } from "lucide-react";
+import { ArrowLeft, Bot, Check, Clock, History, Plus, Send, Stop, Trash, Close, Undo } from "fluid-icons/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -95,7 +95,7 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="New conversation" onClick={newThread}><Plus className="h-3.5 w-3.5" /></Button>
         <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Conversation history" onClick={() => setView(view === "history" ? "chat" : "history")}><History className="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Close assistant" onClick={onClose}><X className="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Close assistant" onClick={onClose}><Close className="h-3.5 w-3.5" /></Button>
       </div>
 
       {view === "history" ? (
@@ -106,7 +106,7 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
                 <span className={cn("block truncate text-xs font-medium", t.id === activeId && "text-primary")}>{t.title}</span>
                 <span className="font-mono text-[10px] text-muted-foreground">{t.messages.length} messages · {t.when}</span>
               </button>
-              <button aria-label={`Delete ${t.title}`} className="rounded p-1 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100" onClick={() => { if (t.messages.length) api(`/assistant/threads/${t.id}`, { method: "DELETE" }).catch(() => toast.error("Could not delete conversation")); setThreads((l) => { const n = l.filter((x) => x.id !== t.id); if (!n.length) n.push(fresh()); if (t.id === activeId) setActiveId(n[0]!.id); return n; }); }}><Trash2 className="h-3.5 w-3.5" /></button>
+              <button aria-label={`Delete ${t.title}`} className="rounded p-1 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100" onClick={() => { if (t.messages.length) api(`/assistant/threads/${t.id}`, { method: "DELETE" }).catch(() => toast.error("Could not delete conversation")); setThreads((l) => { const n = l.filter((x) => x.id !== t.id); if (!n.length) n.push(fresh()); if (t.id === activeId) setActiveId(n[0]!.id); return n; }); }}><Trash className="h-3.5 w-3.5" /></button>
             </li>
           ))}
         </ul>
@@ -122,7 +122,7 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
               <div className="mt-6 space-y-1.5">
                 {prompts.map((p) => (
                   <button key={p} onClick={() => send(p)} className="flex w-full items-center gap-2 rounded-lg border bg-background/40 px-3 py-2.5 text-left text-xs transition-colors hover:bg-accent">
-                    <Clock3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /><span>{p}</span>
+                    <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /><span>{p}</span>
                   </button>
                 ))}
               </div>
@@ -160,7 +160,7 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
             <div className="mt-1 flex items-center justify-between">
               <span className="px-1 font-mono text-[9px] text-muted-foreground">Enter to send · Shift+Enter for newline</span>
               {thinking ? (
-                <Button size="icon" variant="outline" className="h-7 w-7" aria-label="Stop" onClick={stop}><Square className="h-3 w-3" /></Button>
+                <Button size="icon" variant="outline" className="h-7 w-7" aria-label="Stop" onClick={stop}><Stop className="h-3 w-3" /></Button>
               ) : <Button size="icon" className="h-7 w-7" aria-label="Send message" disabled={!input.trim()} onClick={() => send(input)}><Send className="h-3.5 w-3.5" /></Button>}
             </div>
           </div>

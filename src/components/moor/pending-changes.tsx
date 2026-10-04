@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Rocket, Undo2 } from "lucide-react";
+import { Loader, Rocket, Undo } from "fluid-icons/react";
+
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { api, type ApiError } from "@/lib/api";
@@ -80,10 +81,10 @@ export function PendingChangesBar() {
         </p>
       </div>
       <Button size="sm" variant="ghost" className="h-8 gap-1 px-2 text-xs" disabled={!!busy} onClick={() => void act("discard")}>
-        {busy === "discard" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}Discard
+        {busy === "discard" ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Undo className="h-3.5 w-3.5" />}Discard
       </Button>
       <Button size="sm" className="h-8 gap-1.5 px-3 text-xs" disabled={!!busy} onClick={() => void act("deploy")}>
-        {busy === "deploy" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}Deploy
+        {busy === "deploy" ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}Deploy
       </Button>
     </div>
   );

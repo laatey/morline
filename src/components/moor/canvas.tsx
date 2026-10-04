@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Box, Clock, HardDrive, Maximize, Minus, Plus, Redo2, Undo2, Globe, X } from "lucide-react";
+import { ArrowUpRight, Package, Clock, HardDrive, Expand, Minus, Plus, Redo, Undo, Globe, Close } from "fluid-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Edge, Service } from "@/lib/platform-data";
@@ -323,7 +323,7 @@ export function Canvas({
                         onPointerDown={(ev) => ev.stopPropagation()}
                         onPointerUp={(ev) => ev.stopPropagation()}
                         onClick={() => { if (window.confirm("Remove this connection?")) void state.disconnect(e.id); }}
-                      ><X className="h-2.5 w-2.5" /></button>
+                      ><Close className="h-2.5 w-2.5" /></button>
                     ) : null}
                   </div>
                 </foreignObject>
@@ -351,9 +351,9 @@ export function Canvas({
         <span className="w-9 text-center font-mono text-[9px] text-muted-foreground sm:w-10 sm:text-[10px]">{Math.round(view.k * 100)}%</span>
         <CtrlBtn label="Zoom in" onClick={() => zoom(1.15)}><Plus className="h-3.5 w-3.5" /></CtrlBtn>
         <span className="mx-0.5 h-4 w-px bg-border" />
-        <CtrlBtn label="Fit to screen" onClick={fit}><Maximize className="h-3.5 w-3.5" /></CtrlBtn>
-        <CtrlBtn label="Undo" onClick={state.undo} disabled={!state.canUndo}><Undo2 className="h-3.5 w-3.5" /></CtrlBtn>
-        <CtrlBtn label="Redo" onClick={state.redo} disabled={!state.canRedo}><Redo2 className="h-3.5 w-3.5" /></CtrlBtn>
+        <CtrlBtn label="Fit to screen" onClick={fit}><Expand className="h-3.5 w-3.5" /></CtrlBtn>
+        <CtrlBtn label="Undo" onClick={state.undo} disabled={!state.canUndo}><Undo className="h-3.5 w-3.5" /></CtrlBtn>
+        <CtrlBtn label="Redo" onClick={state.redo} disabled={!state.canRedo}><Redo className="h-3.5 w-3.5" /></CtrlBtn>
       </div>
       <div className="pointer-events-none absolute bottom-4 right-4 hidden items-center gap-3 font-mono text-[10px] text-muted-foreground md:flex">
         <span>drag to pan</span><span>⌘ + scroll to zoom</span><span><Kbd>N</Kbd> new</span>
@@ -370,7 +370,7 @@ function CtrlBtn({ children, label, onClick, disabled }: { children: React.React
   );
 }
 
-const kindIcon = { app: Box, worker: Box, database: HardDrive, cron: Clock };
+const kindIcon = { app: Package, worker: Package, database: HardDrive, cron: Clock };
 
 function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDown, onLinkStart }: { s: Service; selected: boolean; dimmed: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void; onLinkStart: (e: React.PointerEvent) => void }) {
   const KindIcon = kindIcon[s.kind];

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ExternalLink, Loader2, Power, Rocket, RotateCcw, X } from "lucide-react";
+import { ExternalLink, Loader, Power, Rocket, RotateCw, Close } from "fluid-icons/react";
+
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Service } from "@/lib/platform-data";
@@ -77,24 +78,24 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
             <div className="flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/5 p-0.5">
               <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={stopStep === "busy"} onClick={() => setStopStep("idle")}>Keep</Button>
               <Button size="sm" variant="destructive" className="h-6 gap-1 px-2 text-xs" disabled={stopStep === "busy"} onClick={() => void stop()}>
-                {stopStep === "busy" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Power className="h-3 w-3" />}Stop service
+                {stopStep === "busy" ? <Loader className="h-3 w-3 animate-spin" /> : <Power className="h-3 w-3" />}Stop service
               </Button>
             </div>
           )
         ) : null}
         {idle && stopStep === "idle" ? (
           <Button size="sm" className="h-7 gap-1 px-2 text-xs sm:px-2.5" disabled={deploying} onClick={redeploy}>
-            {deploying ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3" />}
+            {deploying ? <Loader className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3" />}
             <span className="hidden sm:inline">{deploying ? "Deploying…" : "Deploy"}</span>
           </Button>
         ) : null}
-        {!idle && stopStep === "idle" ? <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs sm:px-2.5" disabled={deploying} onClick={redeploy}>{deploying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}<span className="hidden sm:inline">Redeploy</span></Button> : null}
+        {!idle && stopStep === "idle" ? <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs sm:px-2.5" disabled={deploying} onClick={redeploy}>{deploying ? <Loader className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}<span className="hidden sm:inline">Redeploy</span></Button> : null}
         {service.domain ? (
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" asChild>
             <a href={`https://${service.domain}`} target="_blank" rel="noreferrer" aria-label="Open domain"><ExternalLink className="h-3.5 w-3.5" /></a>
           </Button>
         ) : null}
-        <button aria-label="Close panel" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground sm:p-1.5"><X className="h-4 w-4" /></button>
+        <button aria-label="Close panel" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground sm:p-1.5"><Close className="h-4 w-4" /></button>
       </div>
       <div role="tablist" className="no-scrollbar flex gap-4 overflow-x-auto border-b px-4">
         {tabs.map((t) => (

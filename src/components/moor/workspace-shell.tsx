@@ -1,5 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Activity, Bot, ChevronDown, ChevronsUpDown, GitBranch, History, LayoutGrid, Plus, Rocket, ScrollText, Settings, Waypoints, Globe } from "lucide-react";
+import { Activity, Bot, ChevronDown, ChevronsUpDown, GitBranch, History, Grid, Plus, Rocket, FileText, Settings, Network, Globe } from "fluid-icons/react";
+
 import { NewEnvironmentDialog, NotificationsButton, ProfileMenu, SearchButton, WorkspaceSwitcher } from "./header-controls";
 import { useState, useEffect, type ReactNode } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -22,7 +23,7 @@ export function Mark({ className }: { className?: string }) {
 
 const nav = [
   { to: "/deployments", label: "Deployments", icon: Rocket },
-  { to: "/logs", label: "Logs", icon: ScrollText },
+  { to: "/logs", label: "Logs", icon: FileText },
   { to: "/metrics", label: "Metrics", icon: Activity },
   { to: "/domains", label: "Networking", icon: Globe },
   { to: "/activity", label: "Activity", icon: History },
@@ -108,7 +109,7 @@ export function WorkspaceShell({ children, title, actions, onAssistant }: { chil
             <WorkspaceSwitcher />
             <span className="text-muted-foreground/50">/</span>
             <Link to="/projects" className="flex min-w-0 items-center gap-1.5 whitespace-nowrap rounded-md px-1.5 py-1 text-sm hover:bg-accent">
-              <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" />
+              <Grid className="h-3.5 w-3.5 text-muted-foreground" />
               {project.name}
             </Link>
             <span className="text-muted-foreground/50">/</span>
@@ -170,7 +171,7 @@ export function WorkspaceShell({ children, title, actions, onAssistant }: { chil
                         active && "bg-accent text-foreground font-semibold"
                       )}
                     >
-                      <Waypoints className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+                      <Network className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
                       <span className="flex-1">Canvas</span>
                       {active && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
                     </DropdownMenuItem>
@@ -224,7 +225,7 @@ export function WorkspaceShell({ children, title, actions, onAssistant }: { chil
                   onClick={() => navigate({ to: "/projects" })}
                   className="flex items-center gap-2 rounded-md px-2 py-2 text-xs cursor-pointer"
                 >
-                  <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Grid className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>All projects</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -273,7 +274,7 @@ export function WorkspaceShell({ children, title, actions, onAssistant }: { chil
                       )}
                     >
                       {active ? <span className="absolute -left-2.5 h-4 w-0.5 rounded-r bg-primary" /> : null}
-                      <Waypoints className="h-4 w-4" />
+                      <Network className="h-4 w-4" />
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right">Canvas</TooltipContent>

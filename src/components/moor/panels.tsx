@@ -3,7 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, ChevronDown, ChevronUp, Copy, Eye, EyeOff, Folder, GitCommitHorizontal, Link2, MoreHorizontal, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Copy, Eye, EyeOff, Folder, GitCommit, Link as LinkIcon, More, Plus, RotateCw, Search, Trash, Close } from "fluid-icons/react";
+
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -79,7 +80,7 @@ export function DeploymentList({ serviceId, compact, onOpen, header }: { service
                   )}
                   <p className="mt-0.5 flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
                     {!compact ? <span className="text-foreground/80">{d.serviceName}</span> : null}
-                    {d.commit?.sha ? <span className="inline-flex items-center gap-1"><GitCommitHorizontal className="h-3 w-3" />{d.commit.sha.slice(0, 7)}</span> : null}
+                    {d.commit?.sha ? <span className="inline-flex items-center gap-1"><GitCommit className="h-3 w-3" />{d.commit.sha.slice(0, 7)}</span> : null}
                     <span>{d.commit?.author ?? d.createdBy?.name ?? d.trigger}</span>
                     <span>{timeAgo(d.createdAt)}</span>
                     <span>· {duration(d)}</span>
@@ -88,11 +89,11 @@ export function DeploymentList({ serviceId, compact, onOpen, header }: { service
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger aria-label="Deployment actions" className="rounded p-1 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100 focus-visible:opacity-100">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <More className="h-4 w-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {onOpen ? <DropdownMenuItem onClick={() => onOpen(d)}>View details</DropdownMenuItem> : <DropdownMenuItem asChild><Link to="/deployments/$id" params={{ id: d.id }}>View build logs</Link></DropdownMenuItem>}
-                    <DropdownMenuItem onClick={() => act(d, "redeploy")}><RotateCcw className="mr-2 h-3.5 w-3.5" />Redeploy</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => act(d, "redeploy")}><RotateCw className="mr-2 h-3.5 w-3.5" />Redeploy</DropdownMenuItem>
                     {d.rollbackable && st !== "active" ? <DropdownMenuItem onClick={() => act(d, "rollback")}>Roll back to this</DropdownMenuItem> : null}
                     {st === "building" || st === "queued" ? <DropdownMenuItem className="text-destructive" onClick={() => act(d, "cancel")}>Cancel</DropdownMenuItem> : null}
                   </DropdownMenuContent>
@@ -350,7 +351,7 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
                 className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                 aria-label="Remove draft row"
               >
-                <X className="h-3.5 w-3.5" />
+                <Close className="h-3.5 w-3.5" />
               </button>
             ) : null}
           </div>
@@ -387,7 +388,7 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
               <li key={v.key} className="group flex h-10 items-center gap-3 px-4 font-mono text-xs">
                 <span className="w-48 shrink-0 truncate">{v.key}</span>
                 <span className={cn("flex min-w-0 flex-1 items-center gap-1.5 truncate", v.isReference ? "text-primary" : "text-muted-foreground")}>
-                  {v.isReference ? <Link2 className="h-3 w-3 shrink-0" /> : null}
+                  {v.isReference ? <LinkIcon className="h-3 w-3 shrink-0" /> : null}
                   {editing === v.key ? (
                     <Input autoFocus value={editValue} onChange={(e) => setEditValue(e.target.value)} onBlur={() => setEditing(null)} onKeyDown={(e) => {
                       if (e.key === "Enter") { setEditing(null); void run(() => api(`/services/${serviceId}/variables/${v.key}`, { method: "PATCH", body: { value: editValue } }), `${v.key} updated`); }
@@ -404,7 +405,7 @@ export function VariablesTable({ serviceId }: { serviceId: string }) {
                     </button>
                   ) : null}
                   <button aria-label="Copy value" className="rounded p-1 hover:bg-accent" onClick={() => { navigator.clipboard?.writeText(v.value); toast("Copied " + v.key); }}><Copy className="h-3.5 w-3.5" /></button>
-                  <button aria-label="Delete variable" className="rounded p-1 text-destructive hover:bg-accent" onClick={() => void run(() => api(`/services/${serviceId}/variables/${v.key}`, { method: "DELETE" }), `${v.key} deleted`)}><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button aria-label="Delete variable" className="rounded p-1 text-destructive hover:bg-accent" onClick={() => void run(() => api(`/services/${serviceId}/variables/${v.key}`, { method: "DELETE" }), `${v.key} deleted`)}><Trash className="h-3.5 w-3.5" /></button>
                 </div>
               </li>
             );
@@ -565,7 +566,7 @@ function LogDetail({ line, onClose, onPrev, onNext }: { line: Record<string, unk
         <div className="ml-auto flex rounded-md border p-0.5 text-[11px]">
           {(["attrs", "raw"] as const).map((v) => <button key={v} onClick={() => setView(v)} className={cn("rounded px-2 py-0.5 text-muted-foreground", view === v && "bg-accent text-foreground")}>{v === "attrs" ? "Attributes" : "Raw"}</button>)}
         </div>
-        <button aria-label="Close details" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+        <button aria-label="Close details" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><Close className="h-3.5 w-3.5" /></button>
       </div>
       <div className="scroll-area min-h-0 flex-1 space-y-2.5 overflow-y-auto p-4 pt-2.5">
         {view === "attrs" ? (

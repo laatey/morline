@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChevronRight, CircleAlert, GitBranch, GitPullRequest, Loader2, MessageSquare, MoreHorizontal, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, AlertCircle, GitBranch, GitPr, Loader, More, RotateCw, Close, Chat } from "fluid-icons/react";
+
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -87,9 +88,9 @@ export function DeploymentPanel({ service, deployment, onBack, onClose }: { serv
         </div>
         <span className="hidden font-mono text-[10px] text-muted-foreground sm:inline">{stamp(d.createdAt)}</span>
         <DropdownMenu>
-          <DropdownMenuTrigger aria-label="Deployment actions" className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><MoreHorizontal className="h-4 w-4" /></DropdownMenuTrigger>
+          <DropdownMenuTrigger aria-label="Deployment actions" className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><More className="h-4 w-4" /></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => act("redeploy")}><RotateCcw className="mr-2 h-3.5 w-3.5" />Redeploy</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => act("redeploy")}><RotateCw className="mr-2 h-3.5 w-3.5" />Redeploy</DropdownMenuItem>
             {d.rollbackable && st !== "active" && !running ? <DropdownMenuItem onClick={() => act("rollback")}>Roll back to this</DropdownMenuItem> : null}
             {running ? <DropdownMenuItem className="text-destructive" onClick={() => act("cancel")}>Cancel</DropdownMenuItem> : null}
             {d.url ? (
@@ -99,7 +100,7 @@ export function DeploymentPanel({ service, deployment, onBack, onClose }: { serv
             ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
-        <button aria-label="Close panel" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><X className="h-4 w-4" /></button>
+        <button aria-label="Close panel" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><Close className="h-4 w-4" /></button>
       </div>
       <div className="border-b">
         <div role="tablist" className="no-scrollbar flex gap-4 overflow-x-auto px-4">
@@ -264,8 +265,8 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex min-w-0 items-center gap-2.5">
           {busy
-            ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-destructive" />
-            : <CircleAlert className="h-4 w-4 shrink-0 text-destructive" />}
+            ? <Loader className="h-4 w-4 shrink-0 animate-spin text-destructive" />
+            : <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />}
           <button
             type="button"
             className="group flex flex-wrap items-baseline gap-2 text-left focus:outline-none"
@@ -289,16 +290,16 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
           ) : null}
           {dx?.status === "completed" && dx.canAutoFix && !dx.pullRequest ? (
             <Button size="sm" className="h-8 gap-1.5 px-3.5 text-xs font-medium" onClick={() => pr.mutate()} disabled={pr.isPending}>
-              {pr.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="h-3.5 w-3.5" />}Create PR
+              {pr.isPending ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <GitPr className="h-3.5 w-3.5" />}Create PR
             </Button>
           ) : null}
           {dx?.pullRequest ? (
             <Button size="sm" variant="outline" className="h-8 gap-1.5 px-3.5 text-xs font-medium" asChild>
-              <a href={dx.pullRequest.url} target="_blank" rel="noreferrer"><GitPullRequest className="h-3.5 w-3.5" />View PR{dx.pullRequest.number ? ` #${dx.pullRequest.number}` : ""}</a>
+              <a href={dx.pullRequest.url} target="_blank" rel="noreferrer"><GitPr className="h-3.5 w-3.5" />View PR{dx.pullRequest.number ? ` #${dx.pullRequest.number}` : ""}</a>
             </Button>
           ) : null}
           <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground" onClick={() => openAssistantWith(chatPrompt)}>
-            <MessageSquare className="h-3.5 w-3.5" />Open in chat
+            <Chat className="h-3.5 w-3.5" />Open in chat
           </Button>
           {dx?.status === "completed" ? (
             <Button size="sm" variant="ghost" className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground" onClick={dismiss}>Ignore</Button>
@@ -338,7 +339,7 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
       ) : dx?.status === "failed" ? (
         <p className="mt-1 pl-[26px] text-xs text-muted-foreground">Analysis couldn't finish. Try again.</p>
       ) : busy ? (
-        <p className="mt-1 pl-[26px] flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Analyzing…</p>
+        <p className="mt-1 pl-[26px] flex items-center gap-1.5 text-xs text-muted-foreground"><Loader className="h-3 w-3 animate-spin" />Analyzing…</p>
       ) : null}
     </div>
   );

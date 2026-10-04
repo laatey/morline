@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "fluid-icons/react";
 import { Mark } from "@/components/moor/workspace-shell";
 import pg from "@/assets/stack/postgresql.svg";
 import redis from "@/assets/stack/redis.svg";

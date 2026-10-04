@@ -1,4 +1,4 @@
-import { GripVertical } from "lucide-react";
+import { MoreVertical as GripVertical } from "fluid-icons/react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
 import { cn } from "@/lib/utils";

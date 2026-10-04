@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { MoreHorizontal, UserPlus } from "lucide-react";
+import { More, UserPlus } from "fluid-icons/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,7 +71,7 @@ function TeamPage() {
               <span className="hidden font-mono text-[11px] text-muted-foreground sm:inline">joined {m.last}</span>
               <span className="w-20 text-right text-xs capitalize">{m.role}{m.id === user?.id ? " · you" : ""}</span>
               <DropdownMenu>
-                <DropdownMenuTrigger aria-label={`Manage ${m.name}`} disabled={m.role === "owner"} className="rounded p-1 text-muted-foreground hover:bg-accent disabled:opacity-30"><MoreHorizontal className="h-4 w-4" /></DropdownMenuTrigger>
+                <DropdownMenuTrigger aria-label={`Manage ${m.name}`} disabled={m.role === "owner"} className="rounded p-1 text-muted-foreground hover:bg-accent disabled:opacity-30"><More className="h-4 w-4" /></DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel className="label-caps">Change role</DropdownMenuLabel>
                   {roles.slice(1).map((r) => <DropdownMenuItem key={r} className="capitalize" onClick={() => run(() => api(`/teams/${teamId}/members/${m.id}`, { method: "PATCH", body: { role: r } }), `${m.name} is now ${r}`)}>{r}</DropdownMenuItem>)}

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, GitCommitHorizontal, Loader2, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, Check, GitCommit, Loader, RotateCw, Close } from "fluid-icons/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { WorkspaceShell } from "@/components/moor/workspace-shell";
@@ -70,13 +70,13 @@ function DeploymentDetail() {
             <h1 className="text-lg font-semibold">{deployTitle(d)}</h1>
             <div className="ml-auto flex gap-2">
               {running ? <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => act("cancel")}>Cancel</Button> : null}
-              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => act("redeploy")}><RotateCcw className="h-3.5 w-3.5" />Redeploy</Button>
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => act("redeploy")}><RotateCw className="h-3.5 w-3.5" />Redeploy</Button>
               {d.rollbackable && st !== "active" && !running ? <Button size="sm" className="h-8 text-xs" onClick={() => act("rollback")}>Roll back</Button> : null}
             </div>
           </div>
           <p className="mt-1 flex flex-wrap gap-3 font-mono text-[11px] text-muted-foreground">
             <span>{d.serviceName}</span>
-            {d.commit?.sha ? <span className="inline-flex items-center gap-1"><GitCommitHorizontal className="h-3 w-3" />{d.commit.sha.slice(0, 7)}</span> : null}
+            {d.commit?.sha ? <span className="inline-flex items-center gap-1"><GitCommit className="h-3 w-3" />{d.commit.sha.slice(0, 7)}</span> : null}
             <span>{d.commit?.author ?? d.createdBy?.name ?? d.trigger}</span><span>{timeAgo(d.createdAt)}</span><span>{duration(d)}</span>
             {d.url ? <a href={d.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{d.url.replace(/^https?:\/\//, "")}</a> : null}
           </p>
@@ -86,7 +86,7 @@ function DeploymentDetail() {
             <p className="label-caps mb-3">Build steps</p>
             {(d.phases ?? []).map((p) => (
               <li key={p.name} className="flex items-center gap-2 py-1.5 text-xs">
-                {p.status === "succeeded" ? <Check className="h-3.5 w-3.5 text-score" /> : p.status === "running" ? <Loader2 className="h-3.5 w-3.5 animate-spin text-score-mid" /> : p.status === "failed" ? <X className="h-3.5 w-3.5 text-destructive" /> : <span className="h-3.5 w-3.5 rounded-full border" />}
+                {p.status === "succeeded" ? <Check className="h-3.5 w-3.5 text-score" /> : p.status === "running" ? <Loader className="h-3.5 w-3.5 animate-spin text-score-mid" /> : p.status === "failed" ? <Close className="h-3.5 w-3.5 text-destructive" /> : <span className="h-3.5 w-3.5 rounded-full border" />}
                 <span className={cn("flex-1 truncate font-mono capitalize", p.status === "skipped" && "text-muted-foreground line-through")}>{p.name}</span>
                 <span className="font-mono text-[10px] text-muted-foreground">{p.status === "skipped" ? "" : phaseTime(p)}</span>
               </li>
