@@ -1,9 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown, ChevronUp, Copy, Eye, EyeOff, GitCommitHorizontal, Link2, MoreHorizontal, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Copy, Eye, EyeOff, Folder, GitCommitHorizontal, Link2, MoreHorizontal, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -627,6 +627,153 @@ export function NetworkingPanel({ service }: { service: Service }) {
 
 type ServiceSettingsData = { settings?: { startCommand?: string | null; runtimeVersion?: string | null; healthcheckPath?: string | null; autoDeploy?: boolean; sleepWhenIdle?: boolean; replicas?: number; rootDirectory?: string | null; basePath?: string | null } };
 
+function RootDirectoryInput({
+  serviceId,
+  defaultValue,
+  onSave,
+}: {
+  serviceId: string;
+  defaultValue?: string | null;
+  onSave: (val: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(defaultValue ?? "");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setValue(defaultValue ?? "");
+  }, [defaultValue]);
+
+  // Attempt to query backend for repo directories (gracefully returns null if endpoint isn't present)
+  const { data: serverDirs } = useQuery({
+    queryKey: ["service", serviceId, "directories"],
+    queryFn: async () => {
+      try {
+        const res = await api<string[] | { directories: string[] }>(`/services/${serviceId}/directories`);
+        return Array.isArray(res) ? res : res?.directories ?? [];
+      } catch {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  const defaultDirs = [
+    "/",
+    "/backend",
+    "/frontend",
+    "/api",
+    "/server",
+    "/client",
+    "/web",
+    "/app",
+    "/packages",
+    "/services",
+    "/src",
+  ];
+
+  const allDirs = Array.from(
+    new Set([
+      "/",
+      ...(serverDirs && serverDirs.length > 0 ? serverDirs : defaultDirs),
+      ...(defaultValue ? [defaultValue.startsWith("/") ? defaultValue : `/${defaultValue}`] : []),
+    ])
+  );
+
+  const query = value.trim().toLowerCase();
+  const filtered = allDirs.filter((d) =>
+    query === "" || query === "/" ? true : d.toLowerCase().includes(query)
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        commit();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open, value]);
+
+  const commit = (valToCommit?: string) => {
+    const raw = (valToCommit !== undefined ? valToCommit : value).trim();
+    const formatted = raw ? (raw === "/" ? "/" : raw.startsWith("/") ? raw : `/${raw}`) : null;
+    if (formatted !== (defaultValue ?? null)) {
+      onSave(formatted);
+    }
+  };
+
+  const handleSelect = (dir: string) => {
+    setValue(dir);
+    setOpen(false);
+    commit(dir);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Input
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          if (!open) setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            setOpen(false);
+            commit();
+          } else if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+        placeholder="/"
+        className="h-7 w-56 font-mono text-xs"
+      />
+      {open ? (
+        <div className="absolute right-0 top-full z-50 mt-1 max-h-52 w-64 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg backdrop-blur">
+          <div className="px-2 py-1 text-[10px] font-medium text-muted-foreground">
+            {serverDirs && serverDirs.length > 0 ? "Repository folders" : "Select folder"}
+          </div>
+          {filtered.length === 0 ? (
+            <div
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 font-mono text-xs hover:bg-accent"
+              onClick={() => handleSelect(value.startsWith("/") ? value : `/${value}`)}
+            >
+              <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">Use &quot;{value.startsWith("/") ? value : `/${value}`}&quot;</span>
+            </div>
+          ) : (
+            filtered.map((d) => {
+              const isSelected = value === d || (value === "" && d === "/");
+              return (
+                <div
+                  key={d}
+                  onClick={() => handleSelect(d)}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 font-mono text-xs transition-colors hover:bg-accent hover:text-accent-foreground",
+                    isSelected && "bg-accent/50 font-medium"
+                  )}
+                >
+                  <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{d}</span>
+                  {d === "/" ? (
+                    <span className="shrink-0 text-[10px] font-sans text-muted-foreground">root</span>
+                  ) : null}
+                  {isSelected ? <Check className="h-3 w-3 shrink-0 text-primary" /> : null}
+                </div>
+              );
+            })
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ServiceSettings({ service, onDeleted }: { service: Service; onDeleted?: () => void }) {
   const qc = useQueryClient();
   const envId = useEnvId();
@@ -658,7 +805,7 @@ export function ServiceSettings({ service, onDeleted }: { service: Service; onDe
       {row("Source", <span className="font-mono text-xs text-muted-foreground">{service.source}</span>)}
       {row("Region", <span className="font-mono text-xs">{service.region}</span>)}
       {row("Replicas", <span className="font-mono text-xs">{detail?.replicas ?? service.replicas}×</span>, "Traffic is balanced across replicas.")}
-      {service.kind !== "database" ? row("Root directory", <Input defaultValue={detail?.rootDirectory ?? ""} onBlur={(e) => e.target.value !== (detail?.rootDirectory ?? "") && save({ rootDirectory: e.target.value || null })} placeholder="/" className="h-7 w-56 font-mono text-xs" />, "Folder in the repo to build from.") : null}
+      {service.kind !== "database" ? row("Root directory", <RootDirectoryInput serviceId={service.id} defaultValue={detail?.rootDirectory} onSave={(rootDirectory) => save({ rootDirectory })} />, "Folder in the repo to build from.") : null}
       {service.kind !== "database" ? row("Public path", <Input defaultValue={detail?.basePath ?? ""} onBlur={(e) => { const v = e.target.value.trim(); const n = v ? (v.startsWith("/") ? v : `/${v}`) : ""; if (n !== (detail?.basePath ?? "")) save({ basePath: n || null }); }} placeholder="/" className="h-7 w-56 font-mono text-xs" />, "Serve this service under a path, e.g. /api.") : null}
       {service.kind !== "database" ? row("Runtime version", <Input defaultValue={detail?.runtimeVersion ?? ""} onBlur={(e) => { const v = e.target.value.trim(); if (v !== (detail?.runtimeVersion ?? "")) save({ runtimeVersion: v || null }); }} placeholder="auto-detect" className="h-7 w-56 font-mono text-xs" />, "Optional override, e.g. 20.x. Project requirements are still validated.") : null}
       {row("Start command", <Input defaultValue={detail?.startCommand ?? ""} onBlur={(e) => e.target.value !== (detail?.startCommand ?? "") && save({ startCommand: e.target.value || null })} placeholder="from image" className="h-7 w-56 font-mono text-xs" />)}
