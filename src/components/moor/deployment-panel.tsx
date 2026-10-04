@@ -218,7 +218,7 @@ function DetailsTab({ d, service }: { d: DeploymentDetail; service: Service }) {
 }
 
 /** AI crash analysis — compact 2-line strip anchored to the tab bar. Expands on demand. */
-export function DiagnosisCard({ deploymentId, serviceName, errorSummary }: { deploymentId: string; serviceName: string; errorSummary?: string | null }) {
+export function DiagnosisCard({ deploymentId, serviceName, errorSummary }: { deploymentId: string; serviceName: string; errorSummary?: string | null | undefined }) {
   const qc = useQueryClient();
   const key = ["diagnosis", deploymentId];
   const [hidden, setHidden] = useState(false);
