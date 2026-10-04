@@ -121,7 +121,7 @@ function DetailsTab({ d, service }: { d: DeploymentDetail; service: Service }) {
     ["Trigger", d.commit ? "GitHub push" : d.image ? "Image" : (d.trigger ?? "Manual")],
     ["Branch", d.source?.branch ?? "—"],
     ["Commit", (d.commit?.sha ?? "—").slice(0, 7)],
-    ["Region", (config as Record<string, unknown> | null)?.region ? String((config as Record<string, unknown>).region) : "—"],
+    ["Region", (config as Record<string, unknown> | null)?.["region"] ? String((config as Record<string, unknown>)["region"]) : "—"],
   ];
   return (
     <div className="space-y-5 p-4">
