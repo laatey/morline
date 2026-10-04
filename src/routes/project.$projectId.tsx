@@ -1,14 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Plus } from "fluid-icons/react";
+import { Plus, ChevronRight } from "fluid-icons/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { WorkspaceShell } from "@/components/moor/workspace-shell";
-import { Canvas, useCanvasState, ServiceNode } from "@/components/moor/canvas";
+import { Canvas, useCanvasState } from "@/components/moor/canvas";
 import { Inspector } from "@/components/moor/inspector";
 import { NewServiceDialog } from "@/components/moor/new-service";
 import { AiAssistant } from "@/components/moor/ai-assistant";
-import { StatusDot } from "@/components/moor/primitives";
+import { Logo, StatusDot } from "@/components/moor/primitives";
 import { cn } from "@/lib/utils";
 import { api, type ApiError } from "@/lib/api";
 import { selectProject, useProject } from "@/lib/workspace";
@@ -182,19 +182,7 @@ function CanvasPage() {
           ) : (
             <div className="space-y-2 p-4">
               {state.services.map((svc) => (
-                <div key={svc.id} className="relative w-full" style={{ height: 88 + (svc.domain || svc.volume ? 20 : 0) }}>
-                  <div className="absolute inset-0">
-                    <ServiceNode
-                      s={svc}
-                      selected={selected === svc.id}
-                      dimmed={false}
-                      onPointerDown={() => {}}
-                      onPointerUp={() => setSelected(svc.id)}
-                      onKeyDown={(e) => e.key === "Enter" && setSelected(svc.id)}
-                      onLinkStart={() => {}}
-                    />
-                  </div>
-                </div>
+                <MobileServiceCard key={svc.id} service={svc} onSelect={() => setSelected(svc.id)} />
               ))}
             </div>
           )}
@@ -214,3 +202,44 @@ function CanvasPage() {
   );
 }
 
+function MobileServiceCard({ service, onSelect }: { service: Service; onSelect: () => void }) {
+  const ago = (iso?: string) => {
+    if (!iso) return "";
+    const m = Math.max(0, (Date.now() - Date.parse(iso)) / 60000);
+    return m < 1 ? "just now" : m < 60 ? `${Math.floor(m)}m ago` : m < 1440 ? `${Math.floor(m / 60)}h ago` : `${Math.floor(m / 1440)}d ago`;
+  };
+  return (
+    <button
+      onClick={onSelect}
+      className="group w-full rounded-xl border bg-card p-4 text-left transition-colors hover:bg-accent/30 active:scale-[0.99]"
+    >
+      <div className="flex items-center gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-muted/60">
+          <Logo k={service.logo} className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">{service.name}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
+            <span>{service.source}</span>
+            <span className="text-muted-foreground/40">·</span>
+            <span>{service.replicas}×</span>
+          </p>
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5" />
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        <span className={cn("flex items-center gap-1.5 text-xs font-medium",
+          service.status === "online" ? "text-emerald-400" :
+          service.status === "deploying" ? "text-blue-400" :
+          service.status === "crashed" ? "text-red-400" : "text-muted-foreground"
+        )}>
+          <StatusDot status={service.status} />
+          <span className="capitalize">{service.status}</span>
+        </span>
+        {service.lastDeploy ? (
+          <span className="font-mono text-[10px] text-muted-foreground/60">{ago(service.lastDeploy)}</span>
+        ) : null}
+      </div>
+    </button>
+  );
+}
