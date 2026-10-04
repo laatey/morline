@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Bot, Check, Clock, History, Plus, Send, Stop, Trash, Close, Undo } from "fluid-icons/react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -132,7 +134,33 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
               {active.messages.map((m, i) => (
                 <div key={i} className={cn("flex", m.role === "user" && "justify-end")}>
                   <div className={cn("max-w-[85%] rounded-xl px-3 py-2 text-xs leading-5", m.role === "user" ? "bg-primary text-primary-foreground" : "border bg-background")}>
-                    {m.text}
+                    {m.role === "agent" ? (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        className="prose prose-xs prose-invert max-w-none"
+                        components={{
+                          p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-5">{children}</p>,
+                          h1: ({ children }) => <p className="mb-1 font-semibold">{children}</p>,
+                          h2: ({ children }) => <p className="mb-1 font-semibold">{children}</p>,
+                          h3: ({ children }) => <p className="mb-1 font-medium">{children}</p>,
+                          ul: ({ children }) => <ul className="mb-1.5 ml-3 list-disc space-y-0.5">{children}</ul>,
+                          ol: ({ children }) => <ol className="mb-1.5 ml-3 list-decimal space-y-0.5">{children}</ol>,
+                          li: ({ children }) => <li className="leading-5">{children}</li>,
+                          code: ({ children, className }) => className ? (
+                            <pre className="my-1.5 overflow-x-auto rounded-md bg-muted/60 px-2.5 py-2 font-mono text-[10px] leading-relaxed">
+                              <code>{children}</code>
+                            </pre>
+                          ) : (
+                            <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[10px]">{children}</code>
+                          ),
+                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                          a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:opacity-80">{children}</a>,
+                          hr: () => <hr className="my-2 border-border/50" />,
+                        }}
+                      >
+                        {m.text}
+                      </ReactMarkdown>
+                    ) : m.text}
                     {m.action ? (
                       <button disabled={applied.has(`${active.id}-${i}`)} onClick={() => setApplied((s) => new Set(s).add(`${active.id}-${i}`))} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border bg-card px-2 py-1.5 text-[11px] font-medium hover:bg-accent disabled:text-score">
                         {applied.has(`${active.id}-${i}`) ? <><Check className="h-3 w-3" />Noted</> : m.action}
