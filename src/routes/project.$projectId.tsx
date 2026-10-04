@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Plus } from "fluid-icons/react";
+import { Plus, ChevronRight } from "fluid-icons/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { WorkspaceShell } from "@/components/moor/workspace-shell";
@@ -8,11 +8,11 @@ import { Canvas, useCanvasState } from "@/components/moor/canvas";
 import { Inspector } from "@/components/moor/inspector";
 import { NewServiceDialog } from "@/components/moor/new-service";
 import { AiAssistant } from "@/components/moor/ai-assistant";
-import { StatusDot } from "@/components/moor/primitives";
+import { Logo, StatusDot } from "@/components/moor/primitives";
 import { cn } from "@/lib/utils";
 import { api, type ApiError } from "@/lib/api";
 import { selectProject, useProject } from "@/lib/workspace";
-import type { Kind, LogoKey } from "@/lib/platform-data";
+import type { Kind, LogoKey, Service } from "@/lib/platform-data";
 import { PendingChangesBar } from "@/components/moor/pending-changes";
 
 export const Route = createFileRoute("/project/$projectId")({
@@ -101,60 +101,145 @@ function CanvasPage() {
 
   return (
     <WorkspaceShell title="Canvas" onAssistant={() => setAssistantOpen((open) => !open)}>
-      <Canvas state={state} selected={selected} onSelect={setSelected} />
-      {!state.loading && state.envId && !state.services.length ? (
-        <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center">
-          <div className="pointer-events-auto max-w-xs rounded-xl border bg-card/95 p-5 text-center shadow-sm backdrop-blur">
-            <p className="label-caps">{projectName ?? "Project"} · empty</p>
-            <p className="mt-2 font-display text-lg font-semibold">Drop your first service</p>
-            <p className="mt-1 text-sm text-muted-foreground">Start from a database, a starter or an app template. It deploys as soon as it lands.</p>
-            <Button size="sm" className="mt-4 gap-1.5" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" />Add a service</Button>
-          </div>
-        </div>
-      ) : null}
-      <div className="pointer-events-none absolute left-2 top-2 z-10 flex items-center gap-2 rounded-lg border bg-card/95 px-2.5 py-1 font-mono text-[10px] shadow-sm backdrop-blur sm:left-3 sm:top-3 sm:gap-3 sm:px-3 sm:py-1.5 sm:text-[11px]">
-        <span className="text-foreground">{state.services.length} services</span>
-        <span className="hidden items-center gap-2 sm:flex">
-          {(["online", "deploying", "crashed"] as const).map((k) => counts[k] ? (
-            <span key={k} className="flex items-center gap-1.5 text-muted-foreground"><StatusDot status={k} />{counts[k]} {k}</span>
-          ) : null)}
-        </span>
-      </div>
-      <div
-        className={cn(
-          "absolute top-2 z-10 flex items-center gap-1.5 transition-all sm:top-3 sm:gap-2",
-          service ? "hidden sm:flex" : "right-2 sm:right-3"
-        )}
-        style={service ? { right: 584 } : undefined}
-      >
-        
-        <Button size="sm" className="h-7 gap-1 px-2.5 text-xs sm:h-8 sm:gap-1.5 sm:px-3" onClick={() => setAdding(true)}>
-          <Plus className="h-3.5 w-3.5" />
-          <span>Add</span>
-        </Button>
-      </div>
-      {state.loading ? (
-        <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center" aria-label="Loading services">
-          <div className="h-32 w-[280px] rounded-xl border bg-card p-4 shadow-sm">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 animate-pulse rounded-lg bg-muted" />
-              <div className="h-3.5 w-28 animate-pulse rounded bg-muted" />
+      {/* ── Desktop: full canvas ── */}
+      <div className="hidden h-full sm:block">
+        <Canvas state={state} selected={selected} onSelect={setSelected} />
+        {!state.loading && state.envId && !state.services.length ? (
+          <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center">
+            <div className="pointer-events-auto max-w-xs rounded-xl border bg-card/95 p-5 text-center shadow-sm backdrop-blur">
+              <p className="label-caps">{projectName ?? "Project"} · empty</p>
+              <p className="mt-2 font-display text-lg font-semibold">Drop your first service</p>
+              <p className="mt-1 text-sm text-muted-foreground">Start from a database, a starter or an app template. It deploys as soon as it lands.</p>
+              <Button size="sm" className="mt-4 gap-1.5" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" />Add a service</Button>
             </div>
-            <div className="mt-5 h-3 w-40 animate-pulse rounded bg-muted/70" />
-            <div className="mt-2.5 h-2.5 w-24 animate-pulse rounded bg-muted/50" />
           </div>
+        ) : null}
+        <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-3 rounded-lg border bg-card/95 px-3 py-1.5 font-mono text-[11px] shadow-sm backdrop-blur">
+          <span className="text-foreground">{state.services.length} services</span>
+          <span className="flex items-center gap-2">
+            {(["online", "deploying", "crashed"] as const).map((k) => counts[k] ? (
+              <span key={k} className="flex items-center gap-1.5 text-muted-foreground"><StatusDot status={k} />{counts[k]} {k}</span>
+            ) : null)}
+          </span>
         </div>
-      ) : null}
+        <div
+          className={cn(
+            "absolute top-3 z-10 flex items-center gap-2 transition-all",
+            service ? "hidden" : "right-3"
+          )}
+          style={service ? { right: 584 } : undefined}
+        >
+          <Button size="sm" className="h-8 gap-1.5 px-3" onClick={() => setAdding(true)}>
+            <Plus className="h-3.5 w-3.5" /><span>Add</span>
+          </Button>
+        </div>
+        {state.loading ? (
+          <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center" aria-label="Loading services">
+            <div className="h-32 w-[280px] rounded-xl border bg-card p-4 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 animate-pulse rounded-lg bg-muted" />
+                <div className="h-3.5 w-28 animate-pulse rounded bg-muted" />
+              </div>
+              <div className="mt-5 h-3 w-40 animate-pulse rounded bg-muted/70" />
+              <div className="mt-2.5 h-2.5 w-24 animate-pulse rounded bg-muted/50" />
+            </div>
+          </div>
+        ) : null}
+        {service ? <Inspector service={service} onClose={() => setSelected(null)} /> : null}
+        {assistantOpen && !service ? <AiAssistant initialPrompt={assistantPrompt} onClose={() => { setAssistantOpen(false); setAssistantPrompt(null); }} /> : null}
+      </div>
+
+      {/* ── Mobile: scrollable card list ── */}
+      <div className="flex h-full flex-col sm:hidden">
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
+          <span className="font-mono text-[11px] text-muted-foreground">{state.services.length} services</span>
+          <Button size="sm" className="h-7 gap-1 px-2.5 text-xs" onClick={() => setAdding(true)}>
+            <Plus className="h-3.5 w-3.5" />Add
+          </Button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {state.loading ? (
+            <div className="space-y-2 p-4">
+              {[0, 1].map((i) => (
+                <div key={i} className="rounded-xl border bg-card p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 animate-pulse rounded-xl bg-muted" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3.5 w-32 animate-pulse rounded bg-muted" />
+                      <div className="h-2.5 w-20 animate-pulse rounded bg-muted/60" />
+                    </div>
+                  </div>
+                  <div className="mt-3 h-2.5 w-16 animate-pulse rounded bg-muted/50" />
+                </div>
+              ))}
+            </div>
+          ) : !state.services.length ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
+              <p className="font-display text-base font-semibold">No services yet</p>
+              <p className="text-xs text-muted-foreground">Add a database, starter, or app template to get started.</p>
+              <Button size="sm" className="gap-1.5 mt-1" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" />Add a service</Button>
+            </div>
+          ) : (
+            <div className="space-y-2 p-4">
+              {state.services.map((svc) => (
+                <MobileServiceCard key={svc.id} service={svc} onSelect={() => setSelected(svc.id)} />
+              ))}
+            </div>
+          )}
+        </div>
+        {service ? <Inspector service={service} onClose={() => setSelected(null)} /> : null}
+        {assistantOpen && !service ? <AiAssistant initialPrompt={assistantPrompt} onClose={() => { setAssistantOpen(false); setAssistantPrompt(null); }} /> : null}
+      </div>
+
       <PendingChangesBar />
-      {service ? <Inspector service={service} onClose={() => setSelected(null)} /> : null}
-      {assistantOpen && !service ? <AiAssistant initialPrompt={assistantPrompt} onClose={() => { setAssistantOpen(false); setAssistantPrompt(null); }} /> : null}
       <NewServiceDialog
         open={adding}
         onOpenChange={setAdding}
         onPick={(t) => void addService(t.name, t.logo, t.kind, { templateId: t.id, source: { type: "template", templateId: t.id } }, "first deploy started")}
         onPickRepo={(r) => void addService(r.fullName.split("/")[1] ?? r.fullName, "github", "app", { name: r.fullName.split("/")[1], source: { type: "github", repo: r.fullName, branch: r.defaultBranch, ...(r.url ? { url: r.url } : {}) } }, "configure variables and settings, then deploy")}
       />
-
     </WorkspaceShell>
+  );
+}
+
+function MobileServiceCard({ service, onSelect }: { service: Service; onSelect: () => void }) {
+  const ago = (iso?: string) => {
+    if (!iso) return "";
+    const m = Math.max(0, (Date.now() - Date.parse(iso)) / 60000);
+    return m < 1 ? "just now" : m < 60 ? `${Math.floor(m)}m ago` : m < 1440 ? `${Math.floor(m / 60)}h ago` : `${Math.floor(m / 1440)}d ago`;
+  };
+  return (
+    <button
+      onClick={onSelect}
+      className="group w-full rounded-xl border bg-card p-4 text-left transition-colors hover:bg-accent/30 active:scale-[0.99]"
+    >
+      <div className="flex items-center gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-muted/60">
+          <Logo k={service.logo} className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">{service.name}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
+            <span>{service.source}</span>
+            <span className="text-muted-foreground/40">·</span>
+            <span>{service.replicas}×</span>
+          </p>
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5" />
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        <span className={cn("flex items-center gap-1.5 text-xs font-medium",
+          service.status === "online" ? "text-emerald-400" :
+          service.status === "deploying" ? "text-blue-400" :
+          service.status === "crashed" ? "text-red-400" : "text-muted-foreground"
+        )}>
+          <StatusDot status={service.status} />
+          <span className="capitalize">{service.status}</span>
+        </span>
+        {service.lastDeploy ? (
+          <span className="font-mono text-[10px] text-muted-foreground/60">{ago(service.lastDeploy)}</span>
+        ) : null}
+      </div>
+    </button>
   );
 }
