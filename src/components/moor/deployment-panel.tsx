@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, ChevronDown, ChevronRight, ChevronUp, CircleAlert, GitBranch, GitPullRequest, Loader2, MessageSquare, MoreHorizontal, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, CircleAlert, GitBranch, GitPullRequest, Loader2, MessageSquare, MoreHorizontal, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -100,7 +100,7 @@ export function DeploymentPanel({ service, deployment, onBack, onClose }: { serv
             </button>
           ))}
         </div>
-        {st === "failed" ? <DiagnosisCard deploymentId={d.id} serviceName={service.name} errorSummary={d.errorSummary} /> : null}
+        {st === "failed" ? <DiagnosisCard deploymentId={d.id} serviceName={service.name} errorSummary={d.errorSummary} onOpenLogs={() => setTab("Build Logs")} /> : null}
       </div>
       <div className="scroll-area min-h-0 flex-1 overflow-y-auto">
         {tab === "Details" && <DetailsTab d={d} service={service} />}
@@ -217,12 +217,11 @@ function DetailsTab({ d, service }: { d: DeploymentDetail; service: Service }) {
   );
 }
 
-/** AI crash analysis — compact 2-line strip anchored to the tab bar. Expands on demand. */
-export function DiagnosisCard({ deploymentId, serviceName, errorSummary }: { deploymentId: string; serviceName: string; errorSummary?: string | null | undefined }) {
+/** AI crash analysis — strip anchored to the tab bar. Title links to Build Logs. */
+export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenLogs }: { deploymentId: string; serviceName: string; errorSummary?: string | null | undefined; onOpenLogs?: () => void }) {
   const qc = useQueryClient();
   const key = ["diagnosis", deploymentId];
   const [hidden, setHidden] = useState(false);
-  const [collapsed, setCollapsed] = useState(true);
   const q = useQuery({
     queryKey: key,
     queryFn: async () => {
@@ -235,7 +234,7 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary }: { dep
   const analyze = useMutation({
     mutationFn: () => api<Diagnosis>(`/deployments/${deploymentId}/diagnosis`, { method: "POST", body: {} }),
     onMutate: () => qc.setQueryData(key, { status: "running" } satisfies Diagnosis),
-    onSuccess: (data) => { qc.setQueryData(key, data ?? { status: "running" }); setCollapsed(false); },
+    onSuccess: (data) => { qc.setQueryData(key, data ?? { status: "running" }); },
     onError: (e) => { qc.setQueryData(key, null); toast.error((e as ApiError).message ?? "Could not analyze this deployment"); },
   });
   const pr = useMutation({
@@ -258,40 +257,48 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary }: { dep
   const title = dx?.status === "completed" ? dx.summary ?? "Here's what went wrong" : "This deployment crashed";
 
   return (
-    <div className="bg-destructive/5">
-      {/* Row 1 — always visible: icon + title + chevron only */}
-      <div className="flex items-center gap-1.5 px-4 py-1.5">
+    <div className="border-t border-destructive/15 bg-destructive/5 px-4 py-3.5">
+      <div className="flex items-start gap-3">
         {busy
-          ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-destructive" />
-          : <CircleAlert className="h-3.5 w-3.5 shrink-0 text-destructive" />}
-        <span className="flex-1 truncate text-xs font-medium leading-none">{title}</span>
-        <button
-          className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-          onClick={() => setCollapsed((c) => !c)}
-          aria-label={collapsed ? "Expand" : "Collapse"}
-        >
-          {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-        </button>
-      </div>
-      {/* Row 2 — error summary, always visible */}
-      {!dx && errorSummary ? (
-        <p className="truncate px-4 pb-1.5 pl-9 font-mono text-[10px] leading-none text-destructive/80">{errorSummary}</p>
-      ) : null}
-      {/* Expanded panel */}
-      {!collapsed ? (
-        <div className="border-t px-4 py-2.5 space-y-2.5">
-          {/* Analysis results */}
+          ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-destructive" />
+          : <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />}
+        <div className="min-w-0 flex-1">
+          {/* Title — clickable, navigates to Build Logs */}
+          <button
+            type="button"
+            className="group flex flex-wrap items-baseline gap-2 text-left focus:outline-none"
+            onClick={onOpenLogs}
+            title="Click to view build logs"
+          >
+            <span className="text-[14px] font-semibold text-foreground underline-offset-2 group-hover:underline">
+              {title}
+            </span>
+            <span className="text-xs text-muted-foreground group-hover:text-foreground group-hover:underline">
+              View logs →
+            </span>
+          </button>
+          {/* Error summary */}
+          {!dx && errorSummary ? (
+            <p
+              onClick={onOpenLogs}
+              className="mt-1 cursor-pointer font-mono text-xs text-destructive/90 underline-offset-2 hover:underline"
+              title="Click to view build logs"
+            >
+              {errorSummary}
+            </p>
+          ) : null}
+          {/* Analysis status / results */}
           {dx?.status === "completed" ? (
-            <div className="space-y-1.5 text-xs">
+            <div className="mt-2.5 space-y-1.5 text-xs">
               {dx.rootCause ? <p><span className="text-muted-foreground">Cause · </span>{dx.rootCause}</p> : null}
               {dx.suggestedFix ? <p><span className="text-muted-foreground">Fix · </span>{dx.suggestedFix}</p> : null}
               {dx.fix?.files?.length ? (
-                <details className="rounded-md border bg-card">
-                  <summary className="cursor-pointer px-2 py-1.5 font-mono text-[11px] text-muted-foreground">{dx.fix.files.length} file{dx.fix.files.length > 1 ? "s" : ""} changed</summary>
+                <details className="mt-2 rounded-md border bg-card">
+                  <summary className="cursor-pointer px-2.5 py-1.5 font-mono text-xs text-muted-foreground">{dx.fix.files.length} file{dx.fix.files.length > 1 ? "s" : ""} changed</summary>
                   {dx.fix.files.map((f) => (
                     <div key={f.path} className="border-t">
-                      <p className="px-2 py-1 font-mono text-[11px]">{f.path}</p>
-                      <pre className="max-h-48 overflow-auto px-2 pb-2 font-mono text-[10px] leading-relaxed">
+                      <p className="px-2.5 py-1 font-mono text-xs">{f.path}</p>
+                      <pre className="max-h-48 overflow-auto px-2.5 pb-2 font-mono text-[11px] leading-relaxed">
                         {f.diff.split("\n").map((l, i) => <span key={i} className={cn("block", l.startsWith("+") && "text-score", l.startsWith("-") && "text-destructive")}>{l}</span>)}
                       </pre>
                     </div>
@@ -300,36 +307,36 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary }: { dep
               ) : null}
             </div>
           ) : dx?.status === "failed" ? (
-            <p className="text-xs text-muted-foreground">The analysis couldn't finish. Try again.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Analysis couldn't finish. Try again.</p>
           ) : busy ? (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Reading build and deploy logs…</p>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Analyzing…</p>
           ) : null}
-          {/* Action buttons — always shown when expanded */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Action buttons — always visible */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             {!dx || dx.status === "failed" ? (
-              <Button size="sm" className="h-7 text-xs" onClick={() => analyze.mutate()} disabled={analyze.isPending}>
+              <Button size="sm" className="h-8 px-3.5 text-xs font-medium" onClick={() => analyze.mutate()} disabled={analyze.isPending}>
                 Analyze with AI
               </Button>
             ) : null}
             {dx?.status === "completed" && dx.canAutoFix && !dx.pullRequest ? (
-              <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={() => pr.mutate()} disabled={pr.isPending}>
-                {pr.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <GitPullRequest className="h-3 w-3" />}Create PR
+              <Button size="sm" className="h-8 gap-1.5 px-3.5 text-xs font-medium" onClick={() => pr.mutate()} disabled={pr.isPending}>
+                {pr.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="h-3.5 w-3.5" />}Create PR
               </Button>
             ) : null}
             {dx?.pullRequest ? (
-              <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" asChild>
-                <a href={dx.pullRequest.url} target="_blank" rel="noreferrer"><GitPullRequest className="h-3 w-3" />View PR{dx.pullRequest.number ? ` #${dx.pullRequest.number}` : ""}</a>
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 px-3.5 text-xs font-medium" asChild>
+                <a href={dx.pullRequest.url} target="_blank" rel="noreferrer"><GitPullRequest className="h-3.5 w-3.5" />View PR{dx.pullRequest.number ? ` #${dx.pullRequest.number}` : ""}</a>
               </Button>
             ) : null}
-            <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs text-muted-foreground" onClick={() => openAssistantWith(chatPrompt)}>
-              <MessageSquare className="h-3 w-3" />Open in chat
+            <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground" onClick={() => openAssistantWith(chatPrompt)}>
+              <MessageSquare className="h-3.5 w-3.5" />Open in chat
             </Button>
             {dx?.status === "completed" ? (
-              <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={dismiss}>Ignore</Button>
+              <Button size="sm" variant="ghost" className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground" onClick={dismiss}>Ignore</Button>
             ) : null}
           </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

@@ -125,7 +125,7 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
             serviceId={service.id}
             compact
             onOpen={setOpenDeploy}
-            header={latest && deployState(latest.state) === "failed" ? <DiagnosisCard key={latest.id} deploymentId={latest.id} serviceName={service.name} errorSummary={latest.errorSummary ?? undefined} /> : null}
+            header={latest && deployState(latest.state) === "failed" ? <DiagnosisCard key={latest.id} deploymentId={latest.id} serviceName={service.name} errorSummary={latest.errorSummary ?? undefined} onOpenLogs={() => setOpenDeploy(latest)} /> : null}
           />
         )}
         {tab === "Variables" && <VariablesTable key={service.id} serviceId={service.id} />}
