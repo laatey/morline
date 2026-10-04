@@ -215,25 +215,6 @@ function DetailsTab({ d, service }: { d: DeploymentDetail; service: Service }) {
   );
 }
 
-function renderFixText(text: string) {
-  const items = text.split(/(?=\b\d+\.\s+)/).map((s) => s.trim()).filter(Boolean);
-  if (items.length > 1) {
-    return (
-      <ol className="list-decimal space-y-1.5 pl-4">
-        {items.map((item, idx) => {
-          const content = item.replace(/^\d+\.\s*/, "").trim();
-          return (
-            <li key={idx} className="leading-relaxed">
-              {content}
-            </li>
-          );
-        })}
-      </ol>
-    );
-  }
-  return <p className="leading-relaxed">{text}</p>;
-}
-
 /** AI crash analysis — strip anchored to the tab bar. Title links to Build Logs. */
 export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenLogs }: { deploymentId: string; serviceName: string; errorSummary?: string | null | undefined; onOpenLogs?: () => void }) {
   const qc = useQueryClient();
@@ -331,39 +312,19 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
         </p>
       ) : null}
 
-      {/* Analysis status / results — Cutout box */}
+      {/* Analysis status / results — Cutout */}
       {dx?.status === "completed" ? (
-        <div className="mt-3 rounded-lg border border-border/70 bg-card/80 p-3.5 text-xs shadow-sm">
-          {dx.rootCause ? (
-            <div className="space-y-1">
-              <span className="font-semibold text-destructive">Cause</span>
-              <p className="leading-relaxed text-foreground/90">{dx.rootCause}</p>
-            </div>
-          ) : null}
-
-          {dx.suggestedFix ? (
-            <div className={cn("space-y-1.5", dx.rootCause && "mt-3 border-t border-border/50 pt-3")}>
-              <span className="font-semibold text-score">Suggested Fix</span>
-              <div className="leading-relaxed text-foreground/90">
-                {renderFixText(dx.suggestedFix)}
-              </div>
-            </div>
-          ) : null}
-
+        <div className="mt-2 rounded-md border bg-card/60 p-2.5 text-xs space-y-1.5">
+          {dx.rootCause ? <p><span className="text-muted-foreground">Cause · </span>{dx.rootCause}</p> : null}
+          {dx.suggestedFix ? <p><span className="text-muted-foreground">Fix · </span>{dx.suggestedFix}</p> : null}
           {dx.fix?.files?.length ? (
-            <details className="mt-3 rounded-md border bg-background/50">
-              <summary className="cursor-pointer px-2.5 py-1.5 font-mono text-xs text-muted-foreground hover:text-foreground">
-                {dx.fix.files.length} file{dx.fix.files.length > 1 ? "s" : ""} changed
-              </summary>
+            <details className="mt-2 rounded-md border bg-card">
+              <summary className="cursor-pointer px-2 py-1.5 font-mono text-[11px] text-muted-foreground">{dx.fix.files.length} file{dx.fix.files.length > 1 ? "s" : ""} changed</summary>
               {dx.fix.files.map((f) => (
                 <div key={f.path} className="border-t">
-                  <p className="px-2.5 py-1 font-mono text-xs">{f.path}</p>
-                  <pre className="max-h-48 overflow-auto px-2.5 pb-2 font-mono text-[11px] leading-relaxed">
-                    {f.diff.split("\n").map((l, i) => (
-                      <span key={i} className={cn("block", l.startsWith("+") && "text-score", l.startsWith("-") && "text-destructive")}>
-                        {l}
-                      </span>
-                    ))}
+                  <p className="px-2 py-1 font-mono text-[11px]">{f.path}</p>
+                  <pre className="max-h-48 overflow-auto px-2 pb-2 font-mono text-[10px] leading-relaxed">
+                    {f.diff.split("\n").map((l, i) => <span key={i} className={cn("block", l.startsWith("+") && "text-score", l.startsWith("-") && "text-destructive")}>{l}</span>)}
                   </pre>
                 </div>
               ))}
@@ -371,9 +332,9 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
           ) : null}
         </div>
       ) : dx?.status === "failed" ? (
-        <p className="mt-1.5 pl-[26px] text-xs text-muted-foreground">Analysis couldn't finish. Try again.</p>
+        <p className="mt-1 pl-[26px] text-xs text-muted-foreground">Analysis couldn't finish. Try again.</p>
       ) : busy ? (
-        <p className="mt-1.5 pl-[26px] flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Analyzing…</p>
+        <p className="mt-1 pl-[26px] flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Analyzing…</p>
       ) : null}
     </div>
   );
