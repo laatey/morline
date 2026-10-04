@@ -82,6 +82,12 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
             </div>
           )
         ) : null}
+        {idle && stopStep === "idle" ? (
+          <Button size="sm" className="h-7 gap-1 px-2 text-xs sm:px-2.5" disabled={deploying} onClick={redeploy}>
+            {deploying ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3" />}
+            <span className="hidden sm:inline">{deploying ? "Deploying…" : "Deploy"}</span>
+          </Button>
+        ) : null}
         {!idle && stopStep === "idle" ? <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs sm:px-2.5" disabled={deploying} onClick={redeploy}>{deploying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}<span className="hidden sm:inline">Redeploy</span></Button> : null}
         {service.domain ? (
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" asChild>
@@ -90,18 +96,6 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
         ) : null}
         <button aria-label="Close panel" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground sm:p-1.5"><X className="h-4 w-4" /></button>
       </div>
-      {idle ? (
-        <div className="mx-3.5 mb-3 flex items-center gap-3 rounded-lg border border-primary/50 bg-primary/5 p-3 ring-4 ring-primary/5 sm:mx-4">
-          <Rocket className="h-4 w-4 shrink-0 text-primary" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium leading-tight">Ready to deploy</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Nothing is running yet. Check variables and settings, then deploy.</p>
-          </div>
-          <Button size="sm" className="h-8 gap-1.5 px-3 text-xs" disabled={deploying} onClick={redeploy}>
-            {deploying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}{deploying ? "Starting…" : "Deploy"}
-          </Button>
-        </div>
-      ) : null}
       <div role="tablist" className="no-scrollbar flex gap-4 overflow-x-auto border-b px-4">
         {tabs.map((t) => (
           <button
