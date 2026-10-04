@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, ChevronRight, CircleAlert, GitBranch, GitPullRequest, Loader2, MessageSquare, MoreHorizontal, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, CircleAlert, GitBranch, GitPullRequest, Loader2, MessageSquare, MoreHorizontal, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -79,6 +79,11 @@ export function DeploymentPanel({ service, deployment, onBack, onClose }: { serv
           <span className="text-muted-foreground">/</span>
           <span className="font-mono text-xs">{(d.commit?.sha ?? d.id).replace(/^dep_/, "").slice(0, 8)}</span>
           <DeployBadge state={st} />
+          {d.url && st === "active" ? (
+            <a href={d.url} target="_blank" rel="noreferrer" className="shrink-0 rounded-md border px-2 py-0.5 text-xs hover:bg-accent text-foreground">
+              Open ↗
+            </a>
+          ) : null}
         </div>
         <span className="hidden font-mono text-[10px] text-muted-foreground sm:inline">{stamp(d.createdAt)}</span>
         <DropdownMenu>
@@ -87,6 +92,11 @@ export function DeploymentPanel({ service, deployment, onBack, onClose }: { serv
             <DropdownMenuItem onClick={() => act("redeploy")}><RotateCcw className="mr-2 h-3.5 w-3.5" />Redeploy</DropdownMenuItem>
             {d.rollbackable && st !== "active" && !running ? <DropdownMenuItem onClick={() => act("rollback")}>Roll back to this</DropdownMenuItem> : null}
             {running ? <DropdownMenuItem className="text-destructive" onClick={() => act("cancel")}>Cancel</DropdownMenuItem> : null}
+            {d.url ? (
+              <DropdownMenuItem asChild>
+                <a href={d.url} target="_blank" rel="noreferrer">Open URL</a>
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
         <button aria-label="Close panel" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><X className="h-4 w-4" /></button>
@@ -112,11 +122,9 @@ export function DeploymentPanel({ service, deployment, onBack, onClose }: { serv
 }
 
 function DetailsTab({ d, service }: { d: DeploymentDetail; service: Service }) {
-  const st = deployState(d.state);
   const [varsOpen, setVarsOpen] = useState(false);
   const [view, setView] = useState<"pretty" | "code">("pretty");
   const config = d.config ?? null;
-  const tone = st === "failed" ? "text-destructive" : st === "building" || st === "queued" ? "text-score-mid" : st === "removed" ? "text-muted-foreground" : "text-score";
   const facts: [string, string][] = [
     ["Started", stamp(d.createdAt)],
     ["Duration", duration(d) || "—"],
@@ -128,16 +136,6 @@ function DetailsTab({ d, service }: { d: DeploymentDetail; service: Service }) {
   return (
     <div className="space-y-5 p-4">
       <div className="overflow-hidden rounded-lg border">
-        <div className="flex items-center gap-2.5 border-b bg-surface px-3.5 py-3">
-          {st === "active" || st === "removed" ? <Check className={cn("h-4 w-4", tone)} /> : st === "failed" ? <CircleAlert className="h-4 w-4 text-destructive" /> : <Loader2 className="h-4 w-4 animate-spin text-score-mid" />}
-          <div className="min-w-0 flex-1">
-            <p className={cn("text-sm font-medium", tone)}>
-              {st === "failed" ? "Deployment failed" : st === "building" ? "Deploying…" : st === "queued" ? "Queued" : st === "removed" ? "Superseded by a newer deployment" : "Live and serving traffic"}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">{deployTitle(d)}</p>
-          </div>
-          {d.url && st === "active" ? <a href={d.url} target="_blank" rel="noreferrer" className="shrink-0 rounded-md border px-2 py-1 text-xs hover:bg-accent">Open</a> : null}
-        </div>
         <dl className="grid grid-cols-2 divide-x divide-y sm:grid-cols-3 [&>div]:border-border">
           {facts.map(([k, v]) => (
             <div key={k} className="px-3.5 py-2.5">
