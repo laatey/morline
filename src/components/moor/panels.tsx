@@ -633,7 +633,7 @@ function RootDirectoryInput({
   onSave,
 }: {
   serviceId: string;
-  defaultValue?: string | null;
+  defaultValue?: string | null | undefined;
   onSave: (val: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
