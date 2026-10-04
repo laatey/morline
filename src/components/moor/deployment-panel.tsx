@@ -259,20 +259,12 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary }: { dep
 
   return (
     <div className="bg-destructive/5">
-      {/* Row 1 — always visible */}
+      {/* Row 1 — always visible: icon + title + chevron only */}
       <div className="flex items-center gap-1.5 px-4 py-1.5">
         {busy
           ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-destructive" />
           : <CircleAlert className="h-3.5 w-3.5 shrink-0 text-destructive" />}
         <span className="flex-1 truncate text-xs font-medium leading-none">{title}</span>
-        {!dx || dx.status === "failed" ? (
-          <Button size="sm" className="h-6 shrink-0 px-2 text-[11px]" onClick={() => analyze.mutate()} disabled={analyze.isPending}>
-            Analyze with AI
-          </Button>
-        ) : null}
-        <Button size="sm" variant="ghost" className="h-6 w-6 shrink-0 p-0 text-muted-foreground hover:text-foreground" onClick={() => openAssistantWith(chatPrompt)} aria-label="Open in chat">
-          <MessageSquare className="h-3 w-3" />
-        </Button>
         <button
           className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
           onClick={() => setCollapsed((c) => !c)}
@@ -285,38 +277,43 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary }: { dep
       {!dx && errorSummary ? (
         <p className="truncate px-4 pb-1.5 pl-9 font-mono text-[10px] leading-none text-destructive/80">{errorSummary}</p>
       ) : null}
-      {/* Expanded detail */}
+      {/* Expanded panel */}
       {!collapsed ? (
-        <div className="border-t px-4 py-2.5">
-          <div className="space-y-2 text-xs">
-            {dx?.status === "completed" ? (
-              <>
-                {dx.rootCause ? <p><span className="text-muted-foreground">Cause · </span>{dx.rootCause}</p> : null}
-                {dx.suggestedFix ? <p><span className="text-muted-foreground">Fix · </span>{dx.suggestedFix}</p> : null}
-                {dx.fix?.files?.length ? (
-                  <details className="rounded-md border bg-card">
-                    <summary className="cursor-pointer px-2 py-1.5 font-mono text-[11px] text-muted-foreground">{dx.fix.files.length} file{dx.fix.files.length > 1 ? "s" : ""} changed</summary>
-                    {dx.fix.files.map((f) => (
-                      <div key={f.path} className="border-t">
-                        <p className="px-2 py-1 font-mono text-[11px]">{f.path}</p>
-                        <pre className="max-h-48 overflow-auto px-2 pb-2 font-mono text-[10px] leading-relaxed">
-                          {f.diff.split("\n").map((l, i) => <span key={i} className={cn("block", l.startsWith("+") && "text-score", l.startsWith("-") && "text-destructive")}>{l}</span>)}
-                        </pre>
-                      </div>
-                    ))}
-                  </details>
-                ) : null}
-              </>
-            ) : dx?.status === "failed" ? (
-              <p className="text-muted-foreground">The analysis couldn't finish. Try again.</p>
-            ) : busy ? (
-              <p className="flex items-center gap-1.5 text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Reading build and deploy logs…</p>
+        <div className="border-t px-4 py-2.5 space-y-2.5">
+          {/* Analysis results */}
+          {dx?.status === "completed" ? (
+            <div className="space-y-1.5 text-xs">
+              {dx.rootCause ? <p><span className="text-muted-foreground">Cause · </span>{dx.rootCause}</p> : null}
+              {dx.suggestedFix ? <p><span className="text-muted-foreground">Fix · </span>{dx.suggestedFix}</p> : null}
+              {dx.fix?.files?.length ? (
+                <details className="rounded-md border bg-card">
+                  <summary className="cursor-pointer px-2 py-1.5 font-mono text-[11px] text-muted-foreground">{dx.fix.files.length} file{dx.fix.files.length > 1 ? "s" : ""} changed</summary>
+                  {dx.fix.files.map((f) => (
+                    <div key={f.path} className="border-t">
+                      <p className="px-2 py-1 font-mono text-[11px]">{f.path}</p>
+                      <pre className="max-h-48 overflow-auto px-2 pb-2 font-mono text-[10px] leading-relaxed">
+                        {f.diff.split("\n").map((l, i) => <span key={i} className={cn("block", l.startsWith("+") && "text-score", l.startsWith("-") && "text-destructive")}>{l}</span>)}
+                      </pre>
+                    </div>
+                  ))}
+                </details>
+              ) : null}
+            </div>
+          ) : dx?.status === "failed" ? (
+            <p className="text-xs text-muted-foreground">The analysis couldn't finish. Try again.</p>
+          ) : busy ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Reading build and deploy logs…</p>
+          ) : null}
+          {/* Action buttons — always shown when expanded */}
+          <div className="flex flex-wrap items-center gap-2">
+            {!dx || dx.status === "failed" ? (
+              <Button size="sm" className="h-7 text-xs" onClick={() => analyze.mutate()} disabled={analyze.isPending}>
+                Analyze with AI
+              </Button>
             ) : null}
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {dx?.status === "completed" && dx.canAutoFix && !dx.pullRequest ? (
               <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={() => pr.mutate()} disabled={pr.isPending}>
-                {pr.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <GitPullRequest className="h-3 w-3" />}Create pull request
+                {pr.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <GitPullRequest className="h-3 w-3" />}Create PR
               </Button>
             ) : null}
             {dx?.pullRequest ? (
@@ -324,7 +321,12 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary }: { dep
                 <a href={dx.pullRequest.url} target="_blank" rel="noreferrer"><GitPullRequest className="h-3 w-3" />View PR{dx.pullRequest.number ? ` #${dx.pullRequest.number}` : ""}</a>
               </Button>
             ) : null}
-            {dx?.status === "completed" ? <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={dismiss}>Ignore</Button> : null}
+            <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs text-muted-foreground" onClick={() => openAssistantWith(chatPrompt)}>
+              <MessageSquare className="h-3 w-3" />Open in chat
+            </Button>
+            {dx?.status === "completed" ? (
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={dismiss}>Ignore</Button>
+            ) : null}
           </div>
         </div>
       ) : null}
