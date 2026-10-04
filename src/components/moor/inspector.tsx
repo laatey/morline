@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExternalLink, Loader2, Rocket, RotateCcw, Square, X } from "lucide-react";
+import { ExternalLink, Loader2, Power, Rocket, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Service } from "@/lib/platform-data";
@@ -72,12 +72,12 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
         </div>
         {canStop ? (
           stopStep === "idle" ? (
-            <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-destructive" onClick={() => setStopStep("confirm")}><Square className="h-3 w-3" /><span className="hidden sm:inline">Stop</span></Button>
+            <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setStopStep("confirm")}><Power className="h-3 w-3" /><span className="hidden sm:inline">Stop</span></Button>
           ) : (
             <div className="flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/5 p-0.5">
               <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={stopStep === "busy"} onClick={() => setStopStep("idle")}>Keep</Button>
               <Button size="sm" variant="destructive" className="h-6 gap-1 px-2 text-xs" disabled={stopStep === "busy"} onClick={() => void stop()}>
-                {stopStep === "busy" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Square className="h-3 w-3" />}Stop service
+                {stopStep === "busy" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Power className="h-3 w-3" />}Stop service
               </Button>
             </div>
           )
