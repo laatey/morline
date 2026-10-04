@@ -257,18 +257,17 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
   const title = dx?.status === "completed" ? dx.summary ?? "Here's what went wrong" : "This deployment crashed";
 
   return (
-    <div className="border-t border-destructive/15 bg-destructive/5 px-4 py-3.5">
-      <div className="flex items-start gap-3">
-        {busy
-          ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-destructive" />
-          : <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />}
-        <div className="min-w-0 flex-1">
-          {/* Title — clickable, navigates to Build Logs */}
+    <div className="border-t border-destructive/15 bg-destructive/5 px-4 py-3">
+      {/* Top row: Title on left, Action buttons on right */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          {busy
+            ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-destructive" />
+            : <CircleAlert className="h-4 w-4 shrink-0 text-destructive" />}
           <button
             type="button"
             className="group flex flex-wrap items-baseline gap-2 text-left focus:outline-none"
             onClick={onOpenLogs}
-            title="Click to view build logs"
           >
             <span className="text-[14px] font-semibold text-foreground underline-offset-2 group-hover:underline">
               {title}
@@ -277,66 +276,68 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
               View logs →
             </span>
           </button>
-          {/* Error summary — single line truncated with ellipsis */}
-          {!dx && errorSummary ? (
-            <p
-              onClick={onOpenLogs}
-              className="mt-1 block truncate cursor-pointer font-mono text-xs text-destructive/90 underline-offset-2 hover:underline"
-              title={errorSummary}
-            >
-              {errorSummary.replace(/\r?\n+/g, " ").trim()}
-            </p>
-          ) : null}
-          {/* Analysis status / results */}
-          {dx?.status === "completed" ? (
-            <div className="mt-2.5 space-y-1.5 text-xs">
-              {dx.rootCause ? <p><span className="text-muted-foreground">Cause · </span>{dx.rootCause}</p> : null}
-              {dx.suggestedFix ? <p><span className="text-muted-foreground">Fix · </span>{dx.suggestedFix}</p> : null}
-              {dx.fix?.files?.length ? (
-                <details className="mt-2 rounded-md border bg-card">
-                  <summary className="cursor-pointer px-2.5 py-1.5 font-mono text-xs text-muted-foreground">{dx.fix.files.length} file{dx.fix.files.length > 1 ? "s" : ""} changed</summary>
-                  {dx.fix.files.map((f) => (
-                    <div key={f.path} className="border-t">
-                      <p className="px-2.5 py-1 font-mono text-xs">{f.path}</p>
-                      <pre className="max-h-48 overflow-auto px-2.5 pb-2 font-mono text-[11px] leading-relaxed">
-                        {f.diff.split("\n").map((l, i) => <span key={i} className={cn("block", l.startsWith("+") && "text-score", l.startsWith("-") && "text-destructive")}>{l}</span>)}
-                      </pre>
-                    </div>
-                  ))}
-                </details>
-              ) : null}
-            </div>
-          ) : dx?.status === "failed" ? (
-            <p className="mt-1 text-xs text-muted-foreground">Analysis couldn't finish. Try again.</p>
-          ) : busy ? (
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Analyzing…</p>
-          ) : null}
-          {/* Action buttons — always visible */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {!dx || dx.status === "failed" ? (
-              <Button size="sm" className="h-8 px-3.5 text-xs font-medium" onClick={() => analyze.mutate()} disabled={analyze.isPending}>
-                Analyze with AI
-              </Button>
-            ) : null}
-            {dx?.status === "completed" && dx.canAutoFix && !dx.pullRequest ? (
-              <Button size="sm" className="h-8 gap-1.5 px-3.5 text-xs font-medium" onClick={() => pr.mutate()} disabled={pr.isPending}>
-                {pr.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="h-3.5 w-3.5" />}Create PR
-              </Button>
-            ) : null}
-            {dx?.pullRequest ? (
-              <Button size="sm" variant="outline" className="h-8 gap-1.5 px-3.5 text-xs font-medium" asChild>
-                <a href={dx.pullRequest.url} target="_blank" rel="noreferrer"><GitPullRequest className="h-3.5 w-3.5" />View PR{dx.pullRequest.number ? ` #${dx.pullRequest.number}` : ""}</a>
-              </Button>
-            ) : null}
-            <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground" onClick={() => openAssistantWith(chatPrompt)}>
-              <MessageSquare className="h-3.5 w-3.5" />Open in chat
+        </div>
+
+        {/* Action buttons — moved to the top */}
+        <div className="flex items-center gap-2 shrink-0">
+          {!dx || dx.status === "failed" ? (
+            <Button size="sm" className="h-8 px-3.5 text-xs font-medium" onClick={() => analyze.mutate()} disabled={analyze.isPending}>
+              Analyze with AI
             </Button>
-            {dx?.status === "completed" ? (
-              <Button size="sm" variant="ghost" className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground" onClick={dismiss}>Ignore</Button>
-            ) : null}
-          </div>
+          ) : null}
+          {dx?.status === "completed" && dx.canAutoFix && !dx.pullRequest ? (
+            <Button size="sm" className="h-8 gap-1.5 px-3.5 text-xs font-medium" onClick={() => pr.mutate()} disabled={pr.isPending}>
+              {pr.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="h-3.5 w-3.5" />}Create PR
+            </Button>
+          ) : null}
+          {dx?.pullRequest ? (
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 px-3.5 text-xs font-medium" asChild>
+              <a href={dx.pullRequest.url} target="_blank" rel="noreferrer"><GitPullRequest className="h-3.5 w-3.5" />View PR{dx.pullRequest.number ? ` #${dx.pullRequest.number}` : ""}</a>
+            </Button>
+          ) : null}
+          <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground" onClick={() => openAssistantWith(chatPrompt)}>
+            <MessageSquare className="h-3.5 w-3.5" />Open in chat
+          </Button>
+          {dx?.status === "completed" ? (
+            <Button size="sm" variant="ghost" className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground" onClick={dismiss}>Ignore</Button>
+          ) : null}
         </div>
       </div>
+
+      {/* Error summary — single line truncated with ellipsis */}
+      {!dx && errorSummary ? (
+        <p
+          onClick={onOpenLogs}
+          className="mt-1 block truncate pl-[26px] cursor-pointer font-mono text-xs text-destructive/90 underline-offset-2 hover:underline"
+        >
+          {errorSummary.replace(/\r?\n+/g, " ").trim()}
+        </p>
+      ) : null}
+
+      {/* Analysis status / results */}
+      {dx?.status === "completed" ? (
+        <div className="mt-2.5 pl-[26px] space-y-1.5 text-xs">
+          {dx.rootCause ? <p><span className="text-muted-foreground">Cause · </span>{dx.rootCause}</p> : null}
+          {dx.suggestedFix ? <p><span className="text-muted-foreground">Fix · </span>{dx.suggestedFix}</p> : null}
+          {dx.fix?.files?.length ? (
+            <details className="mt-2 rounded-md border bg-card">
+              <summary className="cursor-pointer px-2.5 py-1.5 font-mono text-xs text-muted-foreground">{dx.fix.files.length} file{dx.fix.files.length > 1 ? "s" : ""} changed</summary>
+              {dx.fix.files.map((f) => (
+                <div key={f.path} className="border-t">
+                  <p className="px-2.5 py-1 font-mono text-xs">{f.path}</p>
+                  <pre className="max-h-48 overflow-auto px-2.5 pb-2 font-mono text-[11px] leading-relaxed">
+                    {f.diff.split("\n").map((l, i) => <span key={i} className={cn("block", l.startsWith("+") && "text-score", l.startsWith("-") && "text-destructive")}>{l}</span>)}
+                  </pre>
+                </div>
+              ))}
+            </details>
+          ) : null}
+        </div>
+      ) : dx?.status === "failed" ? (
+        <p className="mt-1 pl-[26px] text-xs text-muted-foreground">Analysis couldn't finish. Try again.</p>
+      ) : busy ? (
+        <p className="mt-1 pl-[26px] flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Analyzing…</p>
+      ) : null}
     </div>
   );
 }
