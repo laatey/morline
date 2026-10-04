@@ -62,8 +62,8 @@ export function NewServiceDialog({
             <CommandItem value="GitHub repository deploy repo" onSelect={() => setGithub(true)} className="group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs">
               <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-surface"><Logo k="github" className="h-3.5 w-3.5" /></span>
               <span className="font-medium text-foreground">GitHub repository</span>
-              <span className="ml-auto font-mono text-[10px] text-muted-foreground">Deploy from a repo</span>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+              <span className="ml-auto text-[10px] text-muted-foreground/40">Deploy from a repo</span>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30" />
             </CommandItem>
           </CommandGroup>
         ) : null}
@@ -80,7 +80,7 @@ export function NewServiceDialog({
                   <Logo k={t.logo} className="h-3.5 w-3.5" />
                 </span>
                 <span className="font-medium text-foreground">{t.name}</span>
-                <span className="ml-auto font-mono text-[10px] text-muted-foreground">{t.hint}</span>
+                <span className="ml-auto text-[10px] text-muted-foreground/40">{t.hint}</span>
               </CommandItem>
             ))}
           </CommandGroup>
