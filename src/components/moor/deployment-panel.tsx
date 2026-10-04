@@ -277,14 +277,14 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
               View logs →
             </span>
           </button>
-          {/* Error summary */}
+          {/* Error summary — single line truncated with ellipsis */}
           {!dx && errorSummary ? (
             <p
               onClick={onOpenLogs}
-              className="mt-1 cursor-pointer font-mono text-xs text-destructive/90 underline-offset-2 hover:underline"
-              title="Click to view build logs"
+              className="mt-1 block truncate cursor-pointer font-mono text-xs text-destructive/90 underline-offset-2 hover:underline"
+              title={errorSummary}
             >
-              {errorSummary}
+              {errorSummary.replace(/\r?\n+/g, " ").trim()}
             </p>
           ) : null}
           {/* Analysis status / results */}
