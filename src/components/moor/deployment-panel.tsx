@@ -99,6 +99,7 @@ export function DeploymentPanel({ service, deployment, onBack, onClose }: { serv
           </button>
         ))}
       </div>
+      {st === "failed" ? <div className="border-b px-4 py-3"><DiagnosisCard deploymentId={d.id} serviceName={service.name} errorSummary={d.errorSummary} compact /></div> : null}
       <div className="scroll-area min-h-0 flex-1 overflow-y-auto">
         {tab === "Details" && <DetailsTab d={d} service={service} />}
         {tab === "Build Logs" && <div className="h-full"><LogStream key="b" deploymentId={d.id} phase="build" dense /></div>}
@@ -113,27 +114,53 @@ function DetailsTab({ d, service }: { d: DeploymentDetail; service: Service }) {
   const [varsOpen, setVarsOpen] = useState(false);
   const [view, setView] = useState<"pretty" | "code">("pretty");
   const config = d.config ?? null;
+  const tone = st === "failed" ? "text-destructive" : st === "building" || st === "queued" ? "text-score-mid" : st === "removed" ? "text-muted-foreground" : "text-score";
+  const facts: [string, React.ReactNode][] = [
+    ["Started", stamp(d.createdAt)],
+    ["Duration", duration(d) || "—"],
+    ["Trigger", d.commit ? "GitHub push" : d.image ? "Image" : (d.trigger ?? "Manual")],
+    ["Branch", d.source?.branch ?? "—"],
+    ["Commit", (d.commit?.sha ?? "—").slice(0, 7)],
+    ["Region", (config as Record<string, unknown> | null)?.region ? String((config as Record<string, unknown>).region) : "—"],
+  ];
   return (
     <div className="space-y-5 p-4">
-      <div className="flex items-center gap-2 text-sm">
-        {st === "active" || st === "removed" ? <Check className="h-4 w-4 text-score" /> : st === "failed" ? <CircleAlert className="h-4 w-4 text-destructive" /> : <Loader2 className="h-4 w-4 animate-spin text-score-mid" />}
-        <span className={cn(st === "failed" ? "text-destructive" : st === "building" || st === "queued" ? "text-foreground" : "text-score")}>
-          {st === "failed" ? "Deployment failed" : st === "building" ? "Deploying…" : st === "queued" ? "Queued" : st === "removed" ? "Deployment successful · superseded" : "Deployment successful"}
-        </span>
-        <span className="ml-auto font-mono text-[11px] text-muted-foreground">{duration(d)}</span>
+      <div className="overflow-hidden rounded-lg border">
+        <div className="flex items-center gap-2.5 border-b bg-surface px-3.5 py-3">
+          {st === "active" || st === "removed" ? <Check className={cn("h-4 w-4", tone)} /> : st === "failed" ? <CircleAlert className="h-4 w-4 text-destructive" /> : <Loader2 className="h-4 w-4 animate-spin text-score-mid" />}
+          <div className="min-w-0 flex-1">
+            <p className={cn("text-sm font-medium", tone)}>
+              {st === "failed" ? "Deployment failed" : st === "building" ? "Deploying…" : st === "queued" ? "Queued" : st === "removed" ? "Superseded by a newer deployment" : "Live and serving traffic"}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{deployTitle(d)}</p>
+          </div>
+          {d.url && st === "active" ? <a href={d.url} target="_blank" rel="noreferrer" className="shrink-0 rounded-md border px-2 py-1 text-xs hover:bg-accent">Open</a> : null}
+        </div>
+        <dl className="grid grid-cols-2 divide-x divide-y sm:grid-cols-3 [&>div]:border-border">
+          {facts.map(([k, v]) => (
+            <div key={k} className="px-3.5 py-2.5">
+              <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{k}</dt>
+              <dd className="mt-0.5 truncate font-mono text-xs">{v}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
-      {st === "failed" ? <DiagnosisCard deploymentId={d.id} serviceName={service.name} errorSummary={d.errorSummary} /> : null}
-
       {d.phases?.length ? (
-        <ol className="space-y-1 rounded-lg border p-3">
-          {d.phases.map((p) => (
-            <li key={p.name} className="flex items-center gap-2 text-xs">
-              {p.status === "succeeded" ? <Check className="h-3.5 w-3.5 text-score" /> : p.status === "running" ? <Loader2 className="h-3.5 w-3.5 animate-spin text-score-mid" /> : p.status === "failed" ? <X className="h-3.5 w-3.5 text-destructive" /> : <span className="h-3.5 w-3.5 rounded-full border" />}
-              <span className={cn("flex-1 font-mono capitalize", p.status === "skipped" && "text-muted-foreground line-through")}>{p.name}</span>
-            </li>
-          ))}
-        </ol>
+        <section>
+          <p className="mb-2 text-sm font-medium">Build steps</p>
+          <ol className="flex items-center gap-1.5">
+            {d.phases.map((p, i) => (
+              <li key={p.name} className="flex min-w-0 flex-1 items-center gap-1.5">
+                <div className="min-w-0 flex-1">
+                  <div className={cn("h-1 rounded-full", p.status === "succeeded" ? "bg-score" : p.status === "running" ? "animate-pulse bg-score-mid" : p.status === "failed" ? "bg-destructive" : "bg-border")} />
+                  <p className={cn("mt-1.5 truncate font-mono text-[10px] capitalize", p.status === "failed" ? "text-destructive" : "text-muted-foreground", p.status === "skipped" && "line-through")}>{p.name}</p>
+                </div>
+                {i < d.phases!.length - 1 ? null : null}
+              </li>
+            ))}
+          </ol>
+        </section>
       ) : null}
 
       {d.variables ? (
