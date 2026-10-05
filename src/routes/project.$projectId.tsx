@@ -101,7 +101,7 @@ function CanvasPage() {
 
   return (
     <WorkspaceShell title="Canvas" onAssistant={() => setAssistantOpen((open) => !open)}>
-      <Canvas state={state} selected={selected} onSelect={setSelected} />
+      <Canvas state={state} selected={selected} onSelect={setSelected} onAddService={() => setAdding(true)} />
       {!state.loading && state.envId && !state.services.length ? (
         <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center">
           <div className="pointer-events-auto max-w-xs rounded-xl border bg-card/95 p-5 text-center shadow-sm backdrop-blur">
@@ -151,7 +151,7 @@ function CanvasPage() {
       <NewServiceDialog
         open={adding}
         onOpenChange={setAdding}
-        onPick={(t) => void addService(t.name, t.logo, t.kind, { templateId: t.id, source: { type: "template", templateId: t.id } }, "first deploy started")}
+        onPick={(t) => void addService(t.name, t.logo, t.kind, { templateId: t.id, source: { type: "template", templateId: t.id }, ...(t.region ? { region: t.region } : {}) }, "first deploy started")}
         onPickRepo={(r) => void addService(r.fullName.split("/")[1] ?? r.fullName, "github", "app", { name: r.fullName.split("/")[1], source: { type: "github", repo: r.fullName, branch: r.defaultBranch, ...(r.url ? { url: r.url } : {}) } }, "configure variables and settings, then deploy")}
       />
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Package, Clock, HardDrive, Expand, Minus, Plus, Redo, Undo, Globe, Close } from "fluid-icons/react";
+import { ArrowUpRight, Package, Clock, HardDrive, Expand, Minus, Plus, Redo, Undo, Globe, Close, Rocket, RotateCw, Trash } from "fluid-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Edge, Service } from "@/lib/platform-data";
@@ -100,16 +100,23 @@ export function Canvas({
   state,
   selected,
   onSelect,
+  onAddService,
 }: {
   state: ReturnType<typeof useCanvasState>;
   selected: string | null;
   onSelect: (id: string | null) => void;
+  onAddService?: () => void;
 }) {
   const { services, setServices, edges, commit } = state;
+  const qc = useQueryClient();
   const [view, setView] = useState({ x: 60, y: 60, k: 1 });
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ mode: "pan" | "node" | "link"; id?: string | undefined; sx: number; sy: number; ox: number; oy: number; moved: boolean; snapshot?: Service[] } | null>(null);
   const [link, setLink] = useState<{ from: string; x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; serviceId?: string } | null>(null);
+  const [menuConfirmDelete, setMenuConfirmDelete] = useState(false);
+  const [pendingConnect, setPendingConnect] = useState<string | null>(null);
+  const [deployingId, setDeployingId] = useState<string | null>(null);
   const toWorld = (cx: number, cy: number) => {
     const r = ref.current!.getBoundingClientRect();
     return { x: (cx - r.left - view.x) / view.k, y: (cy - r.top - view.y) / view.k };
@@ -194,6 +201,8 @@ export function Canvas({
 
   const onPointerDown = (e: React.PointerEvent, id?: string) => {
     e.stopPropagation();
+    setMenu(null);
+    setMenuConfirmDelete(false);
     activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     (e.target as Element).setPointerCapture?.(e.pointerId);
 
@@ -268,9 +277,55 @@ export function Canvas({
     if (d.mode === "node") {
       if (d.moved && d.snapshot) {
         commit(services, d.snapshot);
+      } else if (pendingConnect && d.id && d.id !== pendingConnect) {
+        void state.connect(pendingConnect, d.id);
+        setPendingConnect(null);
       } else onSelect(d.id ?? null);
       return;
-    } else if (!d.moved) onSelect(null);
+    } else if (!d.moved) {
+      if (pendingConnect) setPendingConnect(null);
+      else onSelect(null);
+    }
+  };
+
+  // Close the context menu / connect mode on Escape.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setMenu(null);
+      setMenuConfirmDelete(false);
+      setPendingConnect(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const deployFromMenu = async (id: string) => {
+    if (deployingId) return;
+    setDeployingId(id);
+    setMenu(null);
+    try {
+      await api(`/services/${id}/deployments`, { method: "POST", body: {} });
+      toast.success("Deploy started");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not deploy");
+    } finally {
+      setDeployingId(null);
+      void qc.invalidateQueries({ queryKey: ["deployments"] });
+      void qc.invalidateQueries({ queryKey: ["canvas", state.envId] });
+    }
+  };
+
+  const deleteFromMenu = async (id: string) => {
+    const s = services.find((x) => x.id === id);
+    setMenu(null);
+    try {
+      await api(`/services/${id}`, { method: "DELETE" });
+      toast.success(`${s?.name ?? "Service"} deleted`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete the service");
+    }
+    void qc.invalidateQueries({ queryKey: ["canvas", state.envId] });
   };
 
   const byId = Object.fromEntries(services.map((s) => [s.id, s]));
@@ -285,6 +340,7 @@ export function Canvas({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onContextMenu={(e) => { e.preventDefault(); setMenuConfirmDelete(false); setMenu({ x: e.clientX, y: e.clientY }); }}
     >
       <div className="absolute left-0 top-0 origin-top-left" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})` }}>
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={1} height={1}>
@@ -337,10 +393,12 @@ export function Canvas({
             s={s}
             selected={selected === s.id}
             dimmed={!!related && !related.has(s.id)}
+            connecting={pendingConnect === s.id}
             onPointerDown={(e) => onPointerDown(e, s.id)}
             onPointerUp={(e) => { e.stopPropagation(); onPointerUp(e); }}
             onKeyDown={(e) => e.key === "Enter" && onSelect(s.id)}
             onLinkStart={(e) => startLink(e, s.id)}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenuConfirmDelete(false); setMenu({ x: e.clientX, y: e.clientY, serviceId: s.id }); }}
           />
         ))}
       </div>
@@ -355,10 +413,73 @@ export function Canvas({
         <CtrlBtn label="Undo" onClick={state.undo} disabled={!state.canUndo}><Undo className="h-3.5 w-3.5" /></CtrlBtn>
         <CtrlBtn label="Redo" onClick={state.redo} disabled={!state.canRedo}><Redo className="h-3.5 w-3.5" /></CtrlBtn>
       </div>
+
+      {/* Right-click menu */}
+      {menu ? (
+        <>
+          <div className="fixed inset-0 z-40" onPointerDown={() => { setMenu(null); setMenuConfirmDelete(false); }} onContextMenu={(e) => { e.preventDefault(); setMenu(null); setMenuConfirmDelete(false); }} />
+          <div
+            role="menu"
+            className="fixed z-50 min-w-[188px] rounded-lg border bg-card p-1 shadow-xl"
+            style={{ left: Math.min(menu.x, window.innerWidth - 204), top: Math.min(menu.y, window.innerHeight - (menu.serviceId ? 260 : 110)) }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            {menu.serviceId ? (() => {
+              const s = services.find((x) => x.id === menu.serviceId);
+              if (!s) { setMenu(null); return null; }
+              const idle = s.status === "idle";
+              return menuConfirmDelete ? (
+                <div className="px-2 py-1.5">
+                  <p className="text-xs">Delete <span className="font-medium">{s.name}</span> and all its deploys?</p>
+                  <div className="mt-2 flex justify-end gap-1">
+                    <button className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => { setMenuConfirmDelete(false); setMenu(null); }}>Cancel</button>
+                    <button className="rounded-md bg-destructive px-2 py-1 text-xs font-medium text-destructive-foreground" onClick={() => void deleteFromMenu(s.id)}>Delete</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <MenuItem icon={<Expand className="h-3.5 w-3.5" />} label="Open panel" onClick={() => { onSelect(s.id); setMenu(null); }} />
+                  <MenuItem icon={idle ? <Rocket className="h-3.5 w-3.5" /> : <RotateCw className="h-3.5 w-3.5" />} label={idle ? "Deploy" : "Redeploy"} disabled={deployingId === s.id} onClick={() => void deployFromMenu(s.id)} />
+                  <MenuItem icon={<ArrowUpRight className="h-3.5 w-3.5" />} label="Connect to another service…" onClick={() => { setPendingConnect(s.id); setMenu(null); }} />
+                  <div className="mx-1 my-1 h-px bg-border" />
+                  <button role="menuitem" className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10" onClick={() => setMenuConfirmDelete(true)}>
+                    <Trash className="h-3.5 w-3.5" />Delete service
+                  </button>
+                </>
+              );
+            })() : (
+              <>
+                {onAddService ? <MenuItem icon={<Plus className="h-3.5 w-3.5" />} label="Add service" onClick={() => { setMenu(null); onAddService(); }} /> : null}
+                <MenuItem icon={<Expand className="h-3.5 w-3.5" />} label="Fit to screen" onClick={() => { setMenu(null); fit(); }} />
+              </>
+            )}
+          </div>
+        </>
+      ) : null}
+
+      {/* Connect-mode banner */}
+      {pendingConnect ? (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-lg border bg-card/95 px-3 py-1.5 text-xs shadow-sm backdrop-blur">
+          Pick a service to connect to <span className="font-medium">{services.find((s) => s.id === pendingConnect)?.name}</span> · <span className="font-mono text-muted-foreground">esc</span> to cancel
+        </div>
+      ) : null}
+
       <div className="pointer-events-none absolute bottom-4 right-4 hidden items-center gap-3 font-mono text-[10px] text-muted-foreground md:flex">
-        <span>drag to pan</span><span>⌘ + scroll to zoom</span><span><Kbd>N</Kbd> new</span>
+        <span>drag to pan</span><span>⌘ + scroll to zoom</span><span><Kbd>N</Kbd> new</span><span>right-click for menu</span>
       </div>
     </div>
+  );
+}
+
+function MenuItem({ icon, label, onClick, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      role="menuitem"
+      disabled={disabled}
+      onClick={onClick}
+      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-40"
+    >{icon}{label}</button>
   );
 }
 
@@ -372,7 +493,7 @@ function CtrlBtn({ children, label, onClick, disabled }: { children: React.React
 
 const kindIcon = { app: Package, worker: Package, database: HardDrive, cron: Clock };
 
-function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDown, onLinkStart }: { s: Service; selected: boolean; dimmed: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void; onLinkStart: (e: React.PointerEvent) => void }) {
+function ServiceNode({ s, selected, dimmed, connecting, onPointerDown, onPointerUp, onKeyDown, onLinkStart, onContextMenu }: { s: Service; selected: boolean; dimmed: boolean; connecting: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void; onLinkStart: (e: React.PointerEvent) => void; onContextMenu: (e: React.MouseEvent) => void }) {
   const KindIcon = kindIcon[s.kind];
   const h = nodeHeight(s);
   return (
@@ -383,10 +504,12 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onKeyDown={onKeyDown}
+      onContextMenu={onContextMenu}
       className={cn(
         "group absolute cursor-pointer rounded-xl border bg-card shadow-sm transition-[box-shadow,opacity,border-color] hover:border-foreground/25",
         selected && "border-primary ring-4 ring-primary/15",
-        dimmed && "opacity-40",
+        connecting && "border-primary ring-4 ring-primary/25",
+        dimmed && !connecting && "opacity-40",
       )}
       style={{ left: s.x, top: s.y, width: NODE_W, height: h }}
     >

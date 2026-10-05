@@ -8,13 +8,14 @@ import { Logo, StatusDot } from "./primitives";
 import { DatabaseBackups, DatabaseConnect, DatabaseData } from "./database-panels";
 import { DeploymentList, LogStream, MetricsGrid, NetworkingPanel, ServiceSettings, VariablesTable, deployState, normalizeDeployments } from "./panels";
 import { DeploymentPanel, DiagnosisCard } from "./deployment-panel";
+import { VolumesPanel } from "./volumes-panel";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, type ApiError } from "@/lib/api";
 import { useDeployments, useEnvId, type ApiDeployment } from "@/lib/workspace";
 
-const appTabs = ["Deploys", "Variables", "Metrics", "Logs", "Network", "Settings"] as const;
-const dbTabs = ["Data", "Connect", "Backups", "Variables", "Metrics", "Logs", "Settings"] as const;
+const appTabs = ["Deploys", "Variables", "Metrics", "Logs", "Network", "Volumes", "Settings"] as const;
+const dbTabs = ["Data", "Connect", "Backups", "Volumes", "Variables", "Metrics", "Logs", "Settings"] as const;
 type Tab = (typeof appTabs)[number] | (typeof dbTabs)[number];
 
 export function Inspector({ service, onClose }: { service: Service; onClose: () => void }) {
@@ -127,6 +128,7 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
         {tab === "Metrics" && <MetricsGrid service={service} />}
         {tab === "Logs" && <div className="h-full"><LogStream serviceId={service.id} dense /></div>}
         {tab === "Network" && <NetworkingPanel service={service} />}
+        {tab === "Volumes" && <VolumesPanel key={service.id} service={service} />}
         {tab === "Settings" && <ServiceSettings service={service} onDeleted={onClose} />}
       </div>
     </aside>
