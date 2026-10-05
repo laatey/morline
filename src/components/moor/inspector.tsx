@@ -8,6 +8,7 @@ import { Logo, StatusDot } from "./primitives";
 import { DatabaseBackups, DatabaseConnect, DatabaseData } from "./database-panels";
 import { DeploymentList, LogStream, MetricsGrid, NetworkingPanel, ServiceSettings, VariablesTable, deployState, normalizeDeployments } from "./panels";
 import { DeploymentPanel, DiagnosisCard } from "./deployment-panel";
+import { VolumesPanel } from "./volumes-panel";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, type ApiError } from "@/lib/api";
