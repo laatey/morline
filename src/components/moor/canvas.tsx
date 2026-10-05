@@ -201,6 +201,8 @@ export function Canvas({
 
   const onPointerDown = (e: React.PointerEvent, id?: string) => {
     e.stopPropagation();
+    setMenu(null);
+    setMenuConfirmDelete(false);
     activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     (e.target as Element).setPointerCapture?.(e.pointerId);
 
@@ -275,9 +277,55 @@ export function Canvas({
     if (d.mode === "node") {
       if (d.moved && d.snapshot) {
         commit(services, d.snapshot);
+      } else if (pendingConnect && d.id && d.id !== pendingConnect) {
+        void state.connect(pendingConnect, d.id);
+        setPendingConnect(null);
       } else onSelect(d.id ?? null);
       return;
-    } else if (!d.moved) onSelect(null);
+    } else if (!d.moved) {
+      if (pendingConnect) setPendingConnect(null);
+      else onSelect(null);
+    }
+  };
+
+  // Close the context menu / connect mode on Escape.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setMenu(null);
+      setMenuConfirmDelete(false);
+      setPendingConnect(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const deployFromMenu = async (id: string) => {
+    if (deployingId) return;
+    setDeployingId(id);
+    setMenu(null);
+    try {
+      await api(`/services/${id}/deployments`, { method: "POST", body: {} });
+      toast.success("Deploy started");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not deploy");
+    } finally {
+      setDeployingId(null);
+      void qc.invalidateQueries({ queryKey: ["deployments"] });
+      void qc.invalidateQueries({ queryKey: ["canvas", state.envId] });
+ec    }
+  };
+
+  const deleteFromMenu = async (id: string) => {
+    const s = services.find((x) => x.id === id);
+    setMenu(null);
+    try {
+      await api(`/services/${id}`, { method: "DELETE" });
+      toast.success(`${s?.name ?? "Service"} deleted`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete the service");
+    }
+    void qc.invalidateQueries({ queryKey: ["canvas", state.envId] });
   };
 
   const byId = Object.fromEntries(services.map((s) => [s.id, s]));
