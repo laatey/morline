@@ -340,6 +340,7 @@ export function Canvas({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onContextMenu={(e) => { e.preventDefault(); setMenuConfirmDelete(false); setMenu({ x: e.clientX, y: e.clientY }); }}
     >
       <div className="absolute left-0 top-0 origin-top-left" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})` }}>
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={1} height={1}>
@@ -392,10 +393,12 @@ export function Canvas({
             s={s}
             selected={selected === s.id}
             dimmed={!!related && !related.has(s.id)}
+            connecting={pendingConnect === s.id}
             onPointerDown={(e) => onPointerDown(e, s.id)}
             onPointerUp={(e) => { e.stopPropagation(); onPointerUp(e); }}
             onKeyDown={(e) => e.key === "Enter" && onSelect(s.id)}
             onLinkStart={(e) => startLink(e, s.id)}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenuConfirmDelete(false); setMenu({ x: e.clientX, y: e.clientY, serviceId: s.id }); }}
           />
         ))}
       </div>
