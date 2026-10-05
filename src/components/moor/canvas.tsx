@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Package, Clock, HardDrive, Expand, Minus, Plus, Redo, Undo, Globe, Close } from "fluid-icons/react";
+import { ArrowUpRight, Package, Clock, HardDrive, Expand, Minus, Plus, Redo, Undo, Globe, Close, Rocket, RotateCw, Trash } from "fluid-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Edge, Service } from "@/lib/platform-data";
