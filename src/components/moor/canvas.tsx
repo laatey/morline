@@ -493,7 +493,7 @@ function CtrlBtn({ children, label, onClick, disabled }: { children: React.React
 
 const kindIcon = { app: Package, worker: Package, database: HardDrive, cron: Clock };
 
-function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDown, onLinkStart }: { s: Service; selected: boolean; dimmed: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void; onLinkStart: (e: React.PointerEvent) => void }) {
+function ServiceNode({ s, selected, dimmed, connecting, onPointerDown, onPointerUp, onKeyDown, onLinkStart, onContextMenu }: { s: Service; selected: boolean; dimmed: boolean; connecting: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void; onLinkStart: (e: React.PointerEvent) => void; onContextMenu: (e: React.MouseEvent) => void }) {
   const KindIcon = kindIcon[s.kind];
   const h = nodeHeight(s);
   return (
@@ -504,10 +504,12 @@ function ServiceNode({ s, selected, dimmed, onPointerDown, onPointerUp, onKeyDow
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onKeyDown={onKeyDown}
+      onContextMenu={onContextMenu}
       className={cn(
         "group absolute cursor-pointer rounded-xl border bg-card shadow-sm transition-[box-shadow,opacity,border-color] hover:border-foreground/25",
         selected && "border-primary ring-4 ring-primary/15",
-        dimmed && "opacity-40",
+        connecting && "border-primary ring-4 ring-primary/25",
+        dimmed && !connecting && "opacity-40",
       )}
       style={{ left: s.x, top: s.y, width: NODE_W, height: h }}
     >
