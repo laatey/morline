@@ -100,16 +100,23 @@ export function Canvas({
   state,
   selected,
   onSelect,
+  onAddService,
 }: {
   state: ReturnType<typeof useCanvasState>;
   selected: string | null;
   onSelect: (id: string | null) => void;
+  onAddService?: () => void;
 }) {
   const { services, setServices, edges, commit } = state;
+  const qc = useQueryClient();
   const [view, setView] = useState({ x: 60, y: 60, k: 1 });
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ mode: "pan" | "node" | "link"; id?: string | undefined; sx: number; sy: number; ox: number; oy: number; moved: boolean; snapshot?: Service[] } | null>(null);
   const [link, setLink] = useState<{ from: string; x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; serviceId?: string } | null>(null);
+  const [menuConfirmDelete, setMenuConfirmDelete] = useState(false);
+  const [pendingConnect, setPendingConnect] = useState<string | null>(null);
+  const [deployingId, setDeployingId] = useState<string | null>(null);
   const toWorld = (cx: number, cy: number) => {
     const r = ref.current!.getBoundingClientRect();
     return { x: (cx - r.left - view.x) / view.k, y: (cy - r.top - view.y) / view.k };
