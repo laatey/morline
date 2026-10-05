@@ -313,7 +313,7 @@ export function Canvas({
       setDeployingId(null);
       void qc.invalidateQueries({ queryKey: ["deployments"] });
       void qc.invalidateQueries({ queryKey: ["canvas", state.envId] });
-ec    }
+    }
   };
 
   const deleteFromMenu = async (id: string) => {
