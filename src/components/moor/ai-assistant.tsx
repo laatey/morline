@@ -17,7 +17,7 @@ const prompts = ["Why did the latest deploy fail?", "Review environment variable
 type RawMsg = { role?: string; text?: string; content?: string; action?: string; context?: AssistantContext };
 type RawThread = { id: string; title?: string; updatedAt?: string; createdAt?: string; messages?: RawMsg[] };
 const ago = (iso?: string) => { if (!iso) return "now"; const m = Math.max(0, (Date.now() - Date.parse(iso)) / 60000); return m < 1 ? "now" : m < 60 ? `${Math.floor(m)}m` : m < 1440 ? `${Math.floor(m / 60)}h` : `${Math.floor(m / 1440)}d`; };
-const toMsg = (m: RawMsg): Msg => ({ role: m.role === "user" ? "user" : "agent", text: m.text ?? m.content ?? "", ...(m.action ? { action: m.action } : {}) });
+const toMsg = (m: RawMsg): Msg => ({ role: m.role === "user" ? "user" : "agent", text: m.text ?? m.content ?? "", ...(m.action ? { action: m.action } : {}), ...(m.context ? { context: m.context } : {}) });
 const toThread = (t: RawThread): Thread => ({ id: t.id, title: t.title || "New conversation", when: ago(t.updatedAt ?? t.createdAt), messages: (t.messages ?? []).map(toMsg) });
 const unwrap = (r: unknown): RawThread[] => Array.isArray(r) ? r : ((r as { threads?: RawThread[]; data?: RawThread[] })?.threads ?? (r as { data?: RawThread[] })?.data ?? []);
 const fresh = (): Thread => ({ id: crypto.randomUUID(), title: "New conversation", when: "now", messages: [] });
@@ -64,7 +64,7 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
     const q = text.trim();
     if (!q || (thinking && !threadId)) return;
     const id = threadId ?? active.id;
-    update(id, (t) => ({ ...t, title: t.messages.length ? t.title : q.slice(0, 40), when: "now", messages: [...t.messages, { role: "user", text: q, context }] }));
+    update(id, (t) => ({ ...t, title: t.messages.length ? t.title : q.slice(0, 40), when: "now", messages: [...t.messages, { role: "user", text: q, ...(context ? { context } : {}) }] }));
     setInput("");
     setThinking(true);
     const cancelled = { v: false };
@@ -136,9 +136,8 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
                 <div key={i} className={cn("flex", m.role === "user" && "justify-end")}>
                   <div className={cn("max-w-[85%] rounded-xl px-3 py-2 text-xs leading-5", m.role === "user" ? "bg-primary text-primary-foreground" : "border bg-background")}>
                     {m.role === "agent" ? (
-                      <ReactMarkdown
+                      <div className="prose prose-xs prose-invert max-w-none"><ReactMarkdown
                         remarkPlugins={[remarkGfm]}
-                        className="prose prose-xs prose-invert max-w-none"
                         components={{
                           p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-5">{children}</p>,
                           h1: ({ children }) => <p className="mb-1 font-semibold">{children}</p>,
@@ -160,7 +159,7 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
                         }}
                       >
                         {m.text}
-                      </ReactMarkdown>
+                      </ReactMarkdown></div>
                     ) : <>{m.context ? <span className="mb-1.5 flex items-center gap-1.5 border-b border-primary-foreground/20 pb-1.5 text-[10px]"><Bot className="h-3 w-3" />{m.context.serviceName} · Failed deployment</span> : null}{m.text}</>}
                     {m.action ? (
                       <button disabled={applied.has(`${active.id}-${i}`)} onClick={() => setApplied((s) => new Set(s).add(`${active.id}-${i}`))} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border bg-card px-2 py-1.5 text-[11px] font-medium hover:bg-accent disabled:text-score">

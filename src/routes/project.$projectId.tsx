@@ -63,7 +63,7 @@ function CanvasPage() {
       const text = detail?.text;
       if (!text) return;
       setSelected(null);
-      setAssistantPrompt({ text, key: Date.now(), context: detail.context });
+      setAssistantPrompt({ text, key: Date.now(), ...(detail.context ? { context: detail.context } : {}) });
       setAssistantOpen(true);
     };
     window.addEventListener("morline:assistant", onAsk);
@@ -106,14 +106,14 @@ function CanvasPage() {
 
   return (
     <WorkspaceShell title="Canvas" onAssistant={() => setAssistantOpen((open) => !open)}>
-      <Canvas state={state} selected={selected} onSelect={setSelected} onAddService={() => setAdding(true)} />
+      <Canvas state={state} selected={selected} onSelect={(id) => { setVolumePanel(null); setSelected(id); }} onAddService={openAdd} onVolumes={(id, attach) => { setVolumePanel({ id, attach }); setSelected(id); }} />
       {!state.loading && state.envId && !state.services.length ? (
         <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center">
           <div className="pointer-events-auto max-w-xs rounded-xl border bg-card/95 p-5 text-center shadow-sm backdrop-blur">
             <p className="label-caps">{projectName ?? "Project"} · empty</p>
             <p className="mt-2 font-display text-lg font-semibold">Drop your first service</p>
             <p className="mt-1 text-sm text-muted-foreground">Start from a database, a starter or an app template. It deploys as soon as it lands.</p>
-            <Button size="sm" className="mt-4 gap-1.5" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" />Add a service</Button>
+            <Button size="sm" className="mt-4 gap-1.5" onClick={() => openAdd()}><Plus className="h-3.5 w-3.5" />Add a service</Button>
           </div>
         </div>
       ) : null}
@@ -133,7 +133,7 @@ function CanvasPage() {
         style={service ? { right: 584 } : undefined}
       >
         
-        <Button size="sm" className="h-7 gap-1 px-2.5 text-xs sm:h-8 sm:gap-1.5 sm:px-3" onClick={() => setAdding(true)}>
+        <Button size="sm" className="h-7 gap-1 px-2.5 text-xs sm:h-8 sm:gap-1.5 sm:px-3" onClick={() => openAdd()}>
           <Plus className="h-3.5 w-3.5" />
           <span>Add</span>
         </Button>
@@ -151,7 +151,7 @@ function CanvasPage() {
         </div>
       ) : null}
       <PendingChangesBar />
-      {service ? <Inspector key={`${service.id}-${volumePanel?.id === service.id ? `volumes-${volumePanel.attach}` : "default"}`} service={service} initialTab={volumePanel?.id === service.id ? "Volumes" : undefined} attachVolume={volumePanel?.id === service.id && volumePanel.attach} onClose={() => { setSelected(null); setVolumePanel(null); }} /> : null}
+      {service ? <Inspector key={`${service.id}-${volumePanel?.id === service.id ? `volumes-${volumePanel.attach}` : "default"}`} service={service} {...(volumePanel?.id === service.id ? { initialTab: "Volumes" as const, attachVolume: volumePanel.attach } : {})} onClose={() => { setSelected(null); setVolumePanel(null); }} /> : null}
       {assistantOpen && !service ? <AiAssistant initialPrompt={assistantPrompt} onClose={() => { setAssistantOpen(false); setAssistantPrompt(null); }} /> : null}
       <NewServiceDialog
         category={addCategory}
