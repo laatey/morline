@@ -1,5 +1,16 @@
 # Roadmap
 
+## Canvas polish
+- [x] Refine right-click menus and database/template entry points.
+- [x] Show attached volumes as stacked cards and open attachment from service menus.
+- [x] Send deployment context separately from the visible chat message.
+- [x] Verify UI interactions with intercepted test responses; no live backend mutations or AI calls.
+- [ ] Live verification of deployment context — blocked until external API supports the context contract below.
+
+### Required external API support
+`POST /assistant/threads/:threadId/messages` accepts `{ text, context: { type: "deployment", deploymentId, serviceName } }`. Authorize access to the referenced deployment, load logs/diagnosis server-side, preserve the context for follow-up messages, and return message context in thread history. Keep raw logs/secrets out of visible user message text. This project only changes the frontend; external API support is unverified.
+Volumes use existing `GET/POST /services/:serviceId/volumes` (`{ data: [{ id, name?, mountPath, sizeGb, usedGb? }] }`, POST `{ mountPath, sizeGb }`) and `PATCH/DELETE /volumes/:id`.
+
 ## Frontend (complete)
 - [x] Marketing site, workspace UI, all product screens on sample data.
 

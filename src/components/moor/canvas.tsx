@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Package, Clock, HardDrive, Expand, Minus, Plus, Redo, Undo, Globe, Close, Rocket, RotateCw, Trash } from "fluid-icons/react";
+import { ArrowUpRight, Package, Clock, HardDrive, Expand, Minus, Plus, Redo, Undo, Globe, Close, Rocket, RotateCw, Trash, ChevronRight, GitBranch } from "fluid-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Edge, Service } from "@/lib/platform-data";
 import { api } from "@/lib/api";
 import { toService, useCanvasData, useEnvId } from "@/lib/workspace";
+import { Button } from "@/components/ui/button";
+import { useServiceVolumes } from "./volumes-panel";
 import { Logo, StatusDot, Kbd } from "./primitives";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +15,7 @@ const BASE_NODE_H = 88;
 const NODE_H = BASE_NODE_H;
 
 function nodeHeight(s: Service) {
-  return BASE_NODE_H + (s.domain || s.volume ? 20 : 0);
+  return BASE_NODE_H + (s.domain ? 20 : 0);
 }
 
 export function useCanvasState() {
@@ -101,11 +103,13 @@ export function Canvas({
   selected,
   onSelect,
   onAddService,
+  onVolumes,
 }: {
   state: ReturnType<typeof useCanvasState>;
   selected: string | null;
   onSelect: (id: string | null) => void;
-  onAddService?: () => void;
+  onAddService?: (category?: "all" | "database" | "template" | "github") => void;
+  onVolumes?: (id: string, attach: boolean) => void;
 }) {
   const { services, setServices, edges, commit } = state;
   const qc = useQueryClient();
@@ -118,7 +122,8 @@ export function Canvas({
   const [pendingConnect, setPendingConnect] = useState<string | null>(null);
   const [deployingId, setDeployingId] = useState<string | null>(null);
   const toWorld = (cx: number, cy: number) => {
-    const r = ref.current!.getBoundingClientRect();
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return { x: 0, y: 0 };
     return { x: (cx - r.left - view.x) / view.k, y: (cy - r.top - view.y) / view.k };
   };
   const startLink = (e: React.PointerEvent, id: string) => {
@@ -134,11 +139,11 @@ export function Canvas({
     const minX = Math.min(...services.map((s) => s.x));
     const minY = Math.min(...services.map((s) => s.y));
     const maxX = Math.max(...services.map((s) => s.x + NODE_W));
-    const maxY = Math.max(...services.map((s) => s.y + nodeHeight(s)));
+    const maxY = Math.max(...services.map((s) => s.y + nodeHeight(s) + Math.max((qc.getQueryData<unknown[]>(["volumes", s.id])?.length ?? 0), s.volume ? 1 : 0) * 40));
     const pad = 80;
     const k = Math.min(1.2, Math.max(0.4, Math.min((el.clientWidth - pad * 2) / (maxX - minX), (el.clientHeight - pad * 2) / (maxY - minY))));
     setView({ k, x: (el.clientWidth - (maxX - minX) * k) / 2 - minX * k, y: (el.clientHeight - (maxY - minY) * k) / 2 - minY * k });
-  }, [services]);
+  }, [services, qc]);
 
   const centerAt100 = useCallback(() => {
     const el = ref.current;
@@ -146,7 +151,7 @@ export function Canvas({
     const minX = Math.min(...services.map((s) => s.x));
     const minY = Math.min(...services.map((s) => s.y));
     const maxX = Math.max(...services.map((s) => s.x + NODE_W));
-    const maxY = Math.max(...services.map((s) => s.y + nodeHeight(s)));
+    const maxY = Math.max(...services.map((s) => s.y + nodeHeight(s) + Math.max((qc.getQueryData<unknown[]>(["volumes", s.id])?.length ?? 0), s.volume ? 1 : 0) * 40));
     const totalW = maxX - minX;
     const totalH = maxY - minY;
 
@@ -168,7 +173,7 @@ export function Canvas({
     }
 
     setView({ k, x, y });
-  }, [services]);
+  }, [services, qc]);
 
   useEffect(() => { centerAt100(); /* initial 100% zoom default */ }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -399,6 +404,7 @@ export function Canvas({
             onKeyDown={(e) => e.key === "Enter" && onSelect(s.id)}
             onLinkStart={(e) => startLink(e, s.id)}
             onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenuConfirmDelete(false); setMenu({ x: e.clientX, y: e.clientY, serviceId: s.id }); }}
+            onVolumes={() => onVolumes?.(s.id, false)}
           />
         ))}
       </div>
@@ -420,14 +426,14 @@ export function Canvas({
           <div className="fixed inset-0 z-40" onPointerDown={() => { setMenu(null); setMenuConfirmDelete(false); }} onContextMenu={(e) => { e.preventDefault(); setMenu(null); setMenuConfirmDelete(false); }} />
           <div
             role="menu"
-            className="fixed z-50 min-w-[188px] rounded-lg border bg-card p-1 shadow-xl"
-            style={{ left: Math.min(menu.x, window.innerWidth - 204), top: Math.min(menu.y, window.innerHeight - (menu.serviceId ? 260 : 110)) }}
+            className="fixed z-50 w-[min(300px,calc(100vw-24px))] max-h-[calc(100vh-24px)] overflow-y-auto rounded-lg border border-border/80 bg-card p-1.5 shadow-xl"
+            style={{ left: Math.max(12, Math.min(menu.x, window.innerWidth - 312)), top: Math.max(12, Math.min(menu.y, window.innerHeight - (menu.serviceId ? 380 : 365))) }}
             onPointerDown={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >
             {menu.serviceId ? (() => {
               const s = services.find((x) => x.id === menu.serviceId);
-              if (!s) { setMenu(null); return null; }
+              if (!s) return null;
               const idle = s.status === "idle";
               return menuConfirmDelete ? (
                 <div className="px-2 py-1.5">
@@ -439,19 +445,34 @@ export function Canvas({
                 </div>
               ) : (
                 <>
-                  <MenuItem icon={<Expand className="h-3.5 w-3.5" />} label="Open panel" onClick={() => { onSelect(s.id); setMenu(null); }} />
-                  <MenuItem icon={idle ? <Rocket className="h-3.5 w-3.5" /> : <RotateCw className="h-3.5 w-3.5" />} label={idle ? "Deploy" : "Redeploy"} disabled={deployingId === s.id} onClick={() => void deployFromMenu(s.id)} />
-                  <MenuItem icon={<ArrowUpRight className="h-3.5 w-3.5" />} label="Connect to another service…" onClick={() => { setPendingConnect(s.id); setMenu(null); }} />
-                  <div className="mx-1 my-1 h-px bg-border" />
-                  <button role="menuitem" className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10" onClick={() => setMenuConfirmDelete(true)}>
-                    <Trash className="h-3.5 w-3.5" />Delete service
-                  </button>
+                  <div className="mb-1 flex items-center gap-2 border-b px-2.5 py-2.5">
+                    <span className="grid h-8 w-8 place-items-center rounded-md bg-surface"><Logo k={s.logo} className="h-4 w-4" /></span>
+                    <div className="min-w-0"><p className="truncate text-xs font-semibold">{s.name}</p><StatusDot status={s.status} withLabel /></div>
+                  </div>
+                  <MenuHeading>Service</MenuHeading>
+                  <MenuItem icon={<Expand className="h-4 w-4" />} label="Open service" hint="Deploys, variables and settings" onClick={() => { onSelect(s.id); setMenu(null); }} />
+                  <MenuItem icon={idle ? <Rocket className="h-4 w-4" /> : <RotateCw className="h-4 w-4" />} label={idle ? "Deploy" : "Redeploy"} disabled={deployingId === s.id} onClick={() => void deployFromMenu(s.id)} />
+                  <MenuHeading>Resources</MenuHeading>
+                  <MenuItem icon={<HardDrive className="h-4 w-4" />} label="Attach volume" hint="Persistent storage for this service" onClick={() => { onVolumes?.(s.id, true); setMenu(null); }} />
+                  <MenuItem icon={<ArrowUpRight className="h-4 w-4" />} label="Connect service" hint="Link to a database or another service" onClick={() => { setPendingConnect(s.id); setMenu(null); }} />
+                  <div className="mx-2 my-1.5 h-px bg-border" />
+                  <Button variant="ghost" role="menuitem" className="h-9 w-full justify-start gap-3 px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setMenuConfirmDelete(true)}>
+                    <Trash className="h-4 w-4" />Delete service
+                  </Button>
                 </>
               );
             })() : (
               <>
-                {onAddService ? <MenuItem icon={<Plus className="h-3.5 w-3.5" />} label="Add service" onClick={() => { setMenu(null); onAddService(); }} /> : null}
-                <MenuItem icon={<Expand className="h-3.5 w-3.5" />} label="Fit to screen" onClick={() => { setMenu(null); fit(); }} />
+                <MenuHeading>Create</MenuHeading>
+                {onAddService ? <>
+                  <MenuItem icon={<Logo k="github" className="h-4 w-4" />} label="GitHub repository" hint="Connected account or public URL" onClick={() => { setMenu(null); onAddService("github"); }} />
+                  <MenuItem icon={<HardDrive className="h-4 w-4" />} label="Add database" hint="Postgres, MySQL, MongoDB, Redis" onClick={() => { setMenu(null); onAddService("database"); }} />
+                  <MenuItem icon={<Package className="h-4 w-4" />} label="Deploy template" hint="Starters and ready-to-run apps" onClick={() => { setMenu(null); onAddService("template"); }} />
+                  <MenuItem icon={<Plus className="h-4 w-4" />} label="Add service" onClick={() => { setMenu(null); onAddService("all"); }} />
+                </> : null}
+                <div className="mx-2 my-1.5 h-px bg-border" />
+                <MenuHeading>Canvas</MenuHeading>
+                <MenuItem icon={<Expand className="h-4 w-4" />} label="Fit to screen" onClick={() => { setMenu(null); fit(); }} />
               </>
             )}
           </div>
@@ -472,14 +493,18 @@ export function Canvas({
   );
 }
 
-function MenuItem({ icon, label, onClick, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean }) {
+function MenuHeading({ children }: { children: React.ReactNode }) {
+  return <p className="px-2.5 pb-1 pt-1.5 font-mono text-[9px] uppercase tracking-wide text-muted-foreground">{children}</p>;
+}
+
+function MenuItem({ icon, label, hint, onClick, disabled }: { icon: React.ReactNode; label: string; hint?: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <button
-      role="menuitem"
-      disabled={disabled}
-      onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-40"
-    >{icon}{label}</button>
+    <Button variant="ghost" role="menuitem" disabled={disabled} onClick={onClick}
+      className="h-auto min-h-9 w-full justify-start gap-3 whitespace-normal rounded-md px-2.5 py-2 text-left">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-surface text-muted-foreground">{icon}</span>
+      <span className="min-w-0 flex-1"><span className="block text-xs font-medium">{label}</span>{hint ? <span className="mt-0.5 block text-[10px] font-normal leading-4 text-muted-foreground">{hint}</span> : null}</span>
+      <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+    </Button>
   );
 }
 
@@ -493,7 +518,9 @@ function CtrlBtn({ children, label, onClick, disabled }: { children: React.React
 
 const kindIcon = { app: Package, worker: Package, database: HardDrive, cron: Clock };
 
-function ServiceNode({ s, selected, dimmed, connecting, onPointerDown, onPointerUp, onKeyDown, onLinkStart, onContextMenu }: { s: Service; selected: boolean; dimmed: boolean; connecting: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void; onLinkStart: (e: React.PointerEvent) => void; onContextMenu: (e: React.MouseEvent) => void }) {
+function ServiceNode({ s, selected, dimmed, connecting, onPointerDown, onPointerUp, onKeyDown, onLinkStart, onContextMenu, onVolumes }: { s: Service; onVolumes: () => void; selected: boolean; dimmed: boolean; connecting: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void; onLinkStart: (e: React.PointerEvent) => void; onContextMenu: (e: React.MouseEvent) => void }) {
+  const { data: volumes } = useServiceVolumes(s.id);
+  const attached = volumes?.length ? volumes.map((v) => ({ id: v.id, label: v.name || v.mountPath, detail: `${v.usedGb != null ? `${v.usedGb.toFixed(1)} / ` : ""}${v.sizeGb} GB` })) : volumes === undefined && s.volume ? [{ id: "legacy", label: s.volume.split(" · ")[0], detail: s.volume.split(" · ")[1] ?? "" }] : [];
   const KindIcon = kindIcon[s.kind];
   const h = nodeHeight(s);
   return (
@@ -521,7 +548,16 @@ function ServiceNode({ s, selected, dimmed, connecting, onPointerDown, onPointer
         className="absolute -right-2 z-10 grid h-4 w-4 cursor-crosshair place-items-center rounded-full border bg-background opacity-0 transition-opacity hover:border-primary group-hover:opacity-100 [@media(hover:none)]:opacity-100"
         style={{ top: h / 2 - 8 }}
       ><span className="h-1.5 w-1.5 rounded-full bg-primary" /></span>
-      <div className="flex h-full flex-col justify-between p-3.5">
+      {attached.map((v, index) => (
+        <Button key={v.id} variant="ghost" aria-label={`Volume ${v.label}`} onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onVolumes(); }}
+          className="absolute inset-x-2 z-0 h-12 justify-start gap-2 rounded-b-lg rounded-t-none border bg-surface px-3 pb-1 pt-3 text-xs shadow-sm hover:bg-accent"
+          style={{ top: h - 10 + index * 40 }}>
+          <HardDrive className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1 truncate text-left font-mono text-[10px]">{v.label}</span>
+          <span className="shrink-0 font-mono text-[9px] text-muted-foreground">{v.detail}</span>
+        </Button>
+      ))}
+      <div className="relative z-[1] flex h-full flex-col justify-between rounded-xl bg-card p-3.5">
         <div>
           <div className="flex items-center gap-2">
             <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border bg-surface"><Logo k={s.logo} /></span>
@@ -544,11 +580,6 @@ function ServiceNode({ s, selected, dimmed, connecting, onPointerDown, onPointer
               <span className="truncate">{s.domain}</span>
               <ArrowUpRight className="h-2.5 w-2.5 shrink-0 opacity-50" />
             </a>
-          ) : s.volume ? (
-            <p className="mt-1 flex items-center gap-1 truncate font-mono text-[10px] text-muted-foreground">
-              <HardDrive className="h-2.5 w-2.5 shrink-0 opacity-70" />
-              <span className="truncate">{s.volume}</span>
-            </p>
           ) : null}
         </div>
         <div>

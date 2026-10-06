@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronRight, AlertCircle, GitBranch, GitPr, Loader, More, R
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import type { AssistantContext } from "@/lib/assistant-context";
 import type { Service } from "@/lib/platform-data";
 import { api, type ApiError } from "@/lib/api";
 import type { ApiDeployment } from "@/lib/workspace";
@@ -38,8 +39,8 @@ const tabs = ["Details", "Build Logs", "Deploy Logs"] as const;
 type Tab = (typeof tabs)[number];
 
 /** Event the canvas page listens for to open the assistant with a prefilled prompt. */
-export function openAssistantWith(text: string) {
-  window.dispatchEvent(new CustomEvent("morline:assistant", { detail: { text } }));
+export function openAssistantWith(text: string, context?: AssistantContext) {
+  window.dispatchEvent(new CustomEvent("morline:assistant", { detail: { text, context } }));
 }
 
 function stamp(iso?: string | null) {
@@ -256,7 +257,7 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
   const dx = q.data;
   if (hidden || dx?.dismissed) return null;
   const busy = dx?.status === "pending" || dx?.status === "running";
-  const chatPrompt = `My service "${serviceName}" failed to deploy (deployment ${deploymentId}).${errorSummary ? ` Error: ${errorSummary}.` : ""}${dx?.rootCause ? ` Your analysis said: ${dx.rootCause}` : ""} Help me fix it.`;
+  const chatPrompt = `Help me fix the failed deployment for ${serviceName}.`;
   const title = dx?.status === "completed" ? dx.summary ?? "Here's what went wrong" : "This deployment crashed";
 
   return (
@@ -298,7 +299,7 @@ export function DiagnosisCard({ deploymentId, serviceName, errorSummary, onOpenL
               <a href={dx.pullRequest.url} target="_blank" rel="noreferrer"><GitPr className="h-3.5 w-3.5" />View PR{dx.pullRequest.number ? ` #${dx.pullRequest.number}` : ""}</a>
             </Button>
           ) : null}
-          <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground" onClick={() => openAssistantWith(chatPrompt)}>
+          <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground" onClick={() => openAssistantWith(chatPrompt, { type: "deployment", deploymentId, serviceName })}>
             <Chat className="h-3.5 w-3.5" />Open in chat
           </Button>
           {dx?.status === "completed" ? (
