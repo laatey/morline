@@ -519,8 +519,8 @@ function CtrlBtn({ children, label, onClick, disabled }: { children: React.React
 const kindIcon = { app: Package, worker: Package, database: HardDrive, cron: Clock };
 
 function ServiceNode({ s, selected, dimmed, connecting, onPointerDown, onPointerUp, onKeyDown, onLinkStart, onContextMenu, onVolumes }: { s: Service; onVolumes: () => void; selected: boolean; dimmed: boolean; connecting: boolean; onPointerDown: (e: React.PointerEvent) => void; onPointerUp: (e: React.PointerEvent) => void; onKeyDown: (e: React.KeyboardEvent) => void; onLinkStart: (e: React.PointerEvent) => void; onContextMenu: (e: React.MouseEvent) => void }) {
-  const { data: volumes = [] } = useServiceVolumes(s.id);
-  const attached = volumes.length ? volumes.map((v) => ({ id: v.id, label: v.name || v.mountPath, detail: `${v.usedGb != null ? `${v.usedGb.toFixed(1)} / ` : ""}${v.sizeGb} GB` })) : s.volume ? [{ id: "legacy", label: s.volume.split(" · ")[0], detail: s.volume.split(" · ")[1] ?? "" }] : [];
+  const { data: volumes } = useServiceVolumes(s.id);
+  const attached = volumes?.length ? volumes.map((v) => ({ id: v.id, label: v.name || v.mountPath, detail: `${v.usedGb != null ? `${v.usedGb.toFixed(1)} / ` : ""}${v.sizeGb} GB` })) : volumes === undefined && s.volume ? [{ id: "legacy", label: s.volume.split(" · ")[0], detail: s.volume.split(" · ")[1] ?? "" }] : [];
   const KindIcon = kindIcon[s.kind];
   const h = nodeHeight(s);
   return (
