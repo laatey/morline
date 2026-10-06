@@ -27,7 +27,9 @@ export function NewServiceDialog({
   onOpenChange,
   onPick,
   onPickRepo,
+  category = "all",
 }: {
+  category?: "all" | "database" | "template" | "github";
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onPick: (t: Template) => void;
@@ -41,8 +43,8 @@ export function NewServiceDialog({
   const [region, setRegion] = useState("us-east");
 
   useEffect(() => {
-    if (open) { setStep("pick"); setQuery(""); setPicked(null); setName(""); setRegion("us-east"); }
-  }, [open]);
+    if (open) { setStep(category === "github" ? "github" : "pick"); setQuery(""); setPicked(null); setName(""); setRegion("us-east"); }
+  }, [open, category]);
 
   if (open && step === "github") {
     return (
@@ -64,7 +66,7 @@ export function NewServiceDialog({
   }
 
   const q = query.trim().toLowerCase();
-  const match = (t: Template) => !q || t.name.toLowerCase().includes(q) || (t.hint ?? "").toLowerCase().includes(q);
+  const match = (t: Template) => (category !== "database" || t.kind === "database") && (category !== "template" || t.kind !== "database") && (!q || t.name.toLowerCase().includes(q) || (t.hint ?? "").toLowerCase().includes(q));
   const groups = [...new Set(templates.map((t) => t.group))];
   const anyMatch = groups.some((g) => templates.some((t) => t.group === g && match(t)));
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -93,12 +95,12 @@ export function NewServiceDialog({
               />
             </div>
             <div className="scroll-area max-h-[340px] overflow-y-auto p-1.5">
-              {onPickRepo ? (
+              {onPickRepo && category === "all" && (!q || "github repository".includes(q)) ? (
                 <Section heading="Source">
-                  <Row logo="github" name="GitHub repository" hint={<>Deploy from a repo <span className="hidden sm:inline">— any account, or paste a URL</span></>} onClick={() => setStep("github")} chevron />
+                  <Row logo="github" name="GitHub repository" hint="Any account or public URL" onClick={() => setStep("github")} chevron />
                 </Section>
               ) : null}
-              {isLoading ? <p className="py-8 text-center text-xs text-muted-foreground">Loading templates…</p> : null}
+              {isLoading ? <div className="space-y-2 p-3" aria-label="Loading templates">{[0, 1, 2].map((i) => <div key={i} className="h-12 animate-pulse rounded-md bg-muted/60" />)}</div> : null}
               {groups.map((g) => {
                 const rows = templates.filter((t) => t.group === g && match(t));
                 if (!rows.length) return null;
@@ -180,19 +182,20 @@ function Section({ heading, children }: { heading: string; children: React.React
 
 function Row({ logo, name, hint, onClick, chevron }: { logo: LogoKey; name: string; hint?: React.ReactNode; onClick: () => void; chevron?: boolean }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={onClick}
-      className="group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-accent/70"
+      className="group h-auto w-full justify-start gap-3 rounded-md px-2.5 py-2.5 text-left"
     >
-      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-surface transition-transform duration-150 group-hover:scale-105">
-        <Logo k={logo} className="h-3.5 w-3.5" />
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-surface">
+        <Logo k={logo} className="h-4 w-4" />
       </span>
-      <span className="font-medium text-foreground">{name}</span>
-      <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground/40">
-        {hint}
-        {chevron ? <ChevronRight className="h-3.5 w-3.5" /> : null}
+      <span className="min-w-0 flex-1 whitespace-normal">
+        <span className="block text-xs font-medium text-foreground">{name}</span>
+        {hint ? <span className="mt-0.5 block text-[11px] font-normal leading-4 text-muted-foreground">{hint}</span> : null}
       </span>
-    </button>
+      {chevron ? <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : null}
+    </Button>
   );
 }

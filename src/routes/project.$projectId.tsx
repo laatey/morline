@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { api, type ApiError } from "@/lib/api";
 import { selectProject, useProject } from "@/lib/workspace";
 import type { Kind, LogoKey } from "@/lib/platform-data";
+import type { AssistantContext } from "@/lib/assistant-context";
 import { PendingChangesBar } from "@/components/moor/pending-changes";
 
 export const Route = createFileRoute("/project/$projectId")({
@@ -44,8 +45,11 @@ function CanvasPage() {
   const state = useCanvasState();
   const [selected, setSelected] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [addCategory, setAddCategory] = useState<"all" | "database" | "template" | "github">("all");
+  const [volumePanel, setVolumePanel] = useState<{ id: string; attach: boolean } | null>(null);
+  const openAdd = (category: typeof addCategory = "all") => { setAddCategory(category); setAdding(true); };
   const [assistantOpen, setAssistantOpen] = useState(false);
-  const [assistantPrompt, setAssistantPrompt] = useState<{ text: string; key: number } | null>(null);
+  const [assistantPrompt, setAssistantPrompt] = useState<{ text: string; key: number; context?: AssistantContext } | null>(null);
   const service = state.services.find((s) => s.id === selected);
   const projectName = useProject().data?.name;
 
@@ -55,10 +59,11 @@ function CanvasPage() {
 
   useEffect(() => {
     const onAsk = (e: Event) => {
-      const text = (e as CustomEvent<{ text: string }>).detail?.text;
+      const detail = (e as CustomEvent<{ text: string; context?: AssistantContext }>).detail;
+      const text = detail?.text;
       if (!text) return;
       setSelected(null);
-      setAssistantPrompt({ text, key: Date.now() });
+      setAssistantPrompt({ text, key: Date.now(), context: detail.context });
       setAssistantOpen(true);
     };
     window.addEventListener("morline:assistant", onAsk);
@@ -68,7 +73,7 @@ function CanvasPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest("input,textarea")) return;
-      if (e.key === "n" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); setAdding(true); }
+      if (e.key === "n" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); openAdd(); }
       if (e.key === "Escape") setSelected(null);
     };
     window.addEventListener("keydown", onKey);
@@ -146,9 +151,10 @@ function CanvasPage() {
         </div>
       ) : null}
       <PendingChangesBar />
-      {service ? <Inspector service={service} onClose={() => setSelected(null)} /> : null}
+      {service ? <Inspector key={`${service.id}-${volumePanel?.id === service.id ? `volumes-${volumePanel.attach}` : "default"}`} service={service} initialTab={volumePanel?.id === service.id ? "Volumes" : undefined} attachVolume={volumePanel?.id === service.id && volumePanel.attach} onClose={() => { setSelected(null); setVolumePanel(null); }} /> : null}
       {assistantOpen && !service ? <AiAssistant initialPrompt={assistantPrompt} onClose={() => { setAssistantOpen(false); setAssistantPrompt(null); }} /> : null}
       <NewServiceDialog
+        category={addCategory}
         open={adding}
         onOpenChange={setAdding}
         onPick={(t) => void addService(t.name, t.logo, t.kind, { templateId: t.id, source: { type: "template", templateId: t.id }, ...(t.region ? { region: t.region } : {}) }, "first deploy started")}

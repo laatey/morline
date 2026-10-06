@@ -18,10 +18,10 @@ const appTabs = ["Deploys", "Variables", "Metrics", "Logs", "Network", "Volumes"
 const dbTabs = ["Data", "Connect", "Backups", "Volumes", "Variables", "Metrics", "Logs", "Settings"] as const;
 type Tab = (typeof appTabs)[number] | (typeof dbTabs)[number];
 
-export function Inspector({ service, onClose }: { service: Service; onClose: () => void }) {
+export function Inspector({ service, onClose, initialTab, attachVolume = false }: { service: Service; onClose: () => void; initialTab?: "Volumes"; attachVolume?: boolean }) {
   const isDb = service.kind === "database";
   const tabs: readonly Tab[] = isDb ? dbTabs : appTabs;
-  const [tab, setTab] = useState<Tab>(isDb ? "Data" : "Deploys");
+  const [tab, setTab] = useState<Tab>(initialTab ?? (isDb ? "Data" : "Deploys"));
   const [openDeploy, setOpenDeploy] = useState<ApiDeployment | null>(null);
   const qc = useQueryClient();
   const envId = useEnvId();
@@ -128,7 +128,7 @@ export function Inspector({ service, onClose }: { service: Service; onClose: () 
         {tab === "Metrics" && <MetricsGrid service={service} />}
         {tab === "Logs" && <div className="h-full"><LogStream serviceId={service.id} dense /></div>}
         {tab === "Network" && <NetworkingPanel service={service} />}
-        {tab === "Volumes" && <VolumesPanel key={service.id} service={service} />}
+        {tab === "Volumes" && <VolumesPanel key={service.id} service={service} initialAdding={attachVolume} />}
         {tab === "Settings" && <ServiceSettings service={service} onDeleted={onClose} />}
       </div>
     </aside>

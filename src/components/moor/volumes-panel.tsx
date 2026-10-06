@@ -10,24 +10,32 @@ import { cn } from "@/lib/utils";
 
 export type Volume = { id: string; name?: string | null; mountPath: string; sizeGb: number; usedGb?: number | null };
 
-export function VolumesPanel({ service }: { service: Service }) {
-  const qc = useQueryClient();
-  const key = ["volumes", service.id];
-  const { data: volumes = [], isLoading } = useQuery({
-    queryKey: key,
+export function useServiceVolumes(serviceId: string) {
+  return useQuery({
+    queryKey: ["volumes", serviceId],
     queryFn: async () => {
       try {
-        return (await api<{ data?: Volume[] }>(`/services/${service.id}/volumes`)).data ?? [];
-      } catch {
-        return []; // endpoint not live yet → treat as no volumes
+        const result = await api<{ data?: Volume[] } | Volume[]>(`/services/${serviceId}/volumes`);
+        return Array.isArray(result) ? result : result.data ?? [];
+      } catch (error) {
+        if ((error as ApiError).status === 404) return [];
+        throw error;
       }
     },
+    enabled: !serviceId.startsWith("tmp_"),
+    staleTime: 30_000,
     retry: false,
   });
+}
+
+export function VolumesPanel({ service, initialAdding = false }: { service: Service; initialAdding?: boolean }) {
+  const qc = useQueryClient();
+  const key = ["volumes", service.id];
+  const { data: volumes = [], isLoading, isError } = useServiceVolumes(service.id);
   const setCache = (fn: (v: Volume[]) => Volume[]) => qc.setQueryData<Volume[]>(key, (old) => fn(old ?? []));
   const refresh = () => void qc.invalidateQueries({ queryKey: key });
 
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(initialAdding);
   const [mountPath, setMountPath] = useState("");
   const [sizeGb, setSizeGb] = useState("1");
   const [busy, setBusy] = useState(false);
@@ -65,6 +73,7 @@ export function VolumesPanel({ service }: { service: Service }) {
     setCache((v) => v.map((x) => (x.id === vol.id ? { ...x, sizeGb: size } : x)));
     try {
       await api(`/volumes/${vol.id}`, { method: "PATCH", body: { sizeGb: size } });
+      refresh();
       toast.success("Volume resized", { description: `${vol.mountPath} · ${size} GB` });
     } catch (e) {
       toast.error((e as ApiError).message ?? "Could not resize the volume");
@@ -89,7 +98,7 @@ export function VolumesPanel({ service }: { service: Service }) {
       <div className="px-4 py-3">
         <p className="label-caps">Attached volumes</p>
         <p className="mt-1 text-xs text-muted-foreground">Volumes keep files between deploys. Resizes grow instantly; shrinking keeps data until the next deploy.</p>
-        {isLoading ? (
+        {isError ? <p className="mt-3 text-xs text-destructive">Could not load volumes. <Button variant="ghost" size="sm" onClick={refresh}>Retry</Button></p> : isLoading ? (
           <div className="mt-3 space-y-2">
             <div className="h-9 animate-pulse rounded-lg bg-muted/60" />
             <div className="h-9 w-3/4 animate-pulse rounded-lg bg-muted/40" />

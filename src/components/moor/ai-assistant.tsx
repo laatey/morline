@@ -5,15 +5,16 @@ import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import type { AssistantContext } from "@/lib/assistant-context";
 import { toast } from "sonner";
 
 // Threads persist via /assistant/threads.
-type Msg = { role: "user" | "agent"; text: string; action?: string };
+type Msg = { role: "user" | "agent"; text: string; action?: string; context?: AssistantContext };
 type Thread = { id: string; title: string; when: string; messages: Msg[] };
 
 const prompts = ["Why did the latest deploy fail?", "Review environment variables", "Explain this service map"];
 
-type RawMsg = { role?: string; text?: string; content?: string; action?: string };
+type RawMsg = { role?: string; text?: string; content?: string; action?: string; context?: AssistantContext };
 type RawThread = { id: string; title?: string; updatedAt?: string; createdAt?: string; messages?: RawMsg[] };
 const ago = (iso?: string) => { if (!iso) return "now"; const m = Math.max(0, (Date.now() - Date.parse(iso)) / 60000); return m < 1 ? "now" : m < 60 ? `${Math.floor(m)}m` : m < 1440 ? `${Math.floor(m / 60)}h` : `${Math.floor(m / 1440)}d`; };
 const toMsg = (m: RawMsg): Msg => ({ role: m.role === "user" ? "user" : "agent", text: m.text ?? m.content ?? "", ...(m.action ? { action: m.action } : {}) });
@@ -21,7 +22,7 @@ const toThread = (t: RawThread): Thread => ({ id: t.id, title: t.title || "New c
 const unwrap = (r: unknown): RawThread[] => Array.isArray(r) ? r : ((r as { threads?: RawThread[]; data?: RawThread[] })?.threads ?? (r as { data?: RawThread[] })?.data ?? []);
 const fresh = (): Thread => ({ id: crypto.randomUUID(), title: "New conversation", when: "now", messages: [] });
 
-export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; initialPrompt?: { text: string; key: number } | null }) {
+export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; initialPrompt?: { text: string; key: number; context?: AssistantContext } | null }) {
   const [threads, setThreads] = useState<Thread[]>(() => [fresh()]);
   const [activeId, setActiveId] = useState(() => threads[0]!.id);
   const [view, setView] = useState<"chat" | "history">("chat");
@@ -54,21 +55,21 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
     setThreads((l) => [t, ...l]);
     setActiveId(t.id);
     setView("chat");
-    send(initialPrompt.text, t.id);
+    send(initialPrompt.text, t.id, initialPrompt.context);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPrompt?.key]);
 
   const update = (id: string, fn: (t: Thread) => Thread) => setThreads((l) => l.map((t) => (t.id === id ? fn(t) : t)));
-  const send = (text: string, threadId?: string) => {
+  const send = (text: string, threadId?: string, context?: AssistantContext) => {
     const q = text.trim();
     if (!q || (thinking && !threadId)) return;
     const id = threadId ?? active.id;
-    update(id, (t) => ({ ...t, title: t.messages.length ? t.title : q.slice(0, 40), when: "now", messages: [...t.messages, { role: "user", text: q }] }));
+    update(id, (t) => ({ ...t, title: t.messages.length ? t.title : q.slice(0, 40), when: "now", messages: [...t.messages, { role: "user", text: q, context }] }));
     setInput("");
     setThinking(true);
     const cancelled = { v: false };
     stopRef.current = () => { cancelled.v = true; };
-    api<unknown>(`/assistant/threads/${id}/messages`, { method: "POST", body: { text: q } })
+    api<unknown>(`/assistant/threads/${id}/messages`, { method: "POST", body: { text: q, ...(context ? { context } : {}) } })
       .then(async (res) => {
         if (cancelled.v) return;
         const r = res as { thread?: RawThread; messages?: RawMsg[]; reply?: RawMsg; message?: RawMsg };
@@ -160,7 +161,7 @@ export function AiAssistant({ onClose, initialPrompt }: { onClose: () => void; i
                       >
                         {m.text}
                       </ReactMarkdown>
-                    ) : m.text}
+                    ) : <>{m.context ? <span className="mb-1.5 flex items-center gap-1.5 border-b border-primary-foreground/20 pb-1.5 text-[10px]"><Bot className="h-3 w-3" />{m.context.serviceName} · Failed deployment</span> : null}{m.text}</>}
                     {m.action ? (
                       <button disabled={applied.has(`${active.id}-${i}`)} onClick={() => setApplied((s) => new Set(s).add(`${active.id}-${i}`))} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border bg-card px-2 py-1.5 text-[11px] font-medium hover:bg-accent disabled:text-score">
                         {applied.has(`${active.id}-${i}`) ? <><Check className="h-3 w-3" />Noted</> : m.action}
