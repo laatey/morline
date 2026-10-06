@@ -1,5 +1,11 @@
 # Roadmap
 
+## Canvas polish
+- [ ] Refine right-click menus and database/template entry points.
+- [ ] Show attached volumes as stacked cards and open attachment from service menus.
+- [ ] Send deployment context separately from the visible chat message.
+- [ ] Verify the updated interactions and report any backend requirements.
+
 ## Frontend (complete)
 - [x] Marketing site, workspace UI, all product screens on sample data.
 
