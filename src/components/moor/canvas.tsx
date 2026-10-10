@@ -121,12 +121,14 @@ export function Canvas({
   const [menuConfirmDelete, setMenuConfirmDelete] = useState(false);
   const [pendingConnect, setPendingConnect] = useState<string | null>(null);
   const [deployingId, setDeployingId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const toWorld = (cx: number, cy: number) => {
     const r = ref.current?.getBoundingClientRect();
     if (!r) return { x: 0, y: 0 };
     return { x: (cx - r.left - view.x) / view.k, y: (cy - r.top - view.y) / view.k };
   };
   const startLink = (e: React.PointerEvent, id: string) => {
+    if (e.button !== 0) return;
     e.stopPropagation();
     (e.target as Element).setPointerCapture?.(e.pointerId);
     drag.current = { mode: "link", id, sx: e.clientX, sy: e.clientY, ox: 0, oy: 0, moved: false };
@@ -205,6 +207,9 @@ export function Canvas({
   const lastPinchDist = useRef<number | null>(null);
 
   const onPointerDown = (e: React.PointerEvent, id?: string) => {
+    // Only handle primary (left) button for canvas panning, dragging, and selection
+    if (e.button !== 0) return;
+
     e.stopPropagation();
     setMenu(null);
     setMenuConfirmDelete(false);
@@ -261,6 +266,8 @@ export function Canvas({
   const onPointerUp = (e?: React.PointerEvent) => {
     if (e) {
       activePointers.current.delete(e.pointerId);
+      // Ignore non-left button releases for node selection/connection
+      if (e.button !== 0) return;
     } else {
       activePointers.current.clear();
     }
@@ -293,7 +300,7 @@ export function Canvas({
     }
   };
 
-  // Close the context menu / connect mode on Escape.
+  // Close context menu on Escape or click outside.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -304,6 +311,18 @@ export function Canvas({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    if (!menu) return;
+    const onPointerDownOutside = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenu(null);
+        setMenuConfirmDelete(false);
+      }
+    };
+    window.addEventListener("pointerdown", onPointerDownOutside);
+    return () => window.removeEventListener("pointerdown", onPointerDownOutside);
+  }, [menu]);
 
   const deployFromMenu = async (id: string) => {
     if (deployingId) return;
@@ -383,6 +402,7 @@ export function Canvas({
                         className="pointer-events-auto grid h-4 w-4 place-items-center rounded-sm border bg-background text-muted-foreground hover:text-destructive"
                         onPointerDown={(ev) => ev.stopPropagation()}
                         onPointerUp={(ev) => ev.stopPropagation()}
+                        onContextMenu={(ev) => { ev.preventDefault(); ev.stopPropagation(); }}
                         onClick={() => { if (window.confirm("Remove this connection?")) void state.disconnect(e.id); }}
                       ><Close className="h-2.5 w-2.5" /></button>
                     ) : null}
@@ -410,7 +430,7 @@ export function Canvas({
       </div>
 
       {/* Controls: bottom-left dock */}
-      <div className="absolute bottom-2 left-2 z-10 flex items-center gap-0.5 rounded-lg border bg-card/95 p-0.5 shadow-sm backdrop-blur sm:bottom-3 sm:left-3 sm:gap-1 sm:p-1" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="absolute bottom-2 left-2 z-10 flex items-center gap-0.5 rounded-lg border bg-card/95 p-0.5 shadow-sm backdrop-blur sm:bottom-3 sm:left-3 sm:gap-1 sm:p-1" onPointerDown={(e) => e.stopPropagation()} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}>
         <CtrlBtn label="Zoom out" onClick={() => zoom(0.85)}><Minus className="h-3.5 w-3.5" /></CtrlBtn>
         <span className="w-9 text-center font-mono text-[9px] text-muted-foreground sm:w-10 sm:text-[10px]">{Math.round(view.k * 100)}%</span>
         <CtrlBtn label="Zoom in" onClick={() => zoom(1.15)}><Plus className="h-3.5 w-3.5" /></CtrlBtn>
@@ -422,15 +442,14 @@ export function Canvas({
 
       {/* Right-click menu */}
       {menu ? (
-        <>
-          <div className="fixed inset-0 z-40" onPointerDown={() => { setMenu(null); setMenuConfirmDelete(false); }} onContextMenu={(e) => { e.preventDefault(); setMenu(null); setMenuConfirmDelete(false); }} />
-          <div
-            role="menu"
-            className="fixed z-50 w-[min(230px,calc(100vw-24px))] max-h-[calc(100vh-24px)] overflow-y-auto rounded-lg border border-border/80 bg-card p-1 shadow-xl"
-            style={{ left: Math.max(12, Math.min(menu.x, window.innerWidth - 242)), top: Math.max(12, Math.min(menu.y, window.innerHeight - (menu.serviceId ? 310 : 270))) }}
-            onPointerDown={(e) => e.stopPropagation()}
-            onContextMenu={(e) => e.preventDefault()}
-          >
+        <div
+          ref={menuRef}
+          role="menu"
+          className="fixed z-50 w-[min(230px,calc(100vw-24px))] max-h-[calc(100vh-24px)] overflow-y-auto rounded-lg border border-border/80 bg-card p-1 shadow-xl"
+          style={{ left: Math.max(12, Math.min(menu.x, window.innerWidth - 242)), top: Math.max(12, Math.min(menu.y, window.innerHeight - (menu.serviceId ? 310 : 270))) }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        >
             {menu.serviceId ? (() => {
               const s = services.find((x) => x.id === menu.serviceId);
               if (!s) return null;
@@ -477,7 +496,6 @@ export function Canvas({
               </>
             )}
           </div>
-        </>
       ) : null}
 
       {/* Connect-mode banner */}
@@ -549,11 +567,13 @@ function ServiceNode({ s, selected, dimmed, connecting, onPointerDown, onPointer
         aria-label={`Connect ${s.name} to another service`}
         title="Drag to another service to connect"
         onPointerDown={onLinkStart}
+        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
         className="absolute -right-2 z-10 grid h-4 w-4 cursor-crosshair place-items-center rounded-full border bg-background opacity-0 transition-opacity hover:border-primary group-hover:opacity-100 [@media(hover:none)]:opacity-100"
         style={{ top: h / 2 - 8 }}
       ><span className="h-1.5 w-1.5 rounded-full bg-primary" /></span>
       {attached.map((v, index) => (
         <Button key={v.id} variant="ghost" aria-label={`Volume ${v.label}`} onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onVolumes(); }}
+          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(e); }}
           className="absolute inset-x-2 z-0 h-12 justify-start gap-2 rounded-b-lg rounded-t-none border bg-surface px-3 pb-1 pt-3 text-xs shadow-sm hover:bg-accent"
           style={{ top: h - 10 + index * 40 }}>
           <HardDrive className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -578,6 +598,7 @@ function ServiceNode({ s, selected, dimmed, connecting, onPointerDown, onPointer
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
+              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(e); }}
               className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
             >
               <Globe className="h-2.5 w-2.5 shrink-0 opacity-70" />
