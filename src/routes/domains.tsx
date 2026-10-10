@@ -127,13 +127,8 @@ function DomainsPage() {
   const records = created?.dnsRecords?.length ? created.dnsRecords : [{ type: "CNAME", name: host.split(".")[0] ?? host, value: "edge.morline.space" }];
 
   const openCloudflareAutoConfig = () => {
-    if (!created?.host) return;
-    const { apex, subdomain } = parseApex(created.host);
-    const domainConnectUrl = created.dnsProvider?.autoConfigUrl ?? 
-      `https://dash.cloudflare.com/domainconnect/v2/domainTemplates/providers/morline/services/app/apply?domain=${encodeURIComponent(apex)}&subdomain=${encodeURIComponent(subdomain)}`;
-    
-    toast.success("Opening Cloudflare to authorize DNS records...");
-    window.open(domainConnectUrl, "_blank", "noopener,noreferrer");
+    toast.success("Opening Cloudflare dashboard...");
+    window.open("https://dash.cloudflare.com/", "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -235,7 +230,7 @@ function DomainsPage() {
                     onClick={openCloudflareAutoConfig}
                   >
                     <img src={cloudflareLogo} alt="" className="h-3.5 w-auto brightness-0 invert" />
-                    Auto-configure with Cloudflare
+                    Configure in Cloudflare
                     <ExternalLink className="h-3 w-3 ml-0.5 opacity-90" />
                   </Button>
                 ) : null}
