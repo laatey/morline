@@ -592,6 +592,93 @@ function LogDetail({ line, onClose, onPrev, onNext }: { line: Record<string, unk
   );
 }
 
+type UdpInfo = { enabled: boolean; host: string; range: { from: number; to: number }; ports: { containerPort: number; port: number; address: string }[] };
+type NetworkingData = { udpProxy?: UdpInfo; restarting?: boolean };
+const UDP_PRESETS = [
+  { label: "RADIUS", hint: "1812, 1813", ports: [1812, 1813] },
+  { label: "WireGuard", hint: "51820", ports: [51820] },
+  { label: "DNS", hint: "53", ports: [53] },
+];
+
+function UdpPorts({ service }: { service: Service }) {
+  const qc = useQueryClient();
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const q = useQuery({ queryKey: ["networking", service.id], queryFn: () => api<NetworkingData>(`/services/${service.id}/networking`) });
+  const info = q.data?.udpProxy;
+  // Older servers don't report udpProxy; hide the section instead of showing controls that cannot work.
+  if (q.isLoading || !info) return null;
+  const current = info.ports;
+
+  const save = async (ports: number[], message: string) => {
+    setBusy(true);
+    try {
+      const res = await api<NetworkingData>(`/services/${service.id}/networking`, { method: "PATCH", body: { udpPorts: ports } });
+      qc.setQueryData(["networking", service.id], res);
+      void qc.invalidateQueries({ queryKey: ["canvas"] });
+      void qc.invalidateQueries({ queryKey: ["service", service.id] });
+      toast.success(res.restarting ? `${message}. Restarting the service to apply.` : message);
+    } catch (e) {
+      toast.error(errMsg(e, "Could not update UDP ports"));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const add = (ports: number[]) => {
+    const have = current.map((p) => p.containerPort);
+    const next = Array.from(new Set([...have, ...ports])).sort((a, b) => a - b);
+    if (next.length === have.length) { toast.info("Already exposed"); return; }
+    void save(next, `UDP ${ports.join(", ")} exposed`);
+  };
+  const submit = () => {
+    const n = Number(draft);
+    if (!Number.isInteger(n) || n < 1 || n > 65535) { toast.error("Enter a port between 1 and 65535"); return; }
+    add([n]);
+    setDraft("");
+  };
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between">
+        <p className="label-caps">Public UDP</p>
+        {busy ? <span className="font-mono text-[10px] text-muted-foreground">applying…</span> : null}
+      </div>
+      {current.length ? current.map((m) => (
+        <div key={m.containerPort} className="mt-2 flex items-center gap-2 font-mono text-xs">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-score" />
+          <span className="truncate">{m.address}</span>
+          <span className="shrink-0 text-muted-foreground">→ :{m.containerPort}/udp</span>
+          <button type="button" aria-label={`Copy ${m.address}`} onClick={() => { void navigator.clipboard.writeText(m.address); toast.success("Address copied"); }} className="ml-auto rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"><Copy className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label={`Stop exposing UDP ${m.containerPort}`} disabled={busy} onClick={() => void save(current.filter((p) => p.containerPort !== m.containerPort).map((p) => p.containerPort), `UDP ${m.containerPort} closed`)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"><Close className="h-3.5 w-3.5" /></button>
+        </div>
+      )) : <p className="mt-2 text-sm text-muted-foreground">No UDP ports exposed.</p>}
+      <div className="mt-3 flex items-center gap-2">
+        <Input
+          value={draft}
+          inputMode="numeric"
+          onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ""))}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          placeholder="Container port, e.g. 1812"
+          aria-label="UDP port inside the container"
+          className="h-7 flex-1 font-mono text-xs"
+        />
+        <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy || !draft} onClick={submit}>Expose</Button>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] text-muted-foreground">Quick add</span>
+        {UDP_PRESETS.map((p) => (
+          <Button key={p.label} type="button" size="sm" variant="ghost" disabled={busy} className="h-6 gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground" onClick={() => add(p.ports)}>
+            <Plus className="h-3 w-3" /> {p.label} <span className="font-mono opacity-60">{p.hint}</span>
+          </Button>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        For RADIUS, WireGuard, DNS or game servers. Each port gets its own public port ({info.range.from}–{info.range.to}). Your app also receives <span className="font-mono">MORLINE_PUBLIC_UDP_HOST</span> and <span className="font-mono">MORLINE_PUBLIC_UDP_PORT_&lt;port&gt;</span>. Changing this restarts the service.
+      </p>
+    </div>
+  );
+}
+
 export function NetworkingPanel({ service }: { service: Service }) {
   const qc = useQueryClient();
   const envId = useEnvId();
@@ -617,6 +704,7 @@ export function NetworkingPanel({ service }: { service: Service }) {
         )) : <p className="mt-2 text-sm text-muted-foreground">Not exposed to the internet.</p>}
         <Button size="sm" variant="outline" className="mt-3 h-7 text-xs" onClick={generate}>Generate domain</Button>
       </div>
+      <UdpPorts service={service} />
       <div className="px-4 py-3">
         <p className="label-caps">Private network</p>
         <p className="mt-2 font-mono text-xs">{service.name}.morline.internal{service.port ? `:${service.port}` : ""}</p>
