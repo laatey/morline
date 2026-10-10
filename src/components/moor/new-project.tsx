@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Layers, Search } from "fluid-icons/react";
+import { ChevronRight, Search, Terminal } from "fluid-icons/react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ type Choice = {
   note: string;
   badge: string;
   logoKey?: LogoKey;
-  icon?: typeof Layers;
+  icon?: typeof Terminal;
 };
 
 const choices: Choice[] = [
@@ -44,7 +44,7 @@ const choices: Choice[] = [
     title: "Starter",
     note: "Begin from a production-ready template",
     badge: "16 starters",
-    icon: Layers,
+    icon: Terminal,
   },
 ];
 

@@ -103,6 +103,7 @@ const logoAliases: Record<string, LogoKey> = {
   go: "go", golang: "go", python: "python", django: "python", flask: "python", fastapi: "python", rust: "rust", cargo: "rust",
   docker: "docker", dockerfile: "docker", postgres: "postgres", postgresql: "postgres", mysql: "mysql", mariadb: "mysql",
   mongo: "mongodb", mongodb: "mongodb", redis: "redis", sqlite: "sqlite", strapi: "strapi", n8n: "n8n", metabase: "metabase",
+  terminal: "terminal", starter: "terminal", starters: "terminal", template: "terminal", templates: "terminal",
 };
 
 /** Most specific signal wins: framework → runtime/language → backend logo. Unknown → neutral icon, never Node. */

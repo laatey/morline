@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Package, Clock, HardDrive, Expand, Minus, Plus, Redo, Undo, Globe, Close, Rocket, RotateCw, Trash, ChevronRight, GitBranch } from "fluid-icons/react";
+import { ArrowUpRight, Package, Clock, HardDrive, Expand, Minus, Plus, Redo, Undo, Globe, Close, Rocket, RotateCw, Trash, ChevronRight, GitBranch, Terminal } from "fluid-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Edge, Service } from "@/lib/platform-data";
@@ -487,7 +487,7 @@ export function Canvas({
                 {onAddService ? <>
                   <MenuItem icon={<Logo k="github" className="h-3.5 w-3.5" />} label="GitHub repository" hint="Connected account or URL" onClick={() => { setMenu(null); onAddService("github"); }} />
                   <MenuItem icon={<HardDrive className="h-3.5 w-3.5" />} label="Add database" hint="Postgres, MySQL, Mongo, Redis" onClick={() => { setMenu(null); onAddService("database"); }} />
-                  <MenuItem icon={<Package className="h-3.5 w-3.5" />} label="Deploy template" hint="Starters and ready apps" onClick={() => { setMenu(null); onAddService("template"); }} />
+                  <MenuItem icon={<Terminal className="h-3.5 w-3.5" />} label="Deploy template" hint="Starters and ready apps" onClick={() => { setMenu(null); onAddService("template"); }} />
                   <MenuItem icon={<Plus className="h-3.5 w-3.5" />} label="Add service" onClick={() => { setMenu(null); onAddService("all"); }} />
                 </> : null}
                 <div className="mx-1.5 my-1 h-px bg-border/60" />

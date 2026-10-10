@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Layers, Search } from "fluid-icons/react";
+import { ChevronLeft, ChevronRight, Search, Terminal } from "fluid-icons/react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ export function useTemplates() {
       try {
         const res = await api<{ data: Template[] }>("/templates");
         if (res?.data?.length) {
-          return res.data.map((t) => ({ ...t, logo: (t.logo in logos ? t.logo : "docker") as LogoKey }));
+          return res.data.map((t) => ({ ...t, logo: (t.logo in logos ? t.logo : (t.kind === "database" ? "postgres" : "terminal")) as LogoKey }));
         }
       } catch {
         // fallback to bundled catalog
@@ -43,7 +43,7 @@ type Choice = {
   note: string;
   badge: string;
   logoKey?: LogoKey;
-  icon?: typeof Layers;
+  icon?: typeof Terminal;
 };
 
 const choices: Choice[] = [
@@ -73,7 +73,7 @@ const choices: Choice[] = [
     title: "Starter",
     note: "Begin from a production-ready template",
     badge: "16 starters",
-    icon: Layers,
+    icon: Terminal,
   },
 ];
 

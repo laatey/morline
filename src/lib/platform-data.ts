@@ -15,8 +15,9 @@ import sqlite from "@/assets/stack/sqlite.svg";
 import strapi from "@/assets/stack/strapi.svg";
 import vite from "@/assets/stack/vite.svg";
 import generic from "@/assets/stack/generic.svg";
+import terminal from "@/assets/stack/terminal.svg";
 
-export const logos = { docker, github, go, js, metabase, mongodb, mysql, n8n, nextjs, postgres, python, redis, rust, sqlite, strapi, vite, generic };
+export const logos = { docker, github, go, js, metabase, mongodb, mysql, n8n, nextjs, postgres, python, redis, rust, sqlite, strapi, vite, generic, terminal };
 export type LogoKey = keyof typeof logos;
 
 /** idle = created but never deployed (waiting for the user to deploy). */
