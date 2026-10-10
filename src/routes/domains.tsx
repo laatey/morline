@@ -186,13 +186,11 @@ function DomainsPage() {
               <div className="text-xs text-muted-foreground">Service<div className="mt-1 flex flex-wrap gap-1">{apps.map((s) => <button key={s.id} onClick={() => setSvc(s.id)} className={cn("rounded-md border px-2 py-1 font-mono text-xs", target === s.id && "border-primary text-foreground")}>{s.name}</button>)}</div></div>
             </div>
           ) : (
-            <div className="space-y-3">
-              <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
-                <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-                <span>
-                  <strong className="font-semibold text-amber-600 dark:text-amber-300">Cloudflare proxy:</strong> Set the Proxy status to <strong className="font-semibold text-amber-600 dark:text-amber-300">DNS only</strong> (toggle the orange cloud off) on these records so Morline can verify them.
-                </span>
-              </div>
+            <div className="space-y-2">
+              <p className="flex items-center gap-1.5 text-xs text-amber-500">
+                <Info className="h-3.5 w-3.5 shrink-0" />
+                <span>In Cloudflare, turn the proxy toggle <strong>OFF</strong> (DNS only / grey cloud).</span>
+              </p>
 
               <div className="rounded-md border font-mono text-xs overflow-hidden">
               <div className="grid grid-cols-[56px_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 bg-muted/40 px-3.5 py-2 font-medium text-muted-foreground border-b">
