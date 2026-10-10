@@ -191,92 +191,59 @@ function DomainsPage() {
               <div className="text-xs text-muted-foreground">Service<div className="mt-1 flex flex-wrap gap-1">{apps.map((s) => <button key={s.id} onClick={() => setSvc(s.id)} className={cn("rounded-md border px-2 py-1 font-mono text-xs", target === s.id && "border-primary text-foreground")}>{s.name}</button>)}</div></div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {cfDetected ? (
-                <div className="rounded-xl border border-[#f48120]/30 bg-[#f48120]/5 p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-background border border-[#f48120]/30 shadow-sm p-1.5">
-                        <img src={cloudflareLogo} alt="Cloudflare" className="h-full w-full object-contain" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-foreground">Cloudflare Detected</span>
-                          <span className="inline-flex items-center rounded-full bg-[#f48120]/15 px-2 py-0.5 text-[10px] font-semibold text-[#f48120] border border-[#f48120]/30">
-                            1-Click Setup
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Authorize DNS records automatically for <span className="font-mono text-foreground font-medium">{parseApex(created.host).apex}</span>.
-                        </p>
-                      </div>
+            <div className="rounded-md border font-mono text-xs overflow-hidden">
+              <div className="grid grid-cols-[56px_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 bg-muted/40 px-3.5 py-2 font-medium text-muted-foreground border-b">
+                <span>Type</span>
+                <span>Name</span>
+                <span>Value</span>
+              </div>
+              <div className="divide-y">
+                {records.map((r) => (
+                  <div key={r.type + r.name} className="grid grid-cols-[56px_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 items-start px-3.5 py-2.5">
+                    <span className="font-semibold text-foreground/90">{r.type}</span>
+                    <div className="flex items-start justify-between gap-1.5 min-w-0">
+                      <span className="break-all select-all leading-relaxed">{r.name}</span>
+                      <button aria-label={`Copy ${r.name}`} className="text-muted-foreground hover:text-foreground transition-colors shrink-0 p-0.5 mt-0.5 cursor-pointer" onClick={() => { navigator.clipboard?.writeText(r.name); toast("Copied"); }}>
+                        <Copy className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <div className="flex items-start justify-between gap-1.5 min-w-0">
+                      <span className="break-all select-all leading-relaxed">{r.value}</span>
+                      <button aria-label={`Copy ${r.value}`} className="text-muted-foreground hover:text-foreground transition-colors shrink-0 p-0.5 mt-0.5 cursor-pointer" onClick={() => { navigator.clipboard?.writeText(r.value); toast("Copied"); }}>
+                        <Copy className="h-3 w-3" />
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                    <Button
-                      size="sm"
-                      className="bg-[#f48120] hover:bg-[#e06f10] text-white font-medium text-xs gap-1.5 h-8 px-3.5 shadow-sm transition-all cursor-pointer"
-                      onClick={openCloudflareAutoConfig}
-                    >
-                      <img src={cloudflareLogo} alt="" className="h-3.5 w-auto brightness-0 invert" />
-                      Auto-configure with Cloudflare
-                      <ExternalLink className="h-3 w-3 ml-0.5 opacity-90" />
-                    </Button>
-                    <a
-                      href="https://dash.cloudflare.com/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 transition-colors"
-                    >
-                      <span>Open Cloudflare Dashboard</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-              ) : null}
-
-              {cfDetected ? (
-                <div className="relative my-1">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border/60" />
-                  </div>
-                  <div className="relative flex justify-center text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
-                    <span className="bg-background px-2.5">Or configure manually</span>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="rounded-md border font-mono text-xs overflow-hidden">
-                <div className="grid grid-cols-[56px_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 bg-muted/40 px-3.5 py-2 font-medium text-muted-foreground border-b">
-                  <span>Type</span>
-                  <span>Name</span>
-                  <span>Value</span>
-                </div>
-                <div className="divide-y">
-                  {records.map((r) => (
-                    <div key={r.type + r.name} className="grid grid-cols-[56px_minmax(0,1fr)_minmax(0,1.2fr)] gap-3 items-start px-3.5 py-2.5">
-                      <span className="font-semibold text-foreground/90">{r.type}</span>
-                      <div className="flex items-start justify-between gap-1.5 min-w-0">
-                        <span className="break-all select-all leading-relaxed">{r.name}</span>
-                        <button aria-label={`Copy ${r.name}`} className="text-muted-foreground hover:text-foreground transition-colors shrink-0 p-0.5 mt-0.5 cursor-pointer" onClick={() => { navigator.clipboard?.writeText(r.name); toast("Copied"); }}>
-                          <Copy className="h-3 w-3" />
-                        </button>
-                      </div>
-                      <div className="flex items-start justify-between gap-1.5 min-w-0">
-                        <span className="break-all select-all leading-relaxed">{r.value}</span>
-                        <button aria-label={`Copy ${r.value}`} className="text-muted-foreground hover:text-foreground transition-colors shrink-0 p-0.5 mt-0.5 cursor-pointer" onClick={() => { navigator.clipboard?.writeText(r.value); toast("Copied"); }}>
-                          <Copy className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
             </div>
           )}
           <DialogFooter>
-            {!created ? <Button size="sm" disabled={!valid || !target || busy} onClick={create}>{busy ? "Adding…" : "Continue"}</Button> : <><Button variant="outline" size="sm" onClick={reset}>Later</Button><Button size="sm" onClick={() => { void verify(created.id, created.host); reset(); }}>I've added the records</Button></>}
+            {!created ? (
+              <Button size="sm" disabled={!valid || !target || busy} onClick={create}>
+                {busy ? "Adding…" : "Continue"}
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={reset}>
+                  Later
+                </Button>
+                {cfDetected ? (
+                  <Button
+                    size="sm"
+                    className="bg-[#f48120] hover:bg-[#e06f10] text-white font-medium text-xs gap-1.5 h-8 px-3 shadow-sm transition-all cursor-pointer"
+                    onClick={openCloudflareAutoConfig}
+                  >
+                    <img src={cloudflareLogo} alt="" className="h-3.5 w-auto brightness-0 invert" />
+                    Auto-configure with Cloudflare
+                    <ExternalLink className="h-3 w-3 ml-0.5 opacity-90" />
+                  </Button>
+                ) : null}
+                <Button size="sm" onClick={() => { void verify(created.id, created.host); reset(); }}>
+                  I've added the records
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
