@@ -426,8 +426,8 @@ export function Canvas({
           <div className="fixed inset-0 z-40" onPointerDown={() => { setMenu(null); setMenuConfirmDelete(false); }} onContextMenu={(e) => { e.preventDefault(); setMenu(null); setMenuConfirmDelete(false); }} />
           <div
             role="menu"
-            className="fixed z-50 w-[min(300px,calc(100vw-24px))] max-h-[calc(100vh-24px)] overflow-y-auto rounded-lg border border-border/80 bg-card p-1.5 shadow-xl"
-            style={{ left: Math.max(12, Math.min(menu.x, window.innerWidth - 312)), top: Math.max(12, Math.min(menu.y, window.innerHeight - (menu.serviceId ? 380 : 365))) }}
+            className="fixed z-50 w-[min(230px,calc(100vw-24px))] max-h-[calc(100vh-24px)] overflow-y-auto rounded-lg border border-border/80 bg-card p-1 shadow-xl"
+            style={{ left: Math.max(12, Math.min(menu.x, window.innerWidth - 242)), top: Math.max(12, Math.min(menu.y, window.innerHeight - (menu.serviceId ? 310 : 270))) }}
             onPointerDown={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >
@@ -439,25 +439,26 @@ export function Canvas({
                 <div className="px-2 py-1.5">
                   <p className="text-xs">Delete <span className="font-medium">{s.name}</span> and all its deploys?</p>
                   <div className="mt-2 flex justify-end gap-1">
-                    <button className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => { setMenuConfirmDelete(false); setMenu(null); }}>Cancel</button>
-                    <button className="rounded-md bg-destructive px-2 py-1 text-xs font-medium text-destructive-foreground" onClick={() => void deleteFromMenu(s.id)}>Delete</button>
+                    <button className="rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => { setMenuConfirmDelete(false); setMenu(null); }}>Cancel</button>
+                    <button className="rounded bg-destructive px-2 py-0.5 text-xs font-medium text-destructive-foreground" onClick={() => void deleteFromMenu(s.id)}>Delete</button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div className="mb-1 flex items-center gap-2 border-b px-2.5 py-2.5">
-                    <span className="grid h-8 w-8 place-items-center rounded-md bg-surface"><Logo k={s.logo} className="h-4 w-4" /></span>
+                  <div className="mb-0.5 flex items-center gap-2 border-b border-border/60 px-2 py-1.5">
+                    <span className="grid h-6 w-6 place-items-center rounded bg-surface"><Logo k={s.logo} className="h-3.5 w-3.5" /></span>
                     <div className="min-w-0"><p className="truncate text-xs font-semibold">{s.name}</p><StatusDot status={s.status} withLabel /></div>
                   </div>
                   <MenuHeading>Service</MenuHeading>
-                  <MenuItem icon={<Expand className="h-4 w-4" />} label="Open service" hint="Deploys, variables and settings" onClick={() => { onSelect(s.id); setMenu(null); }} />
-                  <MenuItem icon={idle ? <Rocket className="h-4 w-4" /> : <RotateCw className="h-4 w-4" />} label={idle ? "Deploy" : "Redeploy"} disabled={deployingId === s.id} onClick={() => void deployFromMenu(s.id)} />
+                  <MenuItem icon={<Expand className="h-3.5 w-3.5" />} label="Open service" hint="Deploys, variables and settings" onClick={() => { onSelect(s.id); setMenu(null); }} />
+                  <MenuItem icon={idle ? <Rocket className="h-3.5 w-3.5" /> : <RotateCw className="h-3.5 w-3.5" />} label={idle ? "Deploy" : "Redeploy"} disabled={deployingId === s.id} onClick={() => void deployFromMenu(s.id)} />
                   <MenuHeading>Resources</MenuHeading>
-                  <MenuItem icon={<HardDrive className="h-4 w-4" />} label="Attach volume" hint="Persistent storage for this service" onClick={() => { onVolumes?.(s.id, true); setMenu(null); }} />
-                  <MenuItem icon={<ArrowUpRight className="h-4 w-4" />} label="Connect service" hint="Link to a database or another service" onClick={() => { setPendingConnect(s.id); setMenu(null); }} />
-                  <div className="mx-2 my-1.5 h-px bg-border" />
-                  <Button variant="ghost" role="menuitem" className="h-9 w-full justify-start gap-3 px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setMenuConfirmDelete(true)}>
-                    <Trash className="h-4 w-4" />Delete service
+                  <MenuItem icon={<HardDrive className="h-3.5 w-3.5" />} label="Attach volume" hint="Persistent storage for this service" onClick={() => { onVolumes?.(s.id, true); setMenu(null); }} />
+                  <MenuItem icon={<ArrowUpRight className="h-3.5 w-3.5" />} label="Connect service" hint="Link to another service" onClick={() => { setPendingConnect(s.id); setMenu(null); }} />
+                  <div className="mx-1.5 my-1 h-px bg-border/60" />
+                  <Button variant="ghost" role="menuitem" className="h-7 w-full justify-start gap-2 rounded px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setMenuConfirmDelete(true)}>
+                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded bg-destructive/10 text-destructive"><Trash className="h-3.5 w-3.5" /></span>
+                    Delete service
                   </Button>
                 </>
               );
@@ -465,14 +466,14 @@ export function Canvas({
               <>
                 <MenuHeading>Create</MenuHeading>
                 {onAddService ? <>
-                  <MenuItem icon={<Logo k="github" className="h-4 w-4" />} label="GitHub repository" hint="Connected account or public URL" onClick={() => { setMenu(null); onAddService("github"); }} />
-                  <MenuItem icon={<HardDrive className="h-4 w-4" />} label="Add database" hint="Postgres, MySQL, MongoDB, Redis" onClick={() => { setMenu(null); onAddService("database"); }} />
-                  <MenuItem icon={<Package className="h-4 w-4" />} label="Deploy template" hint="Starters and ready-to-run apps" onClick={() => { setMenu(null); onAddService("template"); }} />
-                  <MenuItem icon={<Plus className="h-4 w-4" />} label="Add service" onClick={() => { setMenu(null); onAddService("all"); }} />
+                  <MenuItem icon={<Logo k="github" className="h-3.5 w-3.5" />} label="GitHub repository" hint="Connected account or URL" onClick={() => { setMenu(null); onAddService("github"); }} />
+                  <MenuItem icon={<HardDrive className="h-3.5 w-3.5" />} label="Add database" hint="Postgres, MySQL, Mongo, Redis" onClick={() => { setMenu(null); onAddService("database"); }} />
+                  <MenuItem icon={<Package className="h-3.5 w-3.5" />} label="Deploy template" hint="Starters and ready apps" onClick={() => { setMenu(null); onAddService("template"); }} />
+                  <MenuItem icon={<Plus className="h-3.5 w-3.5" />} label="Add service" onClick={() => { setMenu(null); onAddService("all"); }} />
                 </> : null}
-                <div className="mx-2 my-1.5 h-px bg-border" />
+                <div className="mx-1.5 my-1 h-px bg-border/60" />
                 <MenuHeading>Canvas</MenuHeading>
-                <MenuItem icon={<Expand className="h-4 w-4" />} label="Fit to screen" onClick={() => { setMenu(null); fit(); }} />
+                <MenuItem icon={<Expand className="h-3.5 w-3.5" />} label="Fit to screen" onClick={() => { setMenu(null); fit(); }} />
               </>
             )}
           </div>
@@ -494,16 +495,19 @@ export function Canvas({
 }
 
 function MenuHeading({ children }: { children: React.ReactNode }) {
-  return <p className="px-2.5 pb-1 pt-1.5 font-mono text-[9px] uppercase tracking-wide text-muted-foreground">{children}</p>;
+  return <p className="px-2 pb-0.5 pt-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground/75">{children}</p>;
 }
 
 function MenuItem({ icon, label, hint, onClick, disabled }: { icon: React.ReactNode; label: string; hint?: string; onClick: () => void; disabled?: boolean }) {
   return (
     <Button variant="ghost" role="menuitem" disabled={disabled} onClick={onClick}
-      className="h-auto min-h-9 w-full justify-start gap-3 whitespace-normal rounded-md px-2.5 py-2 text-left">
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-surface text-muted-foreground">{icon}</span>
-      <span className="min-w-0 flex-1"><span className="block text-xs font-medium">{label}</span>{hint ? <span className="mt-0.5 block text-[10px] font-normal leading-4 text-muted-foreground">{hint}</span> : null}</span>
-      <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+      className="h-auto min-h-7 w-full justify-start gap-2 whitespace-normal rounded px-2 py-1 text-left hover:bg-accent">
+      <span className="grid h-5 w-5 shrink-0 place-items-center rounded bg-surface text-muted-foreground">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-medium leading-none">{label}</span>
+        {hint ? <span className="mt-0.5 block truncate text-[9.5px] font-normal leading-tight text-muted-foreground">{hint}</span> : null}
+      </span>
+      <ChevronRight className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
     </Button>
   );
 }
