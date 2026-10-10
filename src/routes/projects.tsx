@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, ChevronDown, Globe, Layers, More, Plus, Rocket, FileText, Search, Settings, Network } from "fluid-icons/react";
+import { Activity, ChevronDown, Globe, More, Plus, Rocket, FileText, Search, Settings, Network, Terminal } from "fluid-icons/react";
 
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -349,7 +349,7 @@ function ProjectsPage() {
                 ))}
             {!projectsQuery.isLoading && projects.length === 0 ? (
               <div className="col-span-full flex flex-col items-center gap-3 py-16 text-center">
-                <span className="grid h-11 w-11 place-items-center rounded-full border bg-card"><Layers className="h-5 w-5 text-muted-foreground" /></span>
+                <span className="grid h-11 w-11 place-items-center rounded-full border bg-card"><Terminal className="h-5 w-5 text-muted-foreground" /></span>
                 <p className="font-display text-lg font-semibold">No projects yet</p>
                 <p className="max-w-sm font-mono text-xs text-muted-foreground">create your first project to start mapping services on the canvas</p>
                 <Button size="sm" variant="outline" className="mt-1" onClick={() => setAdding(true)}><Plus className="mr-1.5 h-3.5 w-3.5" />New project</Button>
@@ -422,7 +422,7 @@ function ProjectCard({ p, onRemove, onRename }: { p: Project; onRemove: () => vo
       </div>
       <div className="auth-grid relative mt-2.5 grid min-h-[105px] flex-1 place-items-center overflow-hidden rounded-lg border bg-surface/35">
         <span className="relative grid h-9 w-9 place-items-center rounded-lg border bg-card shadow-sm transition-transform group-hover:scale-105">
-          <Layers className="h-4 w-4 text-muted-foreground" />
+          <Terminal className="h-4 w-4 text-muted-foreground" />
           {p.status === "crashed" ? <span className="absolute mb-[-28px] ml-[28px] h-1.5 w-1.5 rounded-full bg-destructive ring-2 ring-card" /> : null}
         </span>
       </div>

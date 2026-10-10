@@ -5,6 +5,28 @@ export function Logo({ k, className }: { k: LogoKey; className?: string }) {
   return <img src={logos[k]} alt="" className={cn("h-4 w-4 shrink-0 object-contain", className)} />;
 }
 
+export function DatabaseFannedLogos({ className }: { className?: string }) {
+  return (
+    <span className={cn("relative flex h-full w-full items-center justify-center pointer-events-none select-none", className)}>
+      <img
+        src={logos.mysql}
+        alt="MySQL"
+        className="absolute h-3.5 w-3.5 -translate-x-2 -rotate-12 transition-transform duration-200 ease-out group-hover:-translate-x-2.5 group-hover:-rotate-[18deg] drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
+      />
+      <img
+        src={logos.postgres}
+        alt="PostgreSQL"
+        className="absolute z-10 h-4 w-4 -translate-y-0.5 transition-transform duration-200 ease-out group-hover:-translate-y-1 group-hover:scale-110 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+      />
+      <img
+        src={logos.redis}
+        alt="Redis"
+        className="absolute h-3.5 w-3.5 translate-x-2 rotate-12 transition-transform duration-200 ease-out group-hover:translate-x-2.5 group-hover:rotate-[18deg] drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
+      />
+    </span>
+  );
+}
+
 const statusMeta: Record<Status, { label: string; dot: string; text: string }> = {
   online: { label: "Online", dot: "bg-score", text: "text-score" },
   deploying: { label: "Deploying", dot: "bg-score-mid animate-pulse", text: "text-score-mid" },

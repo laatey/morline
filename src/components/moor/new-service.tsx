@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { logos, templates as fallbackTemplates, type Kind, type LogoKey } from "@/lib/platform-data";
-import { Logo, Kbd } from "./primitives";
+import { DatabaseFannedLogos, Logo, Kbd } from "./primitives";
 import { GitHubRepoPicker, type GhRepo } from "./github-repo-picker";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +44,7 @@ type Choice = {
   badge: string;
   logoKey?: LogoKey;
   icon?: typeof Terminal;
+  fanned?: "database";
 };
 
 const choices: Choice[] = [
@@ -66,7 +67,7 @@ const choices: Choice[] = [
     title: "Database",
     note: "Postgres, Redis, MySQL and more",
     badge: "Managed",
-    logoKey: "postgres",
+    fanned: "database",
   },
   {
     id: "starter",
@@ -471,8 +472,10 @@ export function NewServiceDialog({
                     onClick={() => handleSelectChoice(choice)}
                     className="group flex cursor-pointer items-center gap-3 bg-card px-3.5 py-2.5 text-left transition-colors hover:bg-accent/70"
                   >
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface">
-                      {choice.logoKey ? (
+                    <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface">
+                      {choice.fanned === "database" ? (
+                        <DatabaseFannedLogos />
+                      ) : choice.logoKey ? (
                         <Logo k={choice.logoKey} className="h-4.5 w-4.5" />
                       ) : choice.icon ? (
                         <choice.icon className="h-4 w-4 text-foreground/80" />
