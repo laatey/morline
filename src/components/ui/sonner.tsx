@@ -32,8 +32,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           icon: "flex shrink-0 items-center",
           closeButton:
             "!absolute !left-auto !right-2 !top-1/2 !-translate-y-1/2 !translate-x-0 grid !h-5 !w-5 place-items-center rounded-md !border-0 !bg-transparent text-muted-foreground hover:!bg-accent hover:text-foreground",
-          actionButton: "ml-auto shrink-0 rounded-md bg-foreground px-2 py-1 text-[11px] font-medium text-background",
-          cancelButton: "shrink-0 rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground",
+          actionButton:
+            "ml-auto shrink-0 rounded-md bg-foreground px-2 py-1 text-[11px] font-medium text-background",
+          cancelButton:
+            "shrink-0 rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground",
         },
       }}
       {...props}

@@ -41,7 +41,11 @@ export function getSession(): Session | null {
           setSession(parsed);
           params.delete("auth_session");
           const cleanSearch = params.toString() ? `?${params.toString()}` : "";
-          window.history.replaceState({}, "", `${window.location.pathname}${cleanSearch}${window.location.hash}`);
+          window.history.replaceState(
+            {},
+            "",
+            `${window.location.pathname}${cleanSearch}${window.location.hash}`,
+          );
           return parsed;
         }
       }
@@ -119,8 +123,14 @@ export async function api<T = unknown>(
   }
 
   // Lets listeners (e.g. the unapplied-changes bar) refresh right after any write.
-  const notify = () => { if (method !== "GET" && res.ok && typeof window !== "undefined") window.dispatchEvent(new CustomEvent("morline:mutated", { detail: { path } })); };
-  if (res.status === 204) { notify(); return undefined as T; }
+  const notify = () => {
+    if (method !== "GET" && res.ok && typeof window !== "undefined")
+      window.dispatchEvent(new CustomEvent("morline:mutated", { detail: { path } }));
+  };
+  if (res.status === 204) {
+    notify();
+    return undefined as T;
+  }
 
   const text = await res.text();
   let data: unknown = null;

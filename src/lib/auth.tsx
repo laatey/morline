@@ -41,7 +41,11 @@ interface AuthState {
   activeTeamId: string | null;
   setActiveTeamId: (id: string) => void;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<{ requiresEmailVerification: boolean }>;
+  signUp: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<{ requiresEmailVerification: boolean }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -58,7 +62,9 @@ function resolveActiveTeam(me: Me): string | null {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthState["status"]>(() => (getSession() ? "signed-in" : "loading"));
+  const [status, setStatus] = useState<AuthState["status"]>(() =>
+    getSession() ? "signed-in" : "loading",
+  );
   const [user, setUser] = useState<Me | null>(null);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
 
@@ -89,20 +95,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const result = await api<{ user: User; session: Session }>("/auth/login", {
-      method: "POST",
-      auth: false,
-      body: { email, password },
-    });
-    setSession(result.session);
-    const me = await api<Me>("/me");
-    applyMe(me);
-    setStatus("signed-in");
-  }, [applyMe]);
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      const result = await api<{ user: User; session: Session }>("/auth/login", {
+        method: "POST",
+        auth: false,
+        body: { email, password },
+      });
+      setSession(result.session);
+      const me = await api<Me>("/me");
+      applyMe(me);
+      setStatus("signed-in");
+    },
+    [applyMe],
+  );
 
   const signUp = useCallback(async (name: string, email: string, password: string) => {
-    const result = await api<{ user: User; session: Session | null; requiresEmailVerification: boolean }>("/auth/signup", {
+    const result = await api<{
+      user: User;
+      session: Session | null;
+      requiresEmailVerification: boolean;
+    }>("/auth/signup", {
       method: "POST",
       auth: false,
       body: { name, email, password },
@@ -127,7 +140,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("signed-out");
   }, []);
 
-  return <AuthContext.Provider value={{ status, user, teams: user?.teams ?? [], activeTeamId, setActiveTeamId, signIn, signUp, signOut, refresh }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        status,
+        user,
+        teams: user?.teams ?? [],
+        activeTeamId,
+        setActiveTeamId,
+        signIn,
+        signUp,
+        signOut,
+        refresh,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

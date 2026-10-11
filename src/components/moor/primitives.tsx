@@ -7,7 +7,12 @@ export function Logo({ k, className }: { k: LogoKey; className?: string }) {
 
 export function DatabaseFannedLogos({ className }: { className?: string }) {
   return (
-    <span className={cn("relative flex h-full w-full items-center justify-center pointer-events-none select-none", className)}>
+    <span
+      className={cn(
+        "relative flex h-full w-full items-center justify-center pointer-events-none select-none",
+        className,
+      )}
+    >
       <img
         src={logos.mysql}
         alt="MySQL"
@@ -32,7 +37,11 @@ const statusMeta: Record<Status, { label: string; dot: string; text: string }> =
   deploying: { label: "Deploying", dot: "bg-score-mid animate-pulse", text: "text-score-mid" },
   crashed: { label: "Crashed", dot: "bg-destructive", text: "text-destructive" },
   sleeping: { label: "Sleeping", dot: "bg-muted-foreground", text: "text-muted-foreground" },
-  idle: { label: "Not deployed", dot: "border border-primary bg-transparent", text: "text-primary" },
+  idle: {
+    label: "Not deployed",
+    dot: "border border-primary bg-transparent",
+    text: "text-primary",
+  },
 };
 
 export function StatusDot({ status, withLabel }: { status: Status; withLabel?: boolean }) {
@@ -63,31 +72,68 @@ const deployTone: Record<DeployState, string> = {
 
 export function DeployBadge({ state }: { state: DeployState }) {
   return (
-    <span className={cn("inline-flex h-5 items-center rounded-sm border px-1.5 font-mono text-[10px] uppercase tracking-wider", deployTone[state])}>
+    <span
+      className={cn(
+        "inline-flex h-5 items-center rounded-sm border px-1.5 font-mono text-[10px] uppercase tracking-wider",
+        deployTone[state],
+      )}
+    >
       {state}
     </span>
   );
 }
 
-export function Sparkline({ data, className, fill = true }: { data: number[]; className?: string; fill?: boolean }) {
+export function Sparkline({
+  data,
+  className,
+  fill = true,
+}: {
+  data: number[];
+  className?: string;
+  fill?: boolean;
+}) {
   const w = 100;
   const h = 32;
   const max = Math.max(...data);
   const pts = data.map((v, i) => [(i / (data.length - 1)) * w, h - (v / max) * (h - 2)] as const);
   const d = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className={cn("h-8 w-full text-primary", className)}>
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      className={cn("h-8 w-full text-primary", className)}
+    >
       {fill ? <path d={`${d} L${w},${h} L0,${h} Z`} className="fill-current opacity-15" /> : null}
-      <path d={d} className="fill-none stroke-current" strokeWidth={1.25} vectorEffect="non-scaling-stroke" />
+      <path
+        d={d}
+        className="fill-none stroke-current"
+        strokeWidth={1.25}
+        vectorEffect="non-scaling-stroke"
+      />
     </svg>
   );
 }
 
 export function Kbd({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <kbd className={cn("rounded-sm border bg-muted px-1 font-mono text-[10px] text-muted-foreground", className)}>{children}</kbd>;
+  return (
+    <kbd
+      className={cn(
+        "rounded-sm border bg-muted px-1 font-mono text-[10px] text-muted-foreground",
+        className,
+      )}
+    >
+      {children}
+    </kbd>
+  );
 }
 
-export function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+export function SectionTitle({
+  children,
+  action,
+}: {
+  children: React.ReactNode;
+  action?: React.ReactNode;
+}) {
   return (
     <div className="flex h-9 items-center justify-between border-b px-4">
       <p className="label-caps">{children}</p>

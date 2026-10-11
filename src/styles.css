@@ -249,20 +249,79 @@
   color: var(--color-muted-foreground);
 }
 
-@keyframes edge-flow { to { stroke-dashoffset: -20; } }
-.edge-flow { animation: edge-flow 1.2s linear infinite; }
-@keyframes deploy-bar { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
-.deploy-bar { animation: deploy-bar 1.4s ease-in-out infinite; }
-@keyframes rec-blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0.15; } }
-.rec-blink { animation: rec-blink 1.4s steps(1) infinite; }
-@media (prefers-reduced-motion: reduce) { .edge-flow, .deploy-bar, .rec-blink { animation: none; } }
+@keyframes edge-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+.edge-flow {
+  animation: edge-flow 1.2s linear infinite;
+}
+@keyframes deploy-bar {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.deploy-bar {
+  animation: deploy-bar 1.4s ease-in-out infinite;
+}
+@keyframes rec-blink {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  56%,
+  100% {
+    opacity: 0.15;
+  }
+}
+.rec-blink {
+  animation: rec-blink 1.4s steps(1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .edge-flow,
+  .deploy-bar,
+  .rec-blink {
+    animation: none;
+  }
+}
 
 /* Marketing field-guide frame: corner marks instead of a page grid. */
-.corner-bracket { position: absolute; width: 19px; height: 19px; pointer-events: none; border-color: var(--color-primary); z-index: 2; }
-.corner-bracket-tl { top: -1px; left: -1px; border-top: 2px solid; border-left: 2px solid; }
-.corner-bracket-tr { top: -1px; right: -1px; border-top: 2px solid; border-right: 2px solid; }
-.corner-bracket-bl { bottom: -1px; left: -1px; border-bottom: 2px solid; border-left: 2px solid; }
-.corner-bracket-br { bottom: -1px; right: -1px; border-bottom: 2px solid; border-right: 2px solid; }
+.corner-bracket {
+  position: absolute;
+  width: 19px;
+  height: 19px;
+  pointer-events: none;
+  border-color: var(--color-primary);
+  z-index: 2;
+}
+.corner-bracket-tl {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+.corner-bracket-tr {
+  top: -1px;
+  right: -1px;
+  border-top: 2px solid;
+  border-right: 2px solid;
+}
+.corner-bracket-bl {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 2px solid;
+  border-left: 2px solid;
+}
+.corner-bracket-br {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
 
 /* Printed red sun disc (hinomaru) behind the hero wordmark. */
 .sun-disc {
@@ -272,11 +331,15 @@
 }
 
 /* Ink captions sitting directly on the ukiyo-e plate. */
-.plate-note { color: #241d12; }
+.plate-note {
+  color: #241d12;
+}
 
 /* Prevent iOS Safari from auto-zooming on focus when font-size < 16px */
 @media screen and (max-width: 768px) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not(
+      [type="button"]
+    ):not([type="submit"]):not([type="reset"]),
   textarea,
   select,
   [cmdk-input] {

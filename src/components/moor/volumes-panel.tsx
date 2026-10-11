@@ -8,7 +8,13 @@ import { api, type ApiError } from "@/lib/api";
 import type { Service } from "@/lib/platform-data";
 import { cn } from "@/lib/utils";
 
-export type Volume = { id: string; name?: string | null; mountPath: string; sizeGb: number; usedGb?: number | null };
+export type Volume = {
+  id: string;
+  name?: string | null;
+  mountPath: string;
+  sizeGb: number;
+  usedGb?: number | null;
+};
 
 export function useServiceVolumes(serviceId: string) {
   return useQuery({
@@ -16,7 +22,7 @@ export function useServiceVolumes(serviceId: string) {
     queryFn: async () => {
       try {
         const result = await api<{ data?: Volume[] } | Volume[]>(`/services/${serviceId}/volumes`);
-        return Array.isArray(result) ? result : result.data ?? [];
+        return Array.isArray(result) ? result : (result.data ?? []);
       } catch (error) {
         if ((error as ApiError).status === 404) return [];
         throw error;
@@ -28,11 +34,18 @@ export function useServiceVolumes(serviceId: string) {
   });
 }
 
-export function VolumesPanel({ service, initialAdding = false }: { service: Service; initialAdding?: boolean }) {
+export function VolumesPanel({
+  service,
+  initialAdding = false,
+}: {
+  service: Service;
+  initialAdding?: boolean;
+}) {
   const qc = useQueryClient();
   const key = ["volumes", service.id];
   const { data: volumes = [], isLoading, isError } = useServiceVolumes(service.id);
-  const setCache = (fn: (v: Volume[]) => Volume[]) => qc.setQueryData<Volume[]>(key, (old) => fn(old ?? []));
+  const setCache = (fn: (v: Volume[]) => Volume[]) =>
+    qc.setQueryData<Volume[]>(key, (old) => fn(old ?? []));
   const refresh = () => void qc.invalidateQueries({ queryKey: key });
 
   const [adding, setAdding] = useState(initialAdding);
@@ -47,13 +60,21 @@ export function VolumesPanel({ service, initialAdding = false }: { service: Serv
     const path = mountPath.trim();
     const size = Math.max(0.1, Math.min(500, Number(sizeGb) || 1));
     if (!path) return;
-    if (!path.startsWith("/")) { toast.error("Mount path must start with /"); return; }
+    if (!path.startsWith("/")) {
+      toast.error("Mount path must start with /");
+      return;
+    }
     setBusy(true);
     const tempId = `tmp_${crypto.randomUUID()}`;
     setCache((v) => [...v, { id: tempId, mountPath: path, sizeGb: size }]);
     try {
-      await api(`/services/${service.id}/volumes`, { method: "POST", body: { mountPath: path, sizeGb: size } });
-      toast.success("Volume attached", { description: `${path} · ${size} GB — applied on next deploy` });
+      await api(`/services/${service.id}/volumes`, {
+        method: "POST",
+        body: { mountPath: path, sizeGb: size },
+      });
+      toast.success("Volume attached", {
+        description: `${path} · ${size} GB — applied on next deploy`,
+      });
       setAdding(false);
       setMountPath("");
       setSizeGb("1");
@@ -97,8 +118,18 @@ export function VolumesPanel({ service, initialAdding = false }: { service: Serv
     <div className="divide-y">
       <div className="px-4 py-3">
         <p className="label-caps">Attached volumes</p>
-        <p className="mt-1 text-xs text-muted-foreground">Volumes keep files between deploys. Resizes grow instantly; shrinking keeps data until the next deploy.</p>
-        {isError ? <p className="mt-3 text-xs text-destructive">Could not load volumes. <Button variant="ghost" size="sm" onClick={refresh}>Retry</Button></p> : isLoading ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Volumes keep files between deploys. Resizes grow instantly; shrinking keeps data until the
+          next deploy.
+        </p>
+        {isError ? (
+          <p className="mt-3 text-xs text-destructive">
+            Could not load volumes.{" "}
+            <Button variant="ghost" size="sm" onClick={refresh}>
+              Retry
+            </Button>
+          </p>
+        ) : isLoading ? (
           <div className="mt-3 space-y-2">
             <div className="h-9 animate-pulse rounded-lg bg-muted/60" />
             <div className="h-9 w-3/4 animate-pulse rounded-lg bg-muted/40" />
@@ -109,17 +140,38 @@ export function VolumesPanel({ service, initialAdding = false }: { service: Serv
               <div key={vol.id} className="rounded-lg border bg-surface/50 px-2.5 py-2">
                 {deletingId === vol.id ? (
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-muted-foreground">Delete <span className="font-mono text-foreground">{vol.mountPath}</span> and its data?</span>
+                    <span className="text-muted-foreground">
+                      Delete <span className="font-mono text-foreground">{vol.mountPath}</span> and
+                      its data?
+                    </span>
                     <span className="ml-auto flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setDeletingId(null)}>Keep</Button>
-                      <Button size="sm" variant="destructive" className="h-6 px-2 text-xs" onClick={() => void remove(vol)}>Delete</Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setDeletingId(null)}
+                      >
+                        Keep
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => void remove(vol)}
+                      >
+                        Delete
+                      </Button>
                     </span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2.5 font-mono text-xs">
                     <HardDrive className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span className="truncate text-foreground">{vol.mountPath}</span>
-                    {vol.usedGb != null ? <span className="hidden shrink-0 text-muted-foreground sm:inline">{vol.usedGb.toFixed(1)} / </span> : null}
+                    {vol.usedGb != null ? (
+                      <span className="hidden shrink-0 text-muted-foreground sm:inline">
+                        {vol.usedGb.toFixed(1)} /{" "}
+                      </span>
+                    ) : null}
                     {editingId === vol.id ? (
                       <input
                         autoFocus
@@ -129,22 +181,32 @@ export function VolumesPanel({ service, initialAdding = false }: { service: Serv
                         value={editSize}
                         onChange={(e) => setEditSize(e.target.value)}
                         onBlur={() => void resize(vol, Number(editSize))}
-                        onKeyDown={(e) => { if (e.key === "Enter") void resize(vol, Number(editSize)); if (e.key === "Escape") setEditingId(null); }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void resize(vol, Number(editSize));
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
                         className="h-6 w-16 shrink-0 rounded-md border bg-background px-1.5 text-right font-mono text-xs outline-none focus:border-primary"
                         aria-label="New size in GB"
                       />
                     ) : (
                       <button
                         title="Click to resize"
-                        onClick={() => { setEditingId(vol.id); setEditSize(String(vol.sizeGb)); }}
+                        onClick={() => {
+                          setEditingId(vol.id);
+                          setEditSize(String(vol.sizeGb));
+                        }}
                         className="shrink-0 rounded px-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >{vol.sizeGb} GB</button>
+                      >
+                        {vol.sizeGb} GB
+                      </button>
                     )}
                     <button
                       aria-label={`Remove volume ${vol.mountPath}`}
                       onClick={() => setDeletingId(vol.id)}
                       className="ml-auto shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    ><Trash className="h-3.5 w-3.5" /></button>
+                    >
+                      <Trash className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 )}
               </div>
@@ -153,7 +215,9 @@ export function VolumesPanel({ service, initialAdding = false }: { service: Serv
         ) : (
           <div className="mt-3 rounded-lg border border-dashed px-3 py-4 text-center">
             <p className="text-sm font-medium">No volumes attached</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Attach one to keep uploads, databases or caches alive across deploys.</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Attach one to keep uploads, databases or caches alive across deploys.
+            </p>
           </div>
         )}
       </div>
@@ -163,24 +227,62 @@ export function VolumesPanel({ service, initialAdding = false }: { service: Serv
             <p className="text-sm font-medium">Attach a volume</p>
             <div className="mt-2.5 grid grid-cols-[1fr_88px] gap-2">
               <div>
-                <label className="label-caps" htmlFor="vol-mount">Mount path</label>
-                <Input id="vol-mount" value={mountPath} onChange={(e) => setMountPath(e.target.value)} placeholder="/data" className="mt-1 h-8 font-mono text-xs" />
+                <label className="label-caps" htmlFor="vol-mount">
+                  Mount path
+                </label>
+                <Input
+                  id="vol-mount"
+                  value={mountPath}
+                  onChange={(e) => setMountPath(e.target.value)}
+                  placeholder="/data"
+                  className="mt-1 h-8 font-mono text-xs"
+                />
               </div>
               <div>
-                <label className="label-caps" htmlFor="vol-size">GB</label>
-                <Input id="vol-size" type="number" min="0.1" step="0.1" value={sizeGb} onChange={(e) => setSizeGb(e.target.value)} className="mt-1 h-8 font-mono text-xs" />
+                <label className="label-caps" htmlFor="vol-size">
+                  GB
+                </label>
+                <Input
+                  id="vol-size"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={sizeGb}
+                  onChange={(e) => setSizeGb(e.target.value)}
+                  className="mt-1 h-8 font-mono text-xs"
+                />
               </div>
             </div>
             <div className="mt-3 flex justify-end gap-1.5">
-              <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={busy} onClick={() => setAdding(false)}>Cancel</Button>
-              <Button size="sm" className="h-7 gap-1 text-xs" disabled={busy || !mountPath.trim()} onClick={() => void attach()}>
-                {busy ? <Loader className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}Attach
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                disabled={busy}
+                onClick={() => setAdding(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                disabled={busy || !mountPath.trim()}
+                onClick={() => void attach()}
+              >
+                {busy ? <Loader className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                Attach
               </Button>
             </div>
           </div>
         ) : (
-          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setAdding(true)}>
-            <Plus className="h-3.5 w-3.5" />Attach volume
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 text-xs"
+            onClick={() => setAdding(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Attach volume
           </Button>
         )}
       </div>

@@ -79,9 +79,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, interactive-widget=resizes-content" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, interactive-widget=resizes-content",
+      },
       { title: "Morline — deploy and see your whole stack" },
-      { name: "description", content: "Morline deploys your apps, databases and workers, and maps how they connect." },
+      {
+        name: "description",
+        content: "Morline deploys your apps, databases and workers, and maps how they connect.",
+      },
       { property: "og:site_name", content: "Morline" },
       { property: "og:type", content: "website" },
       { property: "og:image", content: "https://morline.space/og.jpg" },

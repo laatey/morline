@@ -4,7 +4,6 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Close } from "fluid-icons/react";
 
-
 import { cn } from "@/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
@@ -64,7 +63,10 @@ DialogHeader.displayName = "DialogHeader";
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("-mx-5 flex flex-row justify-end gap-2 border-t bg-muted/20 px-5 py-3.5", className)}
+    className={cn(
+      "-mx-5 flex flex-row justify-end gap-2 border-t bg-muted/20 px-5 py-3.5",
+      className,
+    )}
     {...props}
   />
 );
