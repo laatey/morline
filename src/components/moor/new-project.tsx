@@ -1,3 +1,5 @@
+import { DockerImageFields, type DockerImageValues } from "@/components/moor/docker-image-form";
+import { defaultNameFromImage, imageProblem } from "@/lib/docker-image";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Search, Terminal } from "fluid-icons/react";
@@ -57,8 +59,11 @@ const choices: Choice[] = [
 
 export type NewProjectInput = {
   name: string;
-  source: "empty" | "github";
+  source: "empty" | "github" | "docker";
   github?: { repo: string; branch?: string; url?: string };
+  docker?: { image: string; port?: number };
+  /** After creating the project, open the picker for this kind of service. */
+  addNext?: "database" | "template";
 };
 
 export function NewProjectDialog({
@@ -77,6 +82,7 @@ export function NewProjectDialog({
   const [repo, setRepo] = useState<GhRepo | null>(null);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [docker, setDocker] = useState<DockerImageValues>({ image: "", port: "" });
 
   const q = query.trim().toLowerCase();
   const visibleChoices = choices.filter(
@@ -104,32 +110,57 @@ export function NewProjectDialog({
       setPending(choice);
       setRepo(null);
       setName("");
+      setDocker({ image: "", port: "" });
       return;
     }
     onOpenChange(false);
     navigate({ to: "/projects" });
   };
 
+  const dockerReady =
+    pending?.id !== "docker" || (!!docker.image.trim() && !imageProblem(docker.image));
+
   const handleCreate = async () => {
-    const finalName = name.trim() || "new-project";
-    if (!onCreate || creating) return;
+    const finalName =
+      name.trim() ||
+      (pending?.id === "docker" && docker.image
+        ? defaultNameFromImage(docker.image)
+        : "new-project");
+    if (!onCreate || creating || !dockerReady) return;
     setCreating(true);
     try {
-      await onCreate(
-        repo
-          ? {
-              name: finalName,
-              source: "github",
-              github: {
-                repo: repo.fullName,
-                branch: repo.defaultBranch,
-                ...(repo.url ? { url: repo.url } : {}),
-              },
-            }
-          : { name: finalName, source: "empty" },
-      );
+      let input: NewProjectInput;
+      if (repo) {
+        input = {
+          name: finalName,
+          source: "github",
+          github: {
+            repo: repo.fullName,
+            branch: repo.defaultBranch,
+            ...(repo.url ? { url: repo.url } : {}),
+          },
+        };
+      } else if (pending?.id === "docker") {
+        input = {
+          name: finalName,
+          source: "docker",
+          docker: {
+            image: docker.image.trim(),
+            ...(docker.port ? { port: Number(docker.port) } : {}),
+          },
+        };
+      } else if (pending?.id === "database" || pending?.id === "starter") {
+        input = {
+          name: finalName,
+          source: "empty",
+          addNext: pending.id === "database" ? "database" : "template",
+        };
+      } else {
+        input = { name: finalName, source: "empty" };
+      }
+      await onCreate(input);
       onOpenChange(false);
-      if (!repo) navigate({ to: "/projects" });
+      if (input.source === "empty" && !input.addNext) navigate({ to: "/projects" });
     } finally {
       setCreating(false);
     }
@@ -144,6 +175,7 @@ export function NewProjectDialog({
           setPending(null);
           setPickingRepo(false);
           setRepo(null);
+          setDocker({ image: "", port: "" });
         }
         onOpenChange(v);
       }}
@@ -158,9 +190,13 @@ export function NewProjectDialog({
           <DialogDescription className="mt-0.5 text-xs text-muted-foreground">
             {pickingRepo
               ? "Pick the repository to deploy as the first service."
-              : pending
-                ? "Name the project before it is created."
-                : "Choose where the first service should come from."}
+              : pending?.id === "docker"
+                ? "Enter the image to run as the first service."
+                : pending?.id === "database" || pending?.id === "starter"
+                  ? "Name the project. You'll choose what to add right after."
+                  : pending
+                    ? "Name the project before it is created."
+                    : "Choose where the first service should come from."}
           </DialogDescription>
         </div>
 
@@ -199,6 +235,9 @@ export function NewProjectDialog({
             }}
           >
             <div className="space-y-3 p-4 sm:p-5">
+              {pending.id === "docker" ? (
+                <DockerImageFields values={docker} onChange={setDocker} />
+              ) : null}
               <label className="block text-xs text-muted-foreground">
                 Project name
                 <Input
@@ -213,7 +252,13 @@ export function NewProjectDialog({
                         .slice(0, 40),
                     )
                   }
-                  placeholder={pending.id === "database" ? "my-db" : "my-app"}
+                  placeholder={
+                    pending.id === "database"
+                      ? "my-db"
+                      : pending.id === "docker" && docker.image
+                        ? defaultNameFromImage(docker.image)
+                        : "my-app"
+                  }
                   className="mt-1 h-9 font-mono text-sm"
                 />
               </label>
@@ -232,7 +277,15 @@ export function NewProjectDialog({
                     {repo ? repo.fullName : pending.title}
                   </span>
                   <span className="block truncate text-muted-foreground">
-                    {repo ? `Deploys ${repo.defaultBranch} as the first service` : pending.note}
+                    {repo
+                      ? `Deploys ${repo.defaultBranch} as the first service`
+                      : pending.id === "docker"
+                        ? "Pulled and started as the first service"
+                        : pending.id === "database"
+                          ? "You will pick a database next"
+                          : pending.id === "starter"
+                            ? "You will pick a starter next"
+                            : pending.note}
                   </span>
                 </span>
               </div>
@@ -249,7 +302,7 @@ export function NewProjectDialog({
               >
                 Back
               </Button>
-              <Button type="submit" size="sm" disabled={creating}>
+              <Button type="submit" size="sm" disabled={creating || !dockerReady}>
                 {creating ? "Creating…" : "Create project"}
               </Button>
             </DialogFooter>

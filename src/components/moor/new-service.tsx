@@ -1,3 +1,5 @@
+import { DockerImageFields, type DockerImageValues } from "@/components/moor/docker-image-form";
+import { defaultNameFromImage, imageProblem } from "@/lib/docker-image";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search, Terminal } from "fluid-icons/react";
@@ -106,18 +108,22 @@ const choices: Choice[] = [
 
 const regions = ["us-east", "us-west", "eu-west", "eu-central", "ap-south"];
 
+export type ImageSelection = { image: string; name: string; port?: number; region: string };
+
 export function NewServiceDialog({
   open,
   onOpenChange,
   onPick,
   onPickRepo,
+  onPickImage,
   category = "all",
 }: {
-  category?: "all" | "database" | "template" | "github";
+  category?: "all" | "database" | "template" | "github" | "docker";
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onPick: (t: Template) => void;
   onPickRepo?: (r: GhRepo) => void;
+  onPickImage?: (i: ImageSelection) => void;
 }) {
   const { data: serverTemplates = [], isLoading } = useTemplates();
   const templates: Template[] = serverTemplates.length
@@ -131,7 +137,9 @@ export function NewServiceDialog({
         hint: t.hint,
       }));
 
-  const [step, setStep] = useState<"pick" | "github" | "review">("pick");
+  const [step, setStep] = useState<"pick" | "github" | "review" | "docker">("pick");
+  const [docker, setDocker] = useState<DockerImageValues>({ image: "", port: "" });
+  const [dockerName, setDockerName] = useState("");
   const [subview, setSubview] = useState<"database" | "starter" | null>(null);
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<Template | null>(null);
@@ -141,7 +149,9 @@ export function NewServiceDialog({
 
   useEffect(() => {
     if (open) {
-      setStep(category === "github" ? "github" : "pick");
+      setStep(category === "github" ? "github" : category === "docker" ? "docker" : "pick");
+      setDocker({ image: "", port: "" });
+      setDockerName("");
       setSubview(category === "database" ? "database" : category === "template" ? "starter" : null);
       setQuery("");
       setPicked(null);
@@ -186,14 +196,7 @@ export function NewServiceDialog({
       return;
     }
     if (choice.id === "docker") {
-      openReview({
-        id: "docker-custom",
-        name: "docker-app",
-        logo: "docker",
-        kind: "app",
-        group: "Source",
-        hint: "Run a public or private container image",
-      });
+      setStep("docker");
       return;
     }
     if (choice.id === "database") {
@@ -246,6 +249,10 @@ export function NewServiceDialog({
     headerCategory = "Source";
     headerTitle = "Deploy from GitHub";
     headerDesc = "Pick the repository to deploy as a service.";
+  } else if (step === "docker") {
+    headerCategory = "Source";
+    headerTitle = "Deploy a Docker image";
+    headerDesc = "Pull an image, run it, and route traffic to it.";
   } else if (step === "review" && picked) {
     headerCategory = "Configure";
     headerTitle = `Add ${picked.name}`;
@@ -291,6 +298,103 @@ export function NewServiceDialog({
               </Button>
             </DialogFooter>
           </>
+        ) : step === "docker" ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const image = docker.image.trim();
+              if (!image || imageProblem(image)) return;
+              onPickImage?.({
+                image,
+                name: dockerName.trim() || defaultNameFromImage(image),
+                ...(docker.port ? { port: Number(docker.port) } : {}),
+                region,
+              });
+              setStep("pick");
+              onOpenChange(false);
+            }}
+          >
+            <div className="border-b px-4.5 pb-3 pt-3.5 sm:px-5 sm:pt-4 sm:pb-3.5">
+              <div className="flex items-center gap-2">
+                {category !== "docker" ? (
+                  <button
+                    type="button"
+                    aria-label="Back"
+                    onClick={() => setStep("pick")}
+                    className="mr-1 grid h-6 w-6 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                ) : null}
+                <div>
+                  <p className="label-caps">{headerCategory}</p>
+                  <DialogTitle className="mt-0.5 font-display text-base font-semibold tracking-tight sm:text-lg">
+                    {headerTitle}
+                  </DialogTitle>
+                </div>
+              </div>
+              <DialogDescription className="mt-1 text-xs text-muted-foreground">
+                {headerDesc}
+              </DialogDescription>
+            </div>
+            <div className="space-y-3.5 p-4 sm:p-5">
+              <DockerImageFields values={docker} onChange={setDocker} />
+              <label className="block text-xs text-muted-foreground">
+                Service name
+                <Input
+                  value={dockerName}
+                  onChange={(e) =>
+                    setDockerName(
+                      e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-]/g, "-")
+                        .replace(/^-+/, "")
+                        .slice(0, 40),
+                    )
+                  }
+                  placeholder={docker.image ? defaultNameFromImage(docker.image) : "from the image"}
+                  className="mt-1 h-9 font-mono text-sm"
+                />
+              </label>
+              <div>
+                <p className="label-caps mb-1.5">Region</p>
+                <div className="flex flex-wrap gap-1">
+                  {regions.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRegion(r)}
+                      className={cn(
+                        "rounded-md border px-2.5 py-1 font-mono text-[11px] transition-colors",
+                        region === r
+                          ? "border-primary/60 bg-primary/10 text-foreground font-medium"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                      )}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="border-t px-4.5 py-3 sm:px-5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => (category === "docker" ? onOpenChange(false) : setStep("pick"))}
+              >
+                {category === "docker" ? "Cancel" : "Back"}
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!docker.image.trim() || !!imageProblem(docker.image)}
+              >
+                Add to canvas
+              </Button>
+            </DialogFooter>
+          </form>
         ) : step === "review" && picked ? (
           <form
             onSubmit={(e) => {

@@ -8,6 +8,8 @@
 
 ## Done
 
+- Docker image flow end to end: image and port form in the add-service and new-project dialogs, server-side pull and run. Database and Starter choices in new project now lead to their picker.
+
 - Assistant can build apps and change code: diff review sheet, commit or pull request, deploy, undo.
 - CPU and memory sliders based on the host's remaining capacity.
 

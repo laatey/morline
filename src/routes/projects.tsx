@@ -208,12 +208,43 @@ function ProjectsPage() {
       if (!teamId) throw new Error("No workspace selected");
       const res = await api<ApiProject | { project: ApiProject; services?: unknown[] }>(
         `/teams/${teamId}/projects`,
-        { method: "POST", body: input },
+        {
+          method: "POST",
+          // Only what the API knows about; the rest drives what happens after creation.
+          body: {
+            name: input.name,
+            source: input.source === "docker" ? "empty" : input.source,
+            ...(input.github ? { github: input.github } : {}),
+          },
+        },
       );
       const project = "project" in res && res.project ? res.project : (res as ApiProject);
       const alreadySeeded =
         "services" in res && Array.isArray(res.services) && res.services.length > 0;
-      if (input.source === "github" && input.github && !alreadySeeded) {
+      const seed =
+        input.source === "github" && input.github
+          ? {
+              name: input.github.repo.split("/")[1] ?? input.github.repo,
+              label: input.github.repo,
+              source: {
+                type: "github",
+                repo: input.github.repo,
+                branch: input.github.branch,
+                ...(input.github.url ? { url: input.github.url } : {}),
+              },
+            }
+          : input.source === "docker" && input.docker
+            ? {
+                name: undefined as string | undefined,
+                label: input.docker.image,
+                source: {
+                  type: "image",
+                  image: input.docker.image,
+                  ...(input.docker.port ? { port: input.docker.port } : {}),
+                },
+              }
+            : null;
+      if (seed && !alreadySeeded) {
         // Seed the repo as the first service in the project's default environment.
         let envId =
           (project as ApiProject & { defaultEnvironmentId?: string | null }).defaultEnvironmentId ??
@@ -223,25 +254,19 @@ function ProjectsPage() {
             (await api<{ data: { id: string }[] }>(`/projects/${project.id}/environments`)).data[0]
               ?.id ?? null;
         if (envId) {
-          const repo = input.github.repo;
           try {
             await api(`/environments/${envId}/services`, {
               method: "POST",
               body: {
-                name: repo.split("/")[1] ?? repo,
-                source: {
-                  type: "github",
-                  repo,
-                  branch: input.github.branch,
-                  ...(input.github.url ? { url: input.github.url } : {}),
-                },
+                ...(seed.name ? { name: seed.name } : {}),
+                source: seed.source,
                 position: { x: 80, y: 80 },
               },
             });
             return { ...project, serviceCount: Math.max(1, project.serviceCount ?? 0) };
           } catch (e) {
             toast.error(
-              `Project created, but ${repo} could not be added: ${(e as ApiError)?.message ?? "unknown error"}`,
+              `Project created, but ${seed.label} could not be added: ${(e as ApiError)?.message ?? "unknown error"}`,
             );
           }
         }
@@ -256,9 +281,16 @@ function ProjectsPage() {
       toast.success(
         input.source === "github"
           ? `${created.name} created — configure variables and settings, then deploy`
-          : `Project ${created.name} created`,
+          : input.source === "docker"
+            ? `${created.name} created — pulling the image`
+            : `Project ${created.name} created`,
       );
-      if (input.source === "github") navigate({ to: `/project/${created.id}` });
+      if (input.source === "github" || input.source === "docker" || input.addNext)
+        navigate({
+          to: "/project/$projectId",
+          params: { projectId: created.id },
+          search: input.addNext ? { add: input.addNext } : {},
+        });
     },
     onError: (error) => {
       const message = (error as ApiError)?.message ?? "Could not create the project";

@@ -39,6 +39,9 @@ export const Route = createFileRoute("/project/$projectId")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): { add?: "database" | "template" } => ({
+    ...(search["add"] === "database" || search["add"] === "template" ? { add: search["add"] } : {}),
+  }),
   component: CanvasPage,
 });
 
@@ -51,12 +54,22 @@ function CanvasPage() {
   const state = useCanvasState();
   const [selected, setSelected] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [addCategory, setAddCategory] = useState<"all" | "database" | "template" | "github">("all");
+  const [addCategory, setAddCategory] = useState<
+    "all" | "database" | "template" | "github" | "docker"
+  >("all");
   const [volumePanel, setVolumePanel] = useState<{ id: string; attach: boolean } | null>(null);
   const openAdd = (category: typeof addCategory = "all") => {
     setAddCategory(category);
     setAdding(true);
   };
+  // Arriving from "new project" with a database or starter chosen: open that picker once.
+  const { add: addOnArrival } = Route.useSearch();
+  useEffect(() => {
+    if (!addOnArrival) return;
+    openAdd(addOnArrival);
+    void navigate({ to: ".", search: {}, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addOnArrival]);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantPrompt, setAssistantPrompt] = useState<{
     text: string;
@@ -268,6 +281,19 @@ function CanvasPage() {
               ...(t.region ? { region: t.region } : {}),
             },
             "first deploy started",
+          )
+        }
+        onPickImage={(i) =>
+          void addService(
+            i.name,
+            "docker",
+            "app",
+            {
+              name: i.name,
+              source: { type: "image", image: i.image, ...(i.port ? { port: i.port } : {}) },
+              ...(i.region ? { region: i.region } : {}),
+            },
+            "pulling the image and starting it",
           )
         }
         onPickRepo={(r) =>
