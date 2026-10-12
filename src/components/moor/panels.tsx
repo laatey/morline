@@ -1,3 +1,4 @@
+import { ResourceLimits } from "@/components/moor/resource-limits";
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -1597,6 +1598,7 @@ export function ServiceSettings({
         <span className="font-mono text-xs">{detail?.replicas ?? service.replicas}×</span>,
         "Traffic is balanced across replicas.",
       )}
+      <ResourceLimits serviceId={service.id} />
       {service.kind !== "database"
         ? row(
             "Root directory",

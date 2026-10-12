@@ -1,41 +1,44 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  Bot,
-  Check,
-  Clock,
-  History,
-  Plus,
-  Send,
-  Stop,
-  Trash,
-  Close,
-  Undo,
-} from "fluid-icons/react";
+import { ArrowLeft, Bot, Clock, History, Plus, Send, Stop, Trash, Close } from "fluid-icons/react";
+import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { api } from "@/lib/api";
+import { api, apiStream } from "@/lib/api";
+import { useEnvId } from "@/lib/workspace";
+import {
+  actionStats,
+  applyAction,
+  dismissAction,
+  revertAction,
+  type AssistantAction,
+} from "@/lib/assistant-actions";
+import { ActionOutcome, ChangeReview } from "@/components/moor/change-review";
 import type { AssistantContext } from "@/lib/assistant-context";
 import { toast } from "sonner";
 
 // Threads persist via /assistant/threads.
-type Msg = { role: "user" | "agent"; text: string; action?: string; context?: AssistantContext };
+type Msg = {
+  role: "user" | "agent";
+  text: string;
+  context?: AssistantContext;
+  actions?: AssistantAction[];
+};
 type Thread = { id: string; title: string; when: string; messages: Msg[] };
 
 const prompts = [
+  "Build a REST API with login and a SQLite database, and deploy it",
   "Why did the latest deploy fail?",
   "Review environment variables",
-  "Explain this service map",
 ];
 
 type RawMsg = {
   role?: string;
   text?: string;
   content?: string;
-  action?: string;
   context?: AssistantContext;
+  actions?: AssistantAction[];
 };
 type RawThread = {
   id: string;
@@ -58,8 +61,8 @@ const ago = (iso?: string) => {
 const toMsg = (m: RawMsg): Msg => ({
   role: m.role === "user" ? "user" : "agent",
   text: m.text ?? m.content ?? "",
-  ...(m.action ? { action: m.action } : {}),
   ...(m.context ? { context: m.context } : {}),
+  ...(m.actions?.length ? { actions: m.actions } : {}),
 });
 const toThread = (t: RawThread): Thread => ({
   id: t.id,
@@ -92,7 +95,15 @@ export function AiAssistant({
   const [view, setView] = useState<"chat" | "history">("chat");
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
-  const [applied, setApplied] = useState<Set<string>>(new Set());
+  const [status, setStatus] = useState("");
+  const [review, setReview] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const envId = useEnvId();
+  const env = useQuery({
+    queryKey: ["assistant-env", envId],
+    queryFn: () => api<{ name: string }>(`/environments/${envId}`),
+    enabled: !!envId,
+  });
   const stopRef = useRef<(() => void) | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const active = threads.find((t) => t.id === activeId) ?? threads[0]!;
@@ -157,46 +168,73 @@ export function AiAssistant({
     stopRef.current = () => {
       cancelled.v = true;
     };
-    api<unknown>(`/assistant/threads/${id}/messages`, {
-      method: "POST",
+    let replied = false;
+    const say = (text: string, raw?: RawMsg) => {
+      replied = true;
+      update(id, (t) => ({
+        ...t,
+        messages: [...t.messages, raw ? toMsg(raw) : { role: "agent", text }],
+      }));
+    };
+    apiStream(`/assistant/threads/${id}/messages`, {
       body: { text: q, ...(context ? { context } : {}) },
-    })
-      .then(async (res) => {
+      onEvent: (event, data) => {
         if (cancelled.v) return;
-        const r = res as {
-          thread?: RawThread;
-          messages?: RawMsg[];
-          reply?: RawMsg;
-          message?: RawMsg;
-        };
-        if (r?.thread?.messages) update(id, () => toThread(r.thread!));
-        else if (r?.messages) update(id, (t) => ({ ...t, messages: r.messages!.map(toMsg) }));
-        else {
-          const t = (await load()).find((x) => x.id === id);
-          if (t) update(id, () => t);
-        }
+        if (event === "status") setStatus(String(data["text"] ?? ""));
+        else if (event === "done")
+          say(String(data["text"] ?? ""), (data["message"] as RawMsg | undefined) ?? undefined);
+        else if (event === "error") say(String(data["message"] ?? "Something went wrong."));
+      },
+    })
+      .then(async () => {
+        if (cancelled.v || replied) return;
+        const t = (await load()).find((x) => x.id === id);
+        if (t) update(id, () => t);
       })
       .catch((e) => {
-        if (!cancelled.v)
-          update(id, (t) => ({
-            ...t,
-            messages: [
-              ...t.messages,
-              { role: "agent", text: (e as Error).message || "Something went wrong." },
-            ],
-          }));
+        if (!cancelled.v) say((e as Error).message || "Something went wrong.");
       })
       .finally(() => {
-        if (!cancelled.v) setThinking(false);
+        if (!cancelled.v) {
+          setThinking(false);
+          setStatus("");
+        }
       });
   };
   const stop = () => {
     stopRef.current?.();
     setThinking(false);
+    setStatus("");
     update(active.id, (t) => ({
       ...t,
       messages: [...t.messages, { role: "agent", text: "Stopped." }],
     }));
+  };
+  const patchAction = (next: AssistantAction) =>
+    setThreads((l) =>
+      l.map((t) => ({
+        ...t,
+        messages: t.messages.map((m) =>
+          m.actions?.some((a) => a.id === next.id)
+            ? { ...m, actions: m.actions.map((a) => (a.id === next.id ? next : a)) }
+            : m,
+        ),
+      })),
+    );
+  const allActions = threads.flatMap((t) => t.messages.flatMap((m) => m.actions ?? []));
+  const reviewing = allActions.find((a) => a.id === review) ?? null;
+  const runAction = async (a: AssistantAction, call: () => Promise<AssistantAction>) => {
+    setBusyAction(a.id);
+    patchAction({ ...a, status: "applying" });
+    try {
+      patchAction(await call());
+    } catch (e) {
+      toast.error((e as Error).message || "That did not work");
+      const latest = await api<AssistantAction>(`/assistant/actions/${a.id}`).catch(() => null);
+      patchAction(latest ?? a);
+    } finally {
+      setBusyAction(null);
+    }
   };
   const newThread = () => {
     const t = fresh();
@@ -227,7 +265,9 @@ export function AiAssistant({
           <p className="truncate text-sm font-semibold">
             {view === "history" ? "Conversations" : active.title}
           </p>
-          <p className="font-mono text-[9px] text-muted-foreground">harbor-api · production</p>
+          <p className="truncate font-mono text-[9px] text-muted-foreground">
+            {env.data?.name ?? "Environment"}
+          </p>
         </div>
         <Button
           variant="ghost"
@@ -311,10 +351,11 @@ export function AiAssistant({
                   <Bot className="h-4 w-4 text-primary" />
                 </span>
                 <h2 className="mt-3 font-display text-base font-semibold">
-                  What should we inspect?
+                  What should we build or fix?
                 </h2>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Ask about services, deploys, logs, or configuration in this environment.
+                  Ask about services, deploys and configuration, or have me build an API or change
+                  an app's code. You review every change before it ships.
                 </p>
               </div>
               <div className="mt-6 space-y-1.5">
@@ -400,38 +441,62 @@ export function AiAssistant({
                         {m.text}
                       </>
                     )}
-                    {m.action ? (
-                      <button
-                        disabled={applied.has(`${active.id}-${i}`)}
-                        onClick={() => setApplied((s) => new Set(s).add(`${active.id}-${i}`))}
-                        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border bg-card px-2 py-1.5 text-[11px] font-medium hover:bg-accent disabled:text-score"
-                      >
-                        {applied.has(`${active.id}-${i}`) ? (
-                          <>
-                            <Check className="h-3 w-3" />
-                            Noted
-                          </>
-                        ) : (
-                          m.action
-                        )}
-                      </button>
+                    {m.actions?.length ? (
+                      <div className="mt-2.5 space-y-2.5 border-t pt-2.5">
+                        {m.actions.map((a) => {
+                          const st = actionStats(a);
+                          return (
+                            <div key={a.id} className="space-y-1.5">
+                              <p className="text-xs font-medium">{a.title}</p>
+                              <p className="font-mono text-[10px] text-muted-foreground">
+                                {st.files} {st.files === 1 ? "file" : "files"}
+                                <span className="ml-2 text-[var(--diff-add)]">+{st.additions}</span>
+                                <span className="ml-1.5 text-[var(--diff-del)]">
+                                  −{st.deletions}
+                                </span>
+                                <span className="ml-2">
+                                  {a.status === "pending"
+                                    ? "Waiting for review"
+                                    : a.status === "applying"
+                                      ? "Applying"
+                                      : a.status === "applied"
+                                        ? "Applied"
+                                        : a.status === "failed"
+                                          ? "Failed"
+                                          : a.status === "reverted"
+                                            ? "Reverted"
+                                            : "Dismissed"}
+                                </span>
+                              </p>
+                              {a.status === "failed" && a.result?.error ? (
+                                <p className="text-[11px] text-destructive">{a.result.error}</p>
+                              ) : null}
+                              <ActionOutcome action={a} />
+                              <div className="flex gap-1.5">
+                                <Button
+                                  size="sm"
+                                  variant={a.status === "pending" ? "default" : "outline"}
+                                  className="h-7 px-2.5 text-[11px]"
+                                  onClick={() => setReview(a.id)}
+                                >
+                                  {a.status === "pending" || a.status === "failed"
+                                    ? "Review changes"
+                                    : "View changes"}
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     ) : null}
                   </div>
                 </div>
               ))}
               {thinking ? (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span className="flex gap-0.5">
-                    {[0, 1, 2].map((d) => (
-                      <span
-                        key={d}
-                        className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground"
-                        style={{ animationDelay: `${d * 120}ms` }}
-                      />
-                    ))}
-                  </span>
-                  Inspecting environment…
-                </div>
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                  {status || "Thinking"}…
+                </p>
               ) : null}
               <div ref={endRef} />
             </div>
@@ -484,6 +549,16 @@ export function AiAssistant({
             </div>
           </div>
         </div>
+      ) : null}
+      {reviewing ? (
+        <ChangeReview
+          action={reviewing}
+          busy={busyAction === reviewing.id}
+          onClose={() => setReview(null)}
+          onApply={(mode) => runAction(reviewing, () => applyAction(reviewing.id, mode))}
+          onDismiss={() => runAction(reviewing, () => dismissAction(reviewing.id))}
+          onRevert={() => runAction(reviewing, () => revertAction(reviewing.id))}
+        />
       ) : null}
     </aside>
   );

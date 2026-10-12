@@ -145,6 +145,76 @@ export async function api<T = unknown>(
   return data as T;
 }
 
+/**
+ * POST that answers with a server-sent event stream. Calls `onEvent(name, data)` per event and
+ * resolves when the stream ends. Handles token refresh the same way `api` does.
+ */
+export async function apiStream(
+  path: string,
+  options: {
+    body: unknown;
+    signal?: AbortSignal;
+    onEvent: (event: string, data: Record<string, unknown>) => void;
+  },
+): Promise<void> {
+  const doFetch = (session: Session | null) =>
+    fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "text/event-stream",
+        ...(session ? { authorization: `Bearer ${session.accessToken}` } : {}),
+      },
+      body: JSON.stringify(options.body),
+      ...(options.signal ? { signal: options.signal } : {}),
+    });
+
+  let session = getSession();
+  if (session && Date.parse(session.expiresAt) - Date.now() < 15_000) {
+    refreshing ??= refreshSession().finally(() => (refreshing = null));
+    session = await refreshing;
+  }
+  let res = await doFetch(session);
+  if (res.status === 401 && session) {
+    refreshing ??= refreshSession().finally(() => (refreshing = null));
+    const next = await refreshing;
+    if (next) res = await doFetch(next);
+  }
+  if (!res.ok || !res.body) {
+    const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
+    throw new ApiError(res.status, body);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const flush = (block: string) => {
+    let event = "message";
+    const data: string[] = [];
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event:")) event = line.slice(6).trim();
+      else if (line.startsWith("data:")) data.push(line.slice(5).trimStart());
+    }
+    if (!data.length) return;
+    try {
+      options.onEvent(event, JSON.parse(data.join("\n")) as Record<string, unknown>);
+    } catch {
+      /* ignore malformed event */
+    }
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() ?? "";
+    blocks.forEach(flush);
+  }
+  if (buffer.trim()) flush(buffer);
+  if (typeof window !== "undefined")
+    window.dispatchEvent(new CustomEvent("morline:mutated", { detail: { path } }));
+}
+
 export function oauthUrl(provider: "github" | "google", redirectTo: string) {
   return `${API_BASE}/auth/oauth/${provider}/start?redirectTo=${encodeURIComponent(redirectTo)}`;
 }

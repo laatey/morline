@@ -8,6 +8,9 @@
 
 ## Done
 
+- Assistant can build apps and change code: diff review sheet, commit or pull request, deploy, undo.
+- CPU and memory sliders based on the host's remaining capacity.
+
 - Marketing site and the full workspace UI.
 - API client with token storage, auto-refresh and typed errors; auth provider and route protection.
 - Sign-in, sign-up, magic and reset links, GitHub OAuth, sign-out.

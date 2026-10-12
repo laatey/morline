@@ -346,3 +346,13 @@
     font-size: 16px !important;
   }
 }
+
+/* Diff colours for the change review. */
+:root {
+  --diff-add: oklch(0.55 0.15 150);
+  --diff-del: oklch(0.58 0.2 25);
+}
+.dark {
+  --diff-add: oklch(0.74 0.15 150);
+  --diff-del: oklch(0.7 0.17 25);
+}
