@@ -2,7 +2,8 @@ import { DockerImageFields, type DockerImageValues } from "@/components/moor/doc
 import { defaultNameFromImage, imageProblem } from "@/lib/docker-image";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Search, Sparkles, Terminal } from "fluid-icons/react";
+import { ChevronRight, Search, Terminal } from "fluid-icons/react";
+import { BrandMark } from "@/components/moor/brand-mark";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,7 @@ type Choice = {
   note: string;
   badge: string;
   logoKey?: LogoKey;
-  icon?: typeof Terminal;
+  icon?: React.ComponentType<{ className?: string }>;
   fanned?: "database";
 };
 
@@ -32,7 +33,7 @@ const choices: Choice[] = [
     title: "Build with AI",
     note: "Describe an app or API, review the code, deploy it",
     badge: "Agent",
-    icon: Sparkles,
+    icon: BrandMark,
   },
   {
     id: "github",
@@ -75,17 +76,6 @@ export type NewProjectInput = {
   addNext?: "database" | "template";
 };
 
-/** "Build me a REST API for task tracking" -> "rest-api-for". */
-function nameFromPrompt(prompt: string) {
-  const words = prompt
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w && !["a", "an", "the", "build", "me", "make", "create"].includes(w))
-    .slice(0, 3);
-  return words.join("-").slice(0, 30) || "ai-project";
-}
-
 export function NewProjectDialog({
   open,
   onOpenChange,
@@ -103,7 +93,6 @@ export function NewProjectDialog({
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [docker, setDocker] = useState<DockerImageValues>({ image: "", port: "" });
-  const [prompt, setPrompt] = useState("");
 
   const q = query.trim().toLowerCase();
   const visibleChoices = choices.filter(
@@ -132,7 +121,6 @@ export function NewProjectDialog({
       setRepo(null);
       setName("");
       setDocker({ image: "", port: "" });
-      setPrompt("");
       return;
     }
     onOpenChange(false);
@@ -141,17 +129,14 @@ export function NewProjectDialog({
 
   const dockerReady =
     pending?.id !== "docker" || (!!docker.image.trim() && !imageProblem(docker.image));
-  const aiReady = pending?.id !== "ai" || prompt.trim().length >= 8;
-  const ready = dockerReady && aiReady;
+  const ready = dockerReady;
 
   const handleCreate = async () => {
     const finalName =
       name.trim() ||
       (pending?.id === "docker" && docker.image
         ? defaultNameFromImage(docker.image)
-        : pending?.id === "ai"
-          ? nameFromPrompt(prompt)
-          : "new-project");
+        : "new-project");
     if (!onCreate || creating || !ready) return;
     setCreating(true);
     try {
@@ -167,7 +152,7 @@ export function NewProjectDialog({
           },
         };
       } else if (pending?.id === "ai") {
-        input = { name: finalName, source: "empty", ai: { prompt: prompt.trim() } };
+        input = { name: finalName, source: "empty", ai: { prompt: "I want to build a " } };
       } else if (pending?.id === "docker") {
         input = {
           name: finalName,
@@ -204,7 +189,6 @@ export function NewProjectDialog({
           setPickingRepo(false);
           setRepo(null);
           setDocker({ image: "", port: "" });
-          setPrompt("");
         }
         onOpenChange(v);
       }}
@@ -220,7 +204,7 @@ export function NewProjectDialog({
             {pickingRepo
               ? "Pick the repository to deploy as the first service."
               : pending?.id === "ai"
-                ? "Describe what you want. The assistant opens in your new project, ready to go."
+                ? "Name the project. The assistant opens right after, ready for your idea."
                 : pending?.id === "docker"
                   ? "Enter the image to run as the first service."
                   : pending?.id === "database" || pending?.id === "starter"
@@ -266,22 +250,6 @@ export function NewProjectDialog({
             }}
           >
             <div className="space-y-3 p-4 sm:p-5">
-              {pending.id === "ai" ? (
-                <label className="block text-xs text-muted-foreground">
-                  What should we build?
-                  <textarea
-                    autoFocus
-                    rows={4}
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value.slice(0, 600))}
-                    placeholder="A REST API for a task tracker with login and SQLite storage"
-                    className="mt-1 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary/60"
-                  />
-                  <span className="mt-1 block text-[11px]">
-                    You'll review every file before anything is created or deployed.
-                  </span>
-                </label>
-              ) : null}
               {pending.id === "docker" ? (
                 <DockerImageFields values={docker} onChange={setDocker} />
               ) : null}
@@ -304,9 +272,7 @@ export function NewProjectDialog({
                       ? "my-db"
                       : pending.id === "docker" && docker.image
                         ? defaultNameFromImage(docker.image)
-                        : pending.id === "ai" && prompt
-                          ? nameFromPrompt(prompt)
-                          : "my-app"
+                        : "my-app"
                   }
                   className="mt-1 h-9 font-mono text-sm"
                 />
@@ -329,7 +295,7 @@ export function NewProjectDialog({
                     {repo
                       ? `Deploys ${repo.defaultBranch} as the first service`
                       : pending.id === "ai"
-                        ? "Opens the assistant with your prompt"
+                        ? "The assistant opens in the new project"
                         : pending.id === "docker"
                           ? "Pulled and started as the first service"
                           : pending.id === "database"

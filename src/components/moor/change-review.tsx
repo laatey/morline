@@ -120,8 +120,16 @@ export function ChangeReview({
           </SheetDescription>
         </div>
 
-        {isApp && (generated.length || required.length) ? (
+        {isApp && (generated.length || required.length || action.payload.volume) ? (
           <div className="shrink-0 space-y-1 border-b px-5 py-3 text-xs text-muted-foreground">
+            {action.payload.volume ? (
+              <p>
+                Attaches a{" "}
+                <span className="text-foreground">{action.payload.volume.sizeGb} GB volume</span>{" "}
+                mounted at{" "}
+                <span className="font-mono text-foreground">{action.payload.volume.mountPath}</span>
+              </p>
+            ) : null}
             {generated.length ? (
               <p>
                 Generated for you and stored as secrets:{" "}

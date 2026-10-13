@@ -33,6 +33,7 @@ export type AssistantAction = {
     name?: string;
     port?: number;
     envVars?: { key: string; description: string; generate: boolean }[];
+    volume?: { mountPath: string; sizeGb: number } | null;
     fileCount?: number;
   };
   diff: FileDiff[];

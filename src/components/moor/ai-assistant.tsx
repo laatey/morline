@@ -9,7 +9,6 @@ import {
   Close,
   Edit,
   FileCode,
-  History,
   Layers,
   Plus,
   Stop,
@@ -487,7 +486,8 @@ export function AiAssistant({
     setChips([]);
   };
 
-  const iconBtn = "h-8 w-8 rounded-full text-muted-foreground hover:text-foreground";
+  const iconBtn =
+    "h-8 w-8 rounded-full border text-muted-foreground hover:bg-accent hover:text-foreground";
 
   return (
     <aside className="absolute bottom-2.5 right-2.5 top-2.5 z-20 flex w-[min(440px,calc(100%-1.25rem))] flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl animate-in slide-in-from-right-6 fade-in duration-200">
@@ -503,14 +503,44 @@ export function AiAssistant({
             <ArrowLeft className="h-4 w-4" />
           </Button>
         ) : null}
-        <button
-          onClick={() => setView(view === "history" ? "chat" : "history")}
-          className="flex min-w-0 items-center gap-1.5 text-sm font-medium hover:opacity-80"
-          aria-label="Conversations"
-        >
-          <span className="truncate">{view === "history" ? "Conversations" : active.title}</span>
-          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-        </button>
+        {view === "history" ? (
+          <span className="truncate text-sm font-medium">Conversations</span>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex min-w-0 items-center gap-1.5 text-sm font-medium hover:opacity-80"
+                aria-label="Recent conversations"
+              >
+                <span className="truncate">{active.title}</span>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-72">
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                Recent conversations
+              </DropdownMenuLabel>
+              {threads.slice(0, 3).map((t) => (
+                <DropdownMenuItem
+                  key={t.id}
+                  onSelect={() => setActiveId(t.id)}
+                  className={cn("flex items-center gap-2", t.id === activeId && "bg-accent")}
+                >
+                  <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                  <span className="shrink-0 text-[11px] text-muted-foreground">{t.when}</span>
+                </DropdownMenuItem>
+              ))}
+              {threads.length > 3 ? (
+                <DropdownMenuItem
+                  onSelect={() => setView("history")}
+                  className="text-muted-foreground"
+                >
+                  Show more
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         {view === "chat" ? (
           <span className="hidden shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground sm:flex">
             <Layers className="h-3 w-3" />
@@ -526,15 +556,6 @@ export function AiAssistant({
           onClick={newThread}
         >
           <Edit className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={iconBtn}
-          aria-label="Conversation history"
-          onClick={() => setView(view === "history" ? "chat" : "history")}
-        >
-          <History className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -697,7 +718,7 @@ export function AiAssistant({
       )}
 
       {view === "chat" ? (
-        <div className="px-3 pb-2 pt-1">
+        <div className="px-3 pb-1 pt-1">
           <div className="rounded-3xl border bg-background p-3 shadow-sm transition-colors focus-within:border-primary/50">
             {chips.length ? (
               <div className="mb-2.5 flex flex-wrap gap-1.5">
@@ -790,7 +811,7 @@ export function AiAssistant({
               )}
             </div>
           </div>
-          <p className="px-4 pb-1 pt-2 text-center text-[11px] text-muted-foreground">
+          <p className="px-4 py-1 text-center text-[11px] leading-4 text-muted-foreground">
             Morline AI can make mistakes. Review changes before you apply them.
           </p>
         </div>
