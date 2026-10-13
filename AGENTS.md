@@ -2,6 +2,7 @@
 
 - The app talks to the live API (`src/lib/api.ts`: token storage, auto-refresh, typed errors). `src/lib/platform-data.ts` is design-time material only: shared types, stack logos, the template catalog, and a few leftover fixtures. New features go through the API, not through that file.
 - Workspace pages wrap in `WorkspaceShell` (top bar and icon rail). Service tabs live in `components/moor/panels.tsx` and are reused by the canvas inspector and the full pages, so there is one source per concern.
+- Live data comes from `lib/env-stream.ts`: one `EventSource` per environment (mounted in `WorkspaceShell`) invalidates the relevant queries. Query hooks use `usePollInterval(fastMs)` so they poll quickly only while the stream is down.
 - The canvas is a hand-rolled pan/zoom surface (`components/moor/canvas.tsx`) with no graph library, which keeps the bundle small and the styling token-based.
 - Service logos are SVGs in `src/assets/stack/`.
 - The assistant proposes changes as actions (`lib/assistant-actions.ts`). They render as a flat summary in the chat and open `change-review.tsx` (file list + `diff-view.tsx`) for approval; nothing is applied from the chat bubble itself. Diff colours come from `--diff-add` / `--diff-del`.

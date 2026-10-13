@@ -1697,7 +1697,8 @@ export function ServiceSettings({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {service.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the service, its deployments and its variables from this environment.
+              This permanently deletes the running container, its deployments and logs, variables,
+              domains, volumes and their data, and any database backups. It can't be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

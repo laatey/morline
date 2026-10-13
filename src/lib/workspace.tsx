@@ -1,3 +1,4 @@
+import { usePollInterval } from "@/lib/env-stream";
 import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -324,27 +325,30 @@ export function useEnvId(): string | null {
 
 export function useCanvasData() {
   const envId = useEnvId();
+  const interval = usePollInterval(5000);
   return useQuery({
     queryKey: ["canvas", envId],
     queryFn: () => api<ApiCanvas>(`/environments/${envId}/canvas`),
     enabled: !!envId,
-    refetchInterval: 5000,
+    refetchInterval: interval,
   });
 }
 
 export function useServices() {
   const envId = useEnvId();
+  const interval = usePollInterval(10000);
   return useQuery({
     queryKey: ["services", envId],
     queryFn: async () =>
       (await api<{ data: ApiService[] }>(`/environments/${envId}/services`)).data.map(toService),
     enabled: !!envId,
-    refetchInterval: 10000,
+    refetchInterval: interval,
   });
 }
 
 export function useDeployments(serviceId?: string) {
   const envId = useEnvId();
+  const interval = usePollInterval(5000);
   return useQuery({
     queryKey: ["deployments", envId, serviceId ?? null],
     queryFn: async () =>
@@ -356,12 +360,13 @@ export function useDeployments(serviceId?: string) {
         )
       ).data,
     enabled: !!envId,
-    refetchInterval: 5000,
+    refetchInterval: interval,
   });
 }
 
 export function useLogs(serviceId?: string) {
   const envId = useEnvId();
+  const interval = usePollInterval(3000);
   return useQuery({
     queryKey: ["logs", envId, serviceId ?? null],
     queryFn: async () =>
@@ -371,7 +376,7 @@ export function useLogs(serviceId?: string) {
         )
       ).data,
     enabled: !!envId,
-    refetchInterval: 3000,
+    refetchInterval: interval,
   });
 }
 

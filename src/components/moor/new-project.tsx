@@ -2,7 +2,7 @@ import { DockerImageFields, type DockerImageValues } from "@/components/moor/doc
 import { defaultNameFromImage, imageProblem } from "@/lib/docker-image";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Search, Terminal } from "fluid-icons/react";
+import { ChevronRight, Search, Sparkles, Terminal } from "fluid-icons/react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,13 @@ type Choice = {
 
 const choices: Choice[] = [
   {
+    id: "ai",
+    title: "Build with AI",
+    note: "Describe an app or API, review the code, deploy it",
+    badge: "Agent",
+    icon: Sparkles,
+  },
+  {
     id: "github",
     title: "GitHub repository",
     note: "Deploy from a connected repository",
@@ -37,7 +44,7 @@ const choices: Choice[] = [
   {
     id: "docker",
     title: "Docker image",
-    note: "Run a public or private container",
+    note: "Run any public container image",
     badge: "Registry",
     logoKey: "docker",
   },
@@ -62,9 +69,22 @@ export type NewProjectInput = {
   source: "empty" | "github" | "docker";
   github?: { repo: string; branch?: string; url?: string };
   docker?: { image: string; port?: number };
+  /** Open the assistant on the new project with this prompt filled in (not sent). */
+  ai?: { prompt: string };
   /** After creating the project, open the picker for this kind of service. */
   addNext?: "database" | "template";
 };
+
+/** "Build me a REST API for task tracking" -> "rest-api-for". */
+function nameFromPrompt(prompt: string) {
+  const words = prompt
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w && !["a", "an", "the", "build", "me", "make", "create"].includes(w))
+    .slice(0, 3);
+  return words.join("-").slice(0, 30) || "ai-project";
+}
 
 export function NewProjectDialog({
   open,
@@ -83,6 +103,7 @@ export function NewProjectDialog({
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [docker, setDocker] = useState<DockerImageValues>({ image: "", port: "" });
+  const [prompt, setPrompt] = useState("");
 
   const q = query.trim().toLowerCase();
   const visibleChoices = choices.filter(
@@ -111,6 +132,7 @@ export function NewProjectDialog({
       setRepo(null);
       setName("");
       setDocker({ image: "", port: "" });
+      setPrompt("");
       return;
     }
     onOpenChange(false);
@@ -119,14 +141,18 @@ export function NewProjectDialog({
 
   const dockerReady =
     pending?.id !== "docker" || (!!docker.image.trim() && !imageProblem(docker.image));
+  const aiReady = pending?.id !== "ai" || prompt.trim().length >= 8;
+  const ready = dockerReady && aiReady;
 
   const handleCreate = async () => {
     const finalName =
       name.trim() ||
       (pending?.id === "docker" && docker.image
         ? defaultNameFromImage(docker.image)
-        : "new-project");
-    if (!onCreate || creating || !dockerReady) return;
+        : pending?.id === "ai"
+          ? nameFromPrompt(prompt)
+          : "new-project");
+    if (!onCreate || creating || !ready) return;
     setCreating(true);
     try {
       let input: NewProjectInput;
@@ -140,6 +166,8 @@ export function NewProjectDialog({
             ...(repo.url ? { url: repo.url } : {}),
           },
         };
+      } else if (pending?.id === "ai") {
+        input = { name: finalName, source: "empty", ai: { prompt: prompt.trim() } };
       } else if (pending?.id === "docker") {
         input = {
           name: finalName,
@@ -160,7 +188,7 @@ export function NewProjectDialog({
       }
       await onCreate(input);
       onOpenChange(false);
-      if (input.source === "empty" && !input.addNext) navigate({ to: "/projects" });
+      if (input.source === "empty" && !input.addNext && !input.ai) navigate({ to: "/projects" });
     } finally {
       setCreating(false);
     }
@@ -176,6 +204,7 @@ export function NewProjectDialog({
           setPickingRepo(false);
           setRepo(null);
           setDocker({ image: "", port: "" });
+          setPrompt("");
         }
         onOpenChange(v);
       }}
@@ -190,13 +219,15 @@ export function NewProjectDialog({
           <DialogDescription className="mt-0.5 text-xs text-muted-foreground">
             {pickingRepo
               ? "Pick the repository to deploy as the first service."
-              : pending?.id === "docker"
-                ? "Enter the image to run as the first service."
-                : pending?.id === "database" || pending?.id === "starter"
-                  ? "Name the project. You'll choose what to add right after."
-                  : pending
-                    ? "Name the project before it is created."
-                    : "Choose where the first service should come from."}
+              : pending?.id === "ai"
+                ? "Describe what you want. The assistant opens in your new project, ready to go."
+                : pending?.id === "docker"
+                  ? "Enter the image to run as the first service."
+                  : pending?.id === "database" || pending?.id === "starter"
+                    ? "Name the project. You'll choose what to add right after."
+                    : pending
+                      ? "Name the project before it is created."
+                      : "Choose where the first service should come from."}
           </DialogDescription>
         </div>
 
@@ -235,6 +266,22 @@ export function NewProjectDialog({
             }}
           >
             <div className="space-y-3 p-4 sm:p-5">
+              {pending.id === "ai" ? (
+                <label className="block text-xs text-muted-foreground">
+                  What should we build?
+                  <textarea
+                    autoFocus
+                    rows={4}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value.slice(0, 600))}
+                    placeholder="A REST API for a task tracker with login and SQLite storage"
+                    className="mt-1 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary/60"
+                  />
+                  <span className="mt-1 block text-[11px]">
+                    You'll review every file before anything is created or deployed.
+                  </span>
+                </label>
+              ) : null}
               {pending.id === "docker" ? (
                 <DockerImageFields values={docker} onChange={setDocker} />
               ) : null}
@@ -257,7 +304,9 @@ export function NewProjectDialog({
                       ? "my-db"
                       : pending.id === "docker" && docker.image
                         ? defaultNameFromImage(docker.image)
-                        : "my-app"
+                        : pending.id === "ai" && prompt
+                          ? nameFromPrompt(prompt)
+                          : "my-app"
                   }
                   className="mt-1 h-9 font-mono text-sm"
                 />
@@ -279,13 +328,15 @@ export function NewProjectDialog({
                   <span className="block truncate text-muted-foreground">
                     {repo
                       ? `Deploys ${repo.defaultBranch} as the first service`
-                      : pending.id === "docker"
-                        ? "Pulled and started as the first service"
-                        : pending.id === "database"
-                          ? "You will pick a database next"
-                          : pending.id === "starter"
-                            ? "You will pick a starter next"
-                            : pending.note}
+                      : pending.id === "ai"
+                        ? "Opens the assistant with your prompt"
+                        : pending.id === "docker"
+                          ? "Pulled and started as the first service"
+                          : pending.id === "database"
+                            ? "You will pick a database next"
+                            : pending.id === "starter"
+                              ? "You will pick a starter next"
+                              : pending.note}
                   </span>
                 </span>
               </div>
@@ -302,7 +353,7 @@ export function NewProjectDialog({
               >
                 Back
               </Button>
-              <Button type="submit" size="sm" disabled={creating || !dockerReady}>
+              <Button type="submit" size="sm" disabled={creating || !ready}>
                 {creating ? "Creating…" : "Create project"}
               </Button>
             </DialogFooter>

@@ -39,8 +39,13 @@ export const Route = createFileRoute("/project/$projectId")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (search: Record<string, unknown>): { add?: "database" | "template" } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { add?: "database" | "template"; ask?: string } => ({
     ...(search["add"] === "database" || search["add"] === "template" ? { add: search["add"] } : {}),
+    ...(typeof search["ask"] === "string" && search["ask"].trim()
+      ? { ask: search["ask"].slice(0, 600) }
+      : {}),
   }),
   component: CanvasPage,
 });
@@ -63,7 +68,7 @@ function CanvasPage() {
     setAdding(true);
   };
   // Arriving from "new project" with a database or starter chosen: open that picker once.
-  const { add: addOnArrival } = Route.useSearch();
+  const { add: addOnArrival, ask: askOnArrival } = Route.useSearch();
   useEffect(() => {
     if (!addOnArrival) return;
     openAdd(addOnArrival);
@@ -71,6 +76,17 @@ function CanvasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addOnArrival]);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantPrefill, setAssistantPrefill] = useState<{ text: string; key: number } | null>(
+    null,
+  );
+  // Arriving from "Build with AI": open the assistant with the prompt filled in, not sent.
+  useEffect(() => {
+    if (!askOnArrival) return;
+    setAssistantPrefill({ text: askOnArrival, key: Date.now() });
+    setAssistantOpen(true);
+    void navigate({ to: ".", search: {}, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [askOnArrival]);
   const [assistantPrompt, setAssistantPrompt] = useState<{
     text: string;
     key: number;
@@ -260,9 +276,11 @@ function CanvasPage() {
       {assistantOpen && !service ? (
         <AiAssistant
           initialPrompt={assistantPrompt}
+          prefill={assistantPrefill}
           onClose={() => {
             setAssistantOpen(false);
             setAssistantPrompt(null);
+            setAssistantPrefill(null);
           }}
         />
       ) : null}

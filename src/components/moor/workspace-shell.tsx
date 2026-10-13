@@ -1,3 +1,4 @@
+import { useEnvironmentStream } from "@/lib/env-stream";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
@@ -104,6 +105,7 @@ export function WorkspaceShell({
   const projectQ = useProject();
   const envList = useEnvironments().data ?? [];
   const envId = useEnvId();
+  useEnvironmentStream(envId);
   const usage = useUsage().data;
   const project = { name: projectQ.data?.name ?? "…" };
   const envs = envList.map((e) => e.name);

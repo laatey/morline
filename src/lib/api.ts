@@ -215,6 +215,17 @@ export async function apiStream(
     window.dispatchEvent(new CustomEvent("morline:mutated", { detail: { path } }));
 }
 
+/** An access token that is good for at least another 30 seconds, refreshing if needed. */
+export async function freshAccessToken(): Promise<string | null> {
+  let session = getSession();
+  if (!session) return null;
+  if (Date.parse(session.expiresAt) - Date.now() < 30_000) {
+    refreshing ??= refreshSession().finally(() => (refreshing = null));
+    session = await refreshing;
+  }
+  return session?.accessToken ?? null;
+}
+
 export function oauthUrl(provider: "github" | "google", redirectTo: string) {
   return `${API_BASE}/auth/oauth/${provider}/start?redirectTo=${encodeURIComponent(redirectTo)}`;
 }

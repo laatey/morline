@@ -285,11 +285,11 @@ function ProjectsPage() {
             ? `${created.name} created — pulling the image`
             : `Project ${created.name} created`,
       );
-      if (input.source === "github" || input.source === "docker" || input.addNext)
+      if (input.source === "github" || input.source === "docker" || input.addNext || input.ai)
         navigate({
           to: "/project/$projectId",
           params: { projectId: created.id },
-          search: input.addNext ? { add: input.addNext } : {},
+          search: input.ai ? { ask: input.ai.prompt } : input.addNext ? { add: input.addNext } : {},
         });
     },
     onError: (error) => {
@@ -607,8 +607,8 @@ function ProjectsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete {deleting?.name}?</AlertDialogTitle>
               <AlertDialogDescription>
-                Every environment, service, deployment and variable in this project will be removed.
-                This can't be undone.
+                Every environment and service in this project is stopped and deleted, along with its
+                deployments, variables, domains, volumes and their data. This can't be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

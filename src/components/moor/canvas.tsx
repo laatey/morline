@@ -682,7 +682,8 @@ export function Canvas({
               return menuConfirmDelete ? (
                 <div className="px-2 py-1.5">
                   <p className="text-xs">
-                    Delete <span className="font-medium">{s.name}</span> and all its deploys?
+                    Delete <span className="font-medium">{s.name}</span>? Its domains, variables,
+                    volume data and deploys are removed too.
                   </p>
                   <div className="mt-2 flex justify-end gap-1">
                     <button
