@@ -356,3 +356,75 @@
   --diff-add: oklch(0.74 0.15 150);
   --diff-del: oklch(0.7 0.17 25);
 }
+
+/* Syntax colours for code in the change review (light and dark). */
+:root {
+  --syn-keyword: oklch(0.5 0.2 20);
+  --syn-string: oklch(0.45 0.12 250);
+  --syn-number: oklch(0.5 0.14 60);
+  --syn-title: oklch(0.45 0.18 300);
+  --syn-comment: oklch(0.55 0.02 260);
+  --syn-attr: oklch(0.45 0.13 200);
+  --syn-meta: oklch(0.5 0.16 150);
+}
+.dark {
+  --syn-keyword: oklch(0.72 0.17 20);
+  --syn-string: oklch(0.8 0.09 240);
+  --syn-number: oklch(0.8 0.13 70);
+  --syn-title: oklch(0.78 0.14 300);
+  --syn-comment: oklch(0.62 0.02 260);
+  --syn-attr: oklch(0.78 0.11 200);
+  --syn-meta: oklch(0.78 0.14 150);
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-doctag,
+.hljs-built_in,
+.hljs-type {
+  color: var(--syn-keyword);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-template-variable,
+.hljs-symbol {
+  color: var(--syn-string);
+}
+.hljs-number,
+.hljs-variable,
+.hljs-bullet {
+  color: var(--syn-number);
+}
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.function_,
+.hljs-section,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: var(--syn-title);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-name,
+.hljs-params {
+  color: var(--syn-attr);
+}
+.hljs-meta,
+.hljs-link,
+.hljs-subst {
+  color: var(--syn-meta);
+}
+.hljs-comment,
+.hljs-quote,
+.hljs-deletion {
+  color: var(--syn-comment);
+  font-style: italic;
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 600;
+}

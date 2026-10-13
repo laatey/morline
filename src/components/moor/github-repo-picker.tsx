@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, Lock, Refresh, Search } from "fluid-icons/react";
 import { Github } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useGithubConnect } from "@/lib/github-connect";
 
 export type GhRepo = { fullName: string; private: boolean; defaultBranch: string; url?: string };
 
@@ -66,40 +66,16 @@ function RepoUrlField({ onPick }: { onPick: (repo: GhRepo) => void }) {
     </form>
   );
 }
-type GhStatus = { connected: boolean; account: unknown; installUrl: string };
-
 /** Shared GitHub step: leads the user through connecting, then lets them pick a repository. */
 export function GitHubRepoPicker({ onPick }: { onPick: (repo: GhRepo) => void }) {
-  const qc = useQueryClient();
-  const { teams, activeTeamId } = useAuth();
-  const teamId = activeTeamId ?? teams[0]?.id ?? null;
+  const { teamId, status, connected, waiting, connect } = useGithubConnect();
   const [q, setQ] = useState("");
-  const [waiting, setWaiting] = useState(false);
-
-  const status = useQuery({
-    queryKey: ["github", teamId],
-    queryFn: () => api<GhStatus>(`/integrations/github?teamId=${teamId}`),
-    enabled: !!teamId,
-    refetchInterval: waiting ? 2500 : false,
-  });
-  const connected = !!status.data?.connected;
   const repos = useQuery({
     queryKey: ["github-repos", teamId],
     queryFn: async () =>
       (await api<{ data: GhRepo[] }>(`/integrations/github/repos?teamId=${teamId}&limit=100`)).data,
     enabled: connected,
   });
-
-  useEffect(() => {
-    if (connected) setWaiting(false);
-  }, [connected]);
-
-  useEffect(() => {
-    if (!waiting) return;
-    const onFocus = () => void qc.invalidateQueries({ queryKey: ["github", teamId] });
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [waiting, qc, teamId]);
 
   if (status.isLoading) {
     return (
@@ -129,15 +105,7 @@ export function GitHubRepoPicker({ onPick }: { onPick: (repo: GhRepo) => void })
               size="sm"
               className="gap-1.5"
               disabled={!status.data?.installUrl}
-              onClick={() => {
-                if (!status.data?.installUrl) return;
-                window.open(
-                  status.data.installUrl,
-                  "morline-github",
-                  `width=560,height=680,left=${Math.round(window.screenX + (window.outerWidth - 560) / 2)},top=${Math.round(window.screenY + (window.outerHeight - 680) / 2)}`,
-                );
-                setWaiting(true);
-              }}
+              onClick={() => void connect()}
             >
               <Github className="h-3.5 w-3.5" />
               Connect GitHub
@@ -213,14 +181,7 @@ export function GitHubRepoPicker({ onPick }: { onPick: (repo: GhRepo) => void })
               <button
                 type="button"
                 className="mt-2 block w-full text-primary hover:underline"
-                onClick={() => {
-                  window.open(
-                    status.data!.installUrl,
-                    "morline-github",
-                    `width=560,height=680,left=${Math.round(window.screenX + (window.outerWidth - 560) / 2)},top=${Math.round(window.screenY + (window.outerHeight - 680) / 2)}`,
-                  );
-                  setWaiting(true);
-                }}
+                onClick={() => void connect()}
               >
                 Choose repositories on GitHub
               </button>

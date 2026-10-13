@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { highlightLines, languageFor } from "@/lib/highlight";
 
 export type DiffLine = {
   type: "ctx" | "add" | "del";
@@ -29,34 +30,66 @@ const signColor: Record<DiffLine["type"], string> = {
   del: "text-[var(--diff-del)]",
 };
 
-/** Unified diff, one file. Flat rows with line numbers; nothing decorative. */
+/** Highlight each hunk twice: the "after" side (context + added) and the "before" side (context + removed). */
+function highlightHunk(lines: DiffLine[], language: string | null): string[] {
+  const after = lines.filter((l) => l.type !== "del");
+  const before = lines.filter((l) => l.type !== "add");
+  const afterHtml = highlightLines(
+    after.map((l) => l.text),
+    language,
+  );
+  const beforeHtml = lines.some((l) => l.type === "del")
+    ? highlightLines(
+        before.map((l) => l.text),
+        language,
+      )
+    : [];
+  let a = 0;
+  let b = 0;
+  return lines.map((l) => {
+    if (l.type === "del") return beforeHtml[b++] ?? "";
+    if (l.type === "ctx") b++;
+    return afterHtml[a++] ?? "";
+  });
+}
+
+/** Unified diff, one file, with syntax colouring. A brand-new file needs only one line-number column. */
 export function DiffView({ file }: { file: FileDiff }) {
   const [all, setAll] = useState(false);
   const total = file.hunks.reduce((n, h) => n + h.lines.length, 0);
+  const language = languageFor(file.path);
+  const showOld = file.action !== "create";
+  const showNew = file.action !== "delete";
+  const html = useMemo(
+    () => file.hunks.map((h) => highlightHunk(h.lines, language)),
+    [file, language],
+  );
   let budget = all ? Infinity : MAX_LINES;
 
   if (!total) return <p className="px-4 py-6 text-xs text-muted-foreground">No textual changes.</p>;
 
+  const num = "shrink-0 select-none pr-2 text-right text-muted-foreground/60";
   return (
-    <div className="overflow-x-auto font-mono text-[11px] leading-5">
+    <div className="diff-code overflow-x-auto py-1 font-mono text-[11.5px] leading-5">
       <div className="min-w-max">
         {file.hunks.map((h, hi) => {
           const lines = h.lines.slice(0, Math.max(0, budget));
           budget -= lines.length;
           return (
-            <div key={hi} className={cn(hi > 0 && "border-t border-dashed")}>
+            <div key={hi} className={cn(hi > 0 && "my-1 border-t border-dashed")}>
               {lines.map((l, li) => (
                 <div key={li} className={cn("flex", tone[l.type])}>
-                  <span className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground/60">
-                    {l.oldNo ?? ""}
-                  </span>
-                  <span className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground/60">
-                    {l.newNo ?? ""}
-                  </span>
+                  {showOld ? <span className={cn(num, "w-9 pl-2")}>{l.oldNo ?? ""}</span> : null}
+                  {showNew ? (
+                    <span className={cn(num, showOld ? "w-9" : "w-10 pl-2")}>{l.newNo ?? ""}</span>
+                  ) : null}
                   <span className={cn("w-4 shrink-0 select-none text-center", signColor[l.type])}>
                     {l.type === "add" ? "+" : l.type === "del" ? "−" : ""}
                   </span>
-                  <span className="whitespace-pre pr-6">{l.text || " "}</span>
+                  <span
+                    className="hljs whitespace-pre pl-1.5 pr-6"
+                    dangerouslySetInnerHTML={{ __html: html[hi]?.[li] || " " }}
+                  />
                 </div>
               ))}
             </div>

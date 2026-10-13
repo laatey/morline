@@ -17,6 +17,7 @@ import {
   ChevronRight,
   GitBranch,
   Terminal,
+  Sparkles,
 } from "fluid-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -705,16 +706,20 @@ export function Canvas({
                 </div>
               ) : (
                 <>
-                  <div className="mb-0.5 flex items-center gap-2 border-b border-border/60 px-2 py-1.5">
-                    <span className="grid h-6 w-6 place-items-center rounded bg-surface">
-                      <Logo k={s.logo} className="h-3.5 w-3.5" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold">{s.name}</p>
-                      <StatusDot status={s.status} withLabel />
-                    </div>
-                  </div>
                   <MenuHeading>Service</MenuHeading>
+                  <MenuItem
+                    icon={<Sparkles className="h-3.5 w-3.5" />}
+                    label="Add to chat"
+                    hint="Use as context for Morline AI"
+                    onClick={() => {
+                      window.dispatchEvent(
+                        new CustomEvent("morline:assistant", {
+                          detail: { addService: { id: s.id, name: s.name, logo: s.logo } },
+                        }),
+                      );
+                      setMenu(null);
+                    }}
+                  />
                   <MenuItem
                     icon={<Expand className="h-3.5 w-3.5" />}
                     label="Open service"

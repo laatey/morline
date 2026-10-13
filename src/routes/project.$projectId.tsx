@@ -92,6 +92,12 @@ function CanvasPage() {
     key: number;
     context?: AssistantContext;
   } | null>(null);
+  const [assistantAdd, setAssistantAdd] = useState<{
+    id: string;
+    name: string;
+    logo?: string;
+    key: number;
+  } | null>(null);
   const service = state.services.find((s) => s.id === selected);
   const projectName = useProject().data?.name;
 
@@ -101,7 +107,19 @@ function CanvasPage() {
 
   useEffect(() => {
     const onAsk = (e: Event) => {
-      const detail = (e as CustomEvent<{ text: string; context?: AssistantContext }>).detail;
+      const detail = (
+        e as CustomEvent<{
+          text?: string;
+          context?: AssistantContext;
+          addService?: { id: string; name: string; logo?: string };
+        }>
+      ).detail;
+      if (detail?.addService) {
+        setSelected(null);
+        setAssistantAdd({ ...detail.addService, key: Date.now() });
+        setAssistantOpen(true);
+        return;
+      }
       const text = detail?.text;
       if (!text) return;
       setSelected(null);
@@ -275,12 +293,15 @@ function CanvasPage() {
       ) : null}
       {assistantOpen && !service ? (
         <AiAssistant
+          key={projectId}
           initialPrompt={assistantPrompt}
           prefill={assistantPrefill}
+          addService={assistantAdd}
           onClose={() => {
             setAssistantOpen(false);
             setAssistantPrompt(null);
             setAssistantPrefill(null);
+            setAssistantAdd(null);
           }}
         />
       ) : null}

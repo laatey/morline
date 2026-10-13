@@ -1,6 +1,8 @@
 import { api } from "@/lib/api";
 import type { FileDiff } from "@/components/moor/diff-view";
 
+export type DeployTarget = "github" | "direct";
+
 export type ActionStatus = "pending" | "applying" | "applied" | "failed" | "dismissed" | "reverted";
 
 export type ActionResult = {
@@ -35,6 +37,8 @@ export type AssistantAction = {
     envVars?: { key: string; description: string; generate: boolean }[];
     volume?: { mountPath: string; sizeGb: number } | null;
     fileCount?: number;
+    deploy?: DeployTarget;
+    githubConnected?: boolean;
   };
   diff: FileDiff[];
   result: ActionResult | null;
@@ -46,10 +50,10 @@ export const actionStats = (a: AssistantAction) => ({
   deletions: a.diff.reduce((n, f) => n + f.deletions, 0),
 });
 
-export const applyAction = (id: string, mode?: "commit" | "pr") =>
+export const applyAction = (id: string, mode?: "commit" | "pr", deploy?: DeployTarget) =>
   api<AssistantAction>(`/assistant/actions/${id}/apply`, {
     method: "POST",
-    body: mode ? { mode } : {},
+    body: { ...(mode ? { mode } : {}), ...(deploy ? { deploy } : {}) },
   });
 export const dismissAction = (id: string) =>
   api<AssistantAction>(`/assistant/actions/${id}/dismiss`, { method: "POST" });

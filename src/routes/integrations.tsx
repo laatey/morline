@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Lock, Refresh } from "fluid-icons/react";
 import { Github } from "lucide-react";
 
@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useEnvId, useSelection } from "@/lib/workspace";
+import { useGithubConnect } from "@/lib/github-connect";
 
 type GhStatus = {
   connected: boolean;
@@ -50,6 +51,10 @@ function IntegrationsPage() {
   const teamId = activeTeamId ?? teams[0]?.id ?? null;
   const { projectId } = useSelection();
   const envId = useEnvId();
+  const gh = useGithubConnect();
+  useEffect(() => {
+    if (gh.error) toast.error(gh.error);
+  }, [gh.error]);
   const status = useQuery({
     queryKey: ["github", teamId],
     queryFn: () => api<GhStatus>(`/integrations/github?teamId=${teamId}`),
@@ -138,13 +143,11 @@ function IntegrationsPage() {
             <Button
               size="sm"
               className="h-8 gap-1.5 text-xs"
-              onClick={() => {
-                if (status.data?.installUrl) window.location.href = status.data.installUrl;
-              }}
-              disabled={!status.data?.installUrl}
+              onClick={() => void gh.connect()}
+              disabled={!status.data?.installUrl || gh.waiting}
             >
               <Github className="h-3.5 w-3.5" />
-              Connect GitHub
+              {gh.waiting ? "Waiting for GitHub…" : "Connect GitHub"}
             </Button>
           )}
         </div>

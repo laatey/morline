@@ -3,13 +3,13 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
-  Check,
   ChevronDown,
   ChevronRight,
   Close,
   Edit,
+  Eye,
   FileCode,
-  Layers,
+  Lightbulb,
   Plus,
   Stop,
   Trash,
@@ -28,7 +28,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { api, apiStream } from "@/lib/api";
-import { useEnvId, useServices } from "@/lib/workspace";
+import { useEnvId, useSelection, useServices } from "@/lib/workspace";
+import { Logo } from "@/components/moor/primitives";
+import type { LogoKey } from "@/lib/platform-data";
 import {
   actionStats,
   applyAction,
@@ -40,14 +42,16 @@ import { ActionOutcome, ChangeReview } from "@/components/moor/change-review";
 import type { AssistantContext } from "@/lib/assistant-context";
 
 // Threads persist via /assistant/threads.
+type Chip = { id?: string; name: string; logo?: string };
 type Msg = {
   role: "user" | "agent";
   text: string;
   context?: AssistantContext;
-  chips?: string[];
+  chips?: Chip[];
   actions?: AssistantAction[];
-  /** What the assistant did to produce this reply (client-side only). */
+  /** What the assistant did to produce this reply. Saved with the message, so it survives a refresh. */
   steps?: string[];
+  durationMs?: number;
 };
 type Thread = { id: string; title: string; when: string; messages: Msg[] };
 
@@ -57,13 +61,15 @@ const suggestions = [
   "Why did the latest deploy fail?",
 ];
 
-type RawContext = AssistantContext | { type?: string; label?: string }[];
+type RawContext =
+  AssistantContext | { type?: string; id?: string; label?: string; logo?: string }[];
 type RawMsg = {
   role?: string;
   text?: string;
   content?: string;
   context?: RawContext;
   actions?: AssistantAction[];
+  toolCalls?: { steps?: string[]; durationMs?: number } | unknown[] | null;
 };
 type RawThread = {
   id: string;
@@ -84,15 +90,24 @@ const ago = (iso?: string) => {
         : `${Math.floor(m / 1440)}d`;
 };
 const toMsg = (m: RawMsg): Msg => {
-  const chips = Array.isArray(m.context)
-    ? m.context.map((c) => c.label).filter((l): l is string => !!l)
+  const chips: Chip[] = Array.isArray(m.context)
+    ? m.context
+        .filter((c) => !!c.label)
+        .map((c) => ({
+          name: c.label!,
+          ...(c.id ? { id: c.id } : {}),
+          ...(c.logo ? { logo: c.logo } : {}),
+        }))
     : [];
+  const work = m.toolCalls && !Array.isArray(m.toolCalls) ? m.toolCalls : null;
   return {
     role: m.role === "user" ? "user" : "agent",
     text: m.text ?? m.content ?? "",
     ...(m.context && !Array.isArray(m.context) ? { context: m.context } : {}),
     ...(chips.length ? { chips } : {}),
     ...(m.actions?.length ? { actions: m.actions } : {}),
+    ...(work?.steps?.length ? { steps: work.steps } : {}),
+    ...(work?.durationMs ? { durationMs: work.durationMs } : {}),
   };
 };
 const toThread = (t: RawThread): Thread => ({
@@ -191,9 +206,22 @@ function Markdown({ text }: { text: string }) {
   );
 }
 
+/** Reading steps get an eye; everything else (planning, writing, thinking) gets a bulb. */
+function StepIcon({ text }: { text: string }) {
+  const Icon = /^(read|review|look|check|fetch|inspect|scan)/i.test(text) ? Eye : Lightbulb;
+  return <Icon className="h-3.5 w-3.5 shrink-0" />;
+}
+
+const took = (ms?: number) => {
+  if (!ms) return null;
+  const s = Math.max(1, Math.round(ms / 1000));
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+};
+
 /** The work behind a finished reply, collapsed by default. */
-function Steps({ steps }: { steps: string[] }) {
+function Steps({ steps, durationMs }: { steps: string[]; durationMs?: number }) {
   const [open, setOpen] = useState(false);
+  const t = took(durationMs);
   return (
     <div className="mb-3">
       <button
@@ -201,7 +229,8 @@ function Steps({ steps }: { steps: string[] }) {
         className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground"
       >
         <span>
-          Worked through {steps.length} {steps.length === 1 ? "step" : "steps"}
+          {t ? `Worked for ${t}` : "Worked"} · {steps.length}{" "}
+          {steps.length === 1 ? "step" : "steps"}
         </span>
         <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-90")} />
       </button>
@@ -209,7 +238,7 @@ function Steps({ steps }: { steps: string[] }) {
         <ul className="mt-2 space-y-2 text-[13px] text-muted-foreground">
           {steps.map((s, i) => (
             <li key={i} className="flex items-center gap-2.5">
-              <Check className="h-3.5 w-3.5 shrink-0" />
+              <StepIcon text={s} />
               {s}
             </li>
           ))}
@@ -217,6 +246,11 @@ function Steps({ steps }: { steps: string[] }) {
       ) : null}
     </div>
   );
+}
+
+/** A service shown as context: its own logo, not a generic icon. */
+function ServiceChipIcon({ logo }: { logo?: string | undefined }) {
+  return <Logo k={(logo || "generic") as LogoKey} className="h-3.5 w-3.5" />;
 }
 
 function ActionRows({
@@ -268,8 +302,11 @@ export function AiAssistant({
   onClose,
   initialPrompt,
   prefill,
+  addService,
 }: {
   onClose: () => void;
+  /** Adds a service to the composer as a context chip ("Add to chat" on the canvas). */
+  addService?: { id: string; name: string; logo?: string; key: number } | null;
   /** Sends immediately (used by "Ask AI" on a failed deployment). */
   initialPrompt?: { text: string; key: number; context?: AssistantContext } | null;
   /** Fills the composer without sending, so the user can edit first. */
@@ -279,13 +316,14 @@ export function AiAssistant({
   const [activeId, setActiveId] = useState(() => threads[0]!.id);
   const [view, setView] = useState<"chat" | "history">("chat");
   const [input, setInput] = useState("");
-  const [chips, setChips] = useState<{ id: string; name: string }[]>([]);
+  const [chips, setChips] = useState<{ id: string; name: string; logo?: string }[]>([]);
   const [thinking, setThinking] = useState(false);
   const [liveSteps, setLiveSteps] = useState<string[]>([]);
   const [review, setReview] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [atBottom, setAtBottom] = useState(true);
   const envId = useEnvId();
+  const { projectId } = useSelection();
   const services = useServices().data ?? [];
   const env = useQuery({
     queryKey: ["assistant-env", envId],
@@ -321,7 +359,13 @@ export function AiAssistant({
     el.style.height = `${Math.min(el.scrollHeight, 168)}px`;
   }, [input, view]);
 
-  const load = async () => unwrap(await api("/assistant/threads")).map(toThread);
+  // Conversations belong to a project: only this project's are ever requested.
+  const load = async () =>
+    projectId
+      ? unwrap(await api(`/assistant/threads?projectId=${encodeURIComponent(projectId)}`)).map(
+          toThread,
+        )
+      : [];
   const seeded = useRef(false);
   useEffect(() => {
     load()
@@ -338,7 +382,26 @@ export function AiAssistant({
         }
       })
       .catch(() => toast.error("Could not load conversations"));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+  useEffect(() => {
+    if (!addService) return;
+    setView("chat");
+    setChips((l) =>
+      l.some((c) => c.id === addService.id)
+        ? l
+        : [
+            ...l,
+            {
+              id: addService.id,
+              name: addService.name,
+              ...(addService.logo ? { logo: addService.logo } : {}),
+            },
+          ],
+    );
+    requestAnimationFrame(() => field.current?.focus());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addService?.key]);
   useEffect(() => {
     if (!initialPrompt?.text) return;
     seeded.current = true;
@@ -375,9 +438,16 @@ export function AiAssistant({
     const id = threadId ?? active.id;
     const sentChips = threadId ? [] : chips;
     const body: Record<string, unknown> = { text: q };
+    if (projectId) body["projectId"] = projectId;
+    if (envId) body["environmentId"] = envId;
     if (context) body["context"] = context;
     else if (sentChips.length)
-      body["context"] = sentChips.map((c) => ({ type: "service", id: c.id, label: c.name }));
+      body["context"] = sentChips.map((c) => ({
+        type: "service",
+        id: c.id,
+        label: c.name,
+        ...(c.logo ? { logo: c.logo } : {}),
+      }));
     update(id, (t) => ({
       ...t,
       title: t.messages.length ? t.title : q.slice(0, 40),
@@ -388,7 +458,7 @@ export function AiAssistant({
           role: "user",
           text: q,
           ...(context ? { context } : {}),
-          ...(sentChips.length ? { chips: sentChips.map((c) => c.name) } : {}),
+          ...(sentChips.length ? { chips: sentChips } : {}),
         },
       ],
     }));
@@ -403,13 +473,18 @@ export function AiAssistant({
     };
     let replied = false;
     let steps: string[] = [];
+    const startedAt = Date.now();
     const say = (reply: string, raw?: RawMsg) => {
       replied = true;
+      const base: Msg = raw ? toMsg(raw) : { role: "agent", text: reply };
       update(id, (t) => ({
         ...t,
         messages: [
           ...t.messages,
-          { ...(raw ? toMsg(raw) : { role: "agent" as const, text: reply }), steps },
+          {
+            ...base,
+            ...(steps.length ? { steps, durationMs: Date.now() - startedAt } : {}),
+          },
         ],
       }));
     };
@@ -423,6 +498,9 @@ export function AiAssistant({
             steps = [...steps, s];
             setLiveSteps(steps);
           }
+        } else if (event === "thread.title") {
+          const title = String(data["title"] ?? "").trim();
+          if (title) update(id, (t) => ({ ...t, title }));
         } else if (event === "done")
           say(String(data["text"] ?? ""), (data["message"] as RawMsg | undefined) ?? undefined);
         else if (event === "error") say(String(data["message"] ?? "Something went wrong."));
@@ -487,7 +565,7 @@ export function AiAssistant({
   };
 
   const iconBtn =
-    "h-8 w-8 rounded-full border text-muted-foreground hover:bg-accent hover:text-foreground";
+    "h-8 w-8 shrink-0 rounded-full border text-muted-foreground hover:bg-accent hover:text-foreground";
 
   return (
     <aside className="absolute bottom-2.5 right-2.5 top-2.5 z-20 flex w-[min(440px,calc(100%-1.25rem))] flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl animate-in slide-in-from-right-6 fade-in duration-200">
@@ -509,7 +587,7 @@ export function AiAssistant({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex min-w-0 items-center gap-1.5 text-sm font-medium hover:opacity-80"
+                className="flex min-w-0 shrink items-center gap-1.5 text-sm font-medium hover:opacity-80"
                 aria-label="Recent conversations"
               >
                 <span className="truncate">{active.title}</span>
@@ -542,12 +620,11 @@ export function AiAssistant({
           </DropdownMenu>
         )}
         {view === "chat" ? (
-          <span className="hidden shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground sm:flex">
-            <Layers className="h-3 w-3" />
+          <span className="hidden max-w-[110px] shrink-0 truncate rounded-full bg-[#3A2A65] px-2.5 py-0.5 text-[11px] text-white sm:block">
             {env.data?.name ?? "Environment"}
           </span>
         ) : null}
-        <span className="flex-1" />
+        <span className="min-w-0 flex-1" />
         <Button
           variant="ghost"
           size="icon"
@@ -659,17 +736,19 @@ export function AiAssistant({
                         <div className="flex flex-wrap justify-end gap-1.5">
                           {m.context ? (
                             <span className="flex items-center gap-1.5 rounded-md bg-primary/15 px-2 py-1 text-xs text-primary">
-                              <Layers className="h-3 w-3" />
+                              <ServiceChipIcon />
                               {m.context.serviceName} · Failed deployment
                             </span>
                           ) : null}
                           {m.chips?.map((c) => (
                             <span
-                              key={c}
+                              key={c.id ?? c.name}
                               className="flex items-center gap-1.5 rounded-md bg-primary/15 px-2 py-1 text-xs text-primary"
                             >
-                              <Layers className="h-3 w-3" />
-                              {c}
+                              <ServiceChipIcon
+                                logo={c.logo ?? services.find((x) => x.id === c.id)?.logo}
+                              />
+                              {c.name}
                             </span>
                           ))}
                         </div>
@@ -680,7 +759,12 @@ export function AiAssistant({
                     </div>
                   ) : (
                     <div key={i} className="text-[13.5px] leading-6">
-                      {m.steps?.length ? <Steps steps={m.steps} /> : null}
+                      {m.steps?.length ? (
+                        <Steps
+                          steps={m.steps}
+                          {...(m.durationMs ? { durationMs: m.durationMs } : {})}
+                        />
+                      ) : null}
                       <Markdown text={m.text} />
                       {m.actions?.length ? (
                         <ActionRows actions={m.actions} onReview={setReview} />
@@ -692,7 +776,7 @@ export function AiAssistant({
                   <ul className="space-y-2.5 text-[13px] text-muted-foreground">
                     {liveSteps.slice(0, -1).map((s) => (
                       <li key={s} className="flex items-center gap-2.5">
-                        <Check className="h-3.5 w-3.5 shrink-0" />
+                        <StepIcon text={s} />
                         {s}
                       </li>
                     ))}
@@ -727,7 +811,7 @@ export function AiAssistant({
                     key={c.id}
                     className="flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-xs"
                   >
-                    <Layers className="h-3 w-3 text-muted-foreground" />
+                    <ServiceChipIcon logo={c.logo} />
                     {c.name}
                     <button
                       aria-label={`Remove ${c.name}`}
@@ -776,8 +860,12 @@ export function AiAssistant({
                       <DropdownMenuItem
                         key={s.id}
                         disabled={chips.some((c) => c.id === s.id)}
-                        onSelect={() => setChips((l) => [...l, { id: s.id, name: s.name }])}
+                        onSelect={() =>
+                          setChips((l) => [...l, { id: s.id, name: s.name, logo: s.logo }])
+                        }
+                        className="gap-2"
                       >
+                        <ServiceChipIcon logo={s.logo} />
                         {s.name}
                       </DropdownMenuItem>
                     ))

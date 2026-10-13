@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { actionStats, type AssistantAction } from "@/lib/assistant-actions";
+import { actionStats, type AssistantAction, type DeployTarget } from "@/lib/assistant-actions";
+import { useGithubConnect } from "@/lib/github-connect";
 import { DiffView } from "@/components/moor/diff-view";
 
 const mark = { create: "A", update: "M", delete: "D" } as const;
@@ -86,12 +87,13 @@ export function ChangeReview({
 }: {
   action: AssistantAction;
   busy: boolean;
-  onApply: (mode?: "commit" | "pr") => void;
+  onApply: (mode?: "commit" | "pr", deploy?: DeployTarget) => void;
   onDismiss: () => void;
   onRevert: () => void;
   onClose: () => void;
 }) {
   const [selected, setSelected] = useState(0);
+  const gh = useGithubConnect();
   useEffect(() => setSelected(0), [action.id]);
   const file = action.diff[selected] ?? action.diff[0];
   const { files, additions, deletions } = actionStats(action);
@@ -105,14 +107,13 @@ export function ChangeReview({
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent
         side="right"
-        className="flex w-[min(1000px,100vw)] flex-col gap-0 p-0 sm:max-w-none"
+        closeClassName="right-4 top-3.5 grid h-8 w-8 place-items-center rounded-full border opacity-100 hover:bg-accent"
+        className="bottom-3 right-3 top-3 flex h-auto w-[min(1000px,calc(100vw-1.5rem))] flex-col gap-0 overflow-hidden rounded-2xl border p-0 sm:max-w-none"
       >
-        <div className="shrink-0 border-b px-5 py-4 pr-12">
+        <div className="shrink-0 border-b px-5 py-4 pr-16">
           <SheetTitle className="text-sm font-semibold">{action.title}</SheetTitle>
           <SheetDescription className="mt-1 font-mono text-[11px] text-muted-foreground">
-            {isApp
-              ? "New private repository"
-              : `${action.payload.repo ?? ""} · ${action.payload.branch ?? ""}`}
+            {isApp ? "New app" : `${action.payload.repo ?? ""} · ${action.payload.branch ?? ""}`}
             {" · "}
             {files} {files === 1 ? "file" : "files"}
             <span className="ml-2 text-[var(--diff-add)]">+{additions}</span>
@@ -182,6 +183,12 @@ export function ChangeReview({
         </div>
 
         <div className="shrink-0 space-y-2 border-t px-5 py-3">
+          {isApp && canAct ? (
+            <p className="text-xs text-muted-foreground">
+              Deploy only runs the app on Morline. Creating a repository also saves the code to a
+              new private repo on GitHub, so the assistant can edit it later.
+            </p>
+          ) : null}
           {action.status === "failed" && action.result?.error ? (
             <p className="text-xs text-destructive">{action.result.error}</p>
           ) : null}
@@ -213,19 +220,39 @@ export function ChangeReview({
                     Open pull request
                   </Button>
                 ) : null}
-                <Button
-                  size="sm"
-                  disabled={working}
-                  onClick={() => onApply(isApp ? undefined : "commit")}
-                >
-                  {working
-                    ? "Applying…"
-                    : action.status === "failed"
-                      ? "Try again"
-                      : isApp
-                        ? "Create and deploy"
+                {isApp ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={working || gh.waiting}
+                      onClick={() => onApply(undefined, "direct")}
+                    >
+                      {working ? "Applying…" : "Deploy only"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={working || gh.waiting}
+                      onClick={async () => {
+                        if (gh.connected || (await gh.connect())) onApply(undefined, "github");
+                      }}
+                    >
+                      {gh.waiting
+                        ? "Waiting for GitHub…"
+                        : gh.connected
+                          ? "Create repo and deploy"
+                          : "Connect GitHub and deploy"}
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" disabled={working} onClick={() => onApply("commit")}>
+                    {working
+                      ? "Applying…"
+                      : action.status === "failed"
+                        ? "Try again"
                         : "Commit and deploy"}
-                </Button>
+                  </Button>
+                )}
               </>
             ) : null}
             {action.status === "applying" && !canAct ? (
