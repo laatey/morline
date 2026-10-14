@@ -13,6 +13,7 @@ import go from "highlight.js/lib/languages/go";
 import rust from "highlight.js/lib/languages/rust";
 import sql from "highlight.js/lib/languages/sql";
 import ini from "highlight.js/lib/languages/ini";
+import diff from "highlight.js/lib/languages/diff";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("typescript", typescript);
@@ -28,6 +29,7 @@ hljs.registerLanguage("go", go);
 hljs.registerLanguage("rust", rust);
 hljs.registerLanguage("sql", sql);
 hljs.registerLanguage("ini", ini);
+hljs.registerLanguage("diff", diff);
 
 const byExt: Record<string, string> = {
   js: "javascript",
@@ -70,6 +72,50 @@ export function languageFor(path: string): string | null {
   if (name.startsWith(".env")) return "ini";
   const ext = name.includes(".") ? name.split(".").pop()! : "";
   return byExt[ext] ?? null;
+}
+
+const byName: Record<string, string> = {
+  js: "javascript",
+  javascript: "javascript",
+  jsx: "javascript",
+  node: "javascript",
+  ts: "typescript",
+  typescript: "typescript",
+  tsx: "typescript",
+  json: "json",
+  jsonc: "json",
+  html: "xml",
+  xml: "xml",
+  svg: "xml",
+  css: "css",
+  scss: "css",
+  md: "markdown",
+  markdown: "markdown",
+  yml: "yaml",
+  yaml: "yaml",
+  sh: "bash",
+  bash: "bash",
+  shell: "bash",
+  zsh: "bash",
+  console: "bash",
+  dockerfile: "dockerfile",
+  docker: "dockerfile",
+  py: "python",
+  python: "python",
+  go: "go",
+  rust: "rust",
+  rs: "rust",
+  sql: "sql",
+  toml: "ini",
+  ini: "ini",
+  env: "ini",
+  diff: "diff",
+  patch: "diff",
+};
+
+/** Language for a markdown fence label such as ```ts or ```dockerfile. */
+export function languageForName(name?: string | null): string | null {
+  return name ? (byName[name.toLowerCase()] ?? null) : null;
 }
 
 const escapeHtml = (s: string) =>

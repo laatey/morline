@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { WorkspaceShell } from "@/components/moor/workspace-shell";
 import { useEnvironments, useProject } from "@/lib/workspace";
+import { useAlwaysProceed } from "@/lib/assistant-settings";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -55,6 +56,7 @@ function SettingsPage() {
   const project = useProject().data;
   const envs = useEnvironments().data ?? [];
   const [confirmDel, setConfirmDel] = useState(false);
+  const [alwaysProceed, setAlwaysProceed] = useAlwaysProceed();
   const patch = async (body: Record<string, unknown>, ok: string) => {
     if (!project) return;
     try {
@@ -127,6 +129,23 @@ function SettingsPage() {
               className="mt-1 h-8 font-mono text-sm text-muted-foreground"
             />
           </label>
+        </Section>
+        <Section title="AI assistant">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Always proceed</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Apply and deploy the assistant's changes straight away, without waiting for you to
+                review and confirm each one. Every change is still listed in the chat and can be
+                undone. Saved in this browser.
+              </p>
+            </div>
+            <Switch
+              checked={alwaysProceed}
+              onCheckedChange={setAlwaysProceed}
+              aria-label="Always proceed"
+            />
+          </div>
         </Section>
         <Section title="Environments">
           <ul className="divide-y rounded-md border">

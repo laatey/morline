@@ -386,7 +386,6 @@
 }
 .hljs-string,
 .hljs-regexp,
-.hljs-addition,
 .hljs-template-variable,
 .hljs-symbol {
   color: var(--syn-string);
@@ -416,9 +415,14 @@
 .hljs-subst {
   color: var(--syn-meta);
 }
-.hljs-comment,
-.hljs-quote,
+.hljs-addition {
+  color: var(--diff-add);
+}
 .hljs-deletion {
+  color: var(--diff-del);
+}
+.hljs-comment,
+.hljs-quote {
   color: var(--syn-comment);
   font-style: italic;
 }

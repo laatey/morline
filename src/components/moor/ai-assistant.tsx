@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -30,6 +30,8 @@ import { cn } from "@/lib/utils";
 import { api, apiStream } from "@/lib/api";
 import { useEnvId, useSelection, useServices } from "@/lib/workspace";
 import { Logo } from "@/components/moor/primitives";
+import { highlightLines, languageForName } from "@/lib/highlight";
+import { getAlwaysProceed } from "@/lib/assistant-settings";
 import type { LogoKey } from "@/lib/platform-data";
 import {
   actionStats,
@@ -157,6 +159,37 @@ function Spinner() {
   );
 }
 
+/** A fenced code block with syntax colours and a copy button. */
+function CodeBlock({ code, lang }: { code: string; lang?: string | undefined }) {
+  const [copied, setCopied] = useState(false);
+  const language = languageForName(lang);
+  const html = useMemo(
+    () => highlightLines(code.split("\n"), language).join("\n"),
+    [code, language],
+  );
+  return (
+    <div className="my-3 overflow-hidden rounded-lg border bg-muted/40">
+      <div className="flex items-center justify-between border-b px-3 py-1 text-[11px] text-muted-foreground">
+        <span>{lang || "text"}</span>
+        <button
+          className="hover:text-foreground"
+          onClick={() => {
+            void navigator.clipboard.writeText(code).then(() => {
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1500);
+            });
+          }}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto px-3 py-2.5 font-mono text-[11.5px] leading-relaxed">
+        <code className="hljs" dangerouslySetInnerHTML={{ __html: html }} />
+      </pre>
+    </div>
+  );
+}
+
 function Markdown({ text }: { text: string }) {
   return (
     <ReactMarkdown
@@ -183,16 +216,18 @@ function Markdown({ text }: { text: string }) {
           </ol>
         ),
         li: ({ children }) => <li className="pl-1">{children}</li>,
-        code: ({ children, className }) =>
-          className ? (
-            <pre className="my-3 overflow-x-auto rounded-lg border bg-muted/40 px-3 py-2.5 font-mono text-[11.5px] leading-relaxed">
-              <code>{children}</code>
-            </pre>
-          ) : (
-            <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[12px]">
-              {children}
-            </code>
-          ),
+        code: ({ children, className }) => {
+          const text = String(children ?? "").replace(/\n$/, "");
+          // A fence has a language class or spans lines; anything else is inline code.
+          if (!className && !text.includes("\n"))
+            return (
+              <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[12px]">
+                {children}
+              </code>
+            );
+          return <CodeBlock code={text} lang={/language-([\w+-]+)/.exec(className ?? "")?.[1]} />;
+        },
+        pre: ({ children }) => <>{children}</>,
         strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
         a: ({ href, children }) => (
           <a
@@ -554,6 +589,25 @@ export function AiAssistant({
     const say = (reply: string, raw?: RawMsg) => {
       replied = true;
       const base: Msg = raw ? toMsg(raw) : { role: "agent", text: reply };
+      // "Always proceed": apply what was just proposed instead of waiting for a click on Review.
+      if (getAlwaysProceed()) {
+        for (const act of base.actions ?? []) {
+          if (act.status !== "pending") continue;
+          const deploy =
+            act.type === "create_app"
+              ? act.payload.githubConnected
+                ? "github"
+                : "direct"
+              : undefined;
+          window.setTimeout(
+            () =>
+              void runAction(act, () =>
+                applyAction(act.id, act.type === "create_app" ? undefined : "commit", deploy),
+              ),
+            0,
+          );
+        }
+      }
       update(id, (t) => ({
         ...t,
         messages: [
