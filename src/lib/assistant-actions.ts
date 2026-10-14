@@ -28,6 +28,8 @@ export type AssistantAction = {
   title: string;
   description: string;
   reversible: boolean;
+  /** high = removes files; never auto-applied by "Always proceed". */
+  risk?: "low" | "medium" | "high";
   payload: {
     repo?: string;
     branch?: string;
@@ -39,6 +41,10 @@ export type AssistantAction = {
     fileCount?: number;
     deploy?: DeployTarget;
     local?: boolean;
+    modules?: string[];
+    addons?: { kind: string; env: string }[];
+    warnings?: string[];
+    services?: { name: string; start: string }[];
     githubConnected?: boolean;
   };
   diff: FileDiff[];

@@ -34,6 +34,12 @@ function Link({ href, children }: { href: string; children: React.ReactNode }) {
 }
 
 /** What happened once an action has been applied, as plain links. */
+const ADDON_NAME: Record<string, string> = {
+  postgres: "a PostgreSQL database",
+  mongodb: "a MongoDB database",
+  redis: "a Redis database",
+};
+
 export function ActionOutcome({ action }: { action: AssistantAction }) {
   const r = action.result;
   if (!r) return null;
@@ -128,7 +134,11 @@ export function ChangeReview({
         <div className="shrink-0 border-b px-5 py-4 pr-16">
           <SheetTitle className="text-sm font-semibold">{action.title}</SheetTitle>
           <SheetDescription className="mt-1 font-mono text-[11px] text-muted-foreground">
-            {isApp ? "New app" : `${action.payload.repo ?? ""} · ${action.payload.branch ?? ""}`}
+            {isApp
+              ? "New app"
+              : action.payload.local
+                ? "Files on Morline"
+                : `${action.payload.repo ?? ""} · ${action.payload.branch ?? ""}`}
             {" · "}
             {files} {files === 1 ? "file" : "files"}
             <span className="ml-2 text-[var(--diff-add)]">+{additions}</span>
@@ -136,7 +146,11 @@ export function ChangeReview({
           </SheetDescription>
         </div>
 
-        {isApp && (generated.length || required.length || action.payload.volume) ? (
+        {generated.length ||
+        required.length ||
+        action.payload.volume ||
+        action.payload.addons?.length ||
+        action.payload.warnings?.length ? (
           <div className="shrink-0 space-y-1 border-b px-5 py-3 text-xs text-muted-foreground">
             {action.payload.volume ? (
               <p>
@@ -152,6 +166,23 @@ export function ChangeReview({
                 <span className="font-mono text-foreground">{generated.join(", ")}</span>
               </p>
             ) : null}
+            {action.payload.addons?.length ? (
+              <p>
+                Creates{" "}
+                <span className="text-foreground">
+                  {action.payload.addons.map((a) => ADDON_NAME[a.kind] ?? a.kind).join(", ")}
+                </span>{" "}
+                and connects it as{" "}
+                <span className="font-mono text-foreground">
+                  {action.payload.addons.map((a) => a.env).join(", ")}
+                </span>
+              </p>
+            ) : null}
+            {action.payload.warnings?.map((w) => (
+              <p key={w} className="text-foreground">
+                {w}
+              </p>
+            ))}
             {required.length ? (
               <p>
                 You will need to set:{" "}

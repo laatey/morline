@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Close,
   Edit,
-  Eye,
   FileCode,
   Lightbulb,
   Plus,
@@ -30,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { api, apiStream } from "@/lib/api";
 import { useEnvId, useSelection, useServices } from "@/lib/workspace";
 import { Logo } from "@/components/moor/primitives";
+import { StepIcon, stepText, type Step } from "./provider-icon";
 import { highlightLines, languageForName } from "@/lib/highlight";
 import { getAlwaysProceed, useAlwaysProceed } from "@/lib/assistant-settings";
 import type { LogoKey } from "@/lib/platform-data";
@@ -54,7 +54,7 @@ type Msg = {
   chips?: Chip[];
   actions?: AssistantAction[];
   /** What the assistant did to produce this reply. Saved with the message, so it survives a refresh. */
-  steps?: string[];
+  steps?: Step[];
   durationMs?: number;
 };
 type Thread = {
@@ -81,7 +81,7 @@ type RawMsg = {
   content?: string;
   context?: RawContext;
   actions?: AssistantAction[];
-  toolCalls?: { steps?: string[]; durationMs?: number } | unknown[] | null;
+  toolCalls?: { steps?: Step[]; durationMs?: number } | unknown[] | null;
 };
 type RawThread = {
   id: string;
@@ -254,16 +254,6 @@ function Markdown({ text }: { text: string }) {
   );
 }
 
-/** Reading steps get an eye; everything else (planning, writing, thinking) gets a bulb. */
-function StepIcon({ text }: { text: string }) {
-  const Icon = /^(read|review|look|check|fetch|inspect|scan)/i.test(text)
-    ? Eye
-    : /^(writ|edit|creat|delet|updat|chang|modif|apply)/i.test(text)
-      ? Edit
-      : Lightbulb;
-  return <Icon className="h-3.5 w-3.5 shrink-0" />;
-}
-
 const took = (ms?: number) => {
   if (!ms) return null;
   const s = Math.max(1, Math.round(ms / 1000));
@@ -271,7 +261,7 @@ const took = (ms?: number) => {
 };
 
 /** The work behind a finished reply, collapsed by default. */
-function Steps({ steps, durationMs }: { steps: string[]; durationMs?: number }) {
+function Steps({ steps, durationMs }: { steps: Step[]; durationMs?: number }) {
   const [open, setOpen] = useState(false);
   const t = took(durationMs);
   return (
@@ -290,8 +280,8 @@ function Steps({ steps, durationMs }: { steps: string[]; durationMs?: number }) 
         <ul className="mt-2 space-y-2 text-[13px] text-muted-foreground">
           {steps.map((s, i) => (
             <li key={i} className="flex items-center gap-2.5">
-              <StepIcon text={s} />
-              {s}
+              <StepIcon step={s} />
+              {stepText(s)}
             </li>
           ))}
         </ul>
@@ -397,7 +387,7 @@ export function AiAssistant({
   const [input, setInput] = useState("");
   const [chips, setChips] = useState<{ id: string; name: string; logo?: string }[]>([]);
   const [thinking, setThinking] = useState(false);
-  const [liveSteps, setLiveSteps] = useState<string[]>([]);
+  const [liveSteps, setLiveSteps] = useState<Step[]>([]);
   const [review, setReview] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [atBottom, setAtBottom] = useState(true);
@@ -585,7 +575,7 @@ export function AiAssistant({
       cancelled.v = true;
     };
     let replied = false;
-    let steps: string[] = [];
+    let steps: Step[] = [];
     const startedAt = Date.now();
     const say = (reply: string, raw?: RawMsg) => {
       replied = true;
@@ -593,7 +583,8 @@ export function AiAssistant({
       // "Always proceed": apply what was just proposed instead of waiting for a click on Review.
       if (getAlwaysProceed()) {
         for (const act of base.actions ?? []) {
-          if (act.status !== "pending") continue;
+          // Removing files (a module's code) always waits for a click, whatever the setting.
+          if (act.status !== "pending" || act.risk === "high") continue;
           const deploy =
             act.type === "create_app"
               ? act.payload.githubConnected
@@ -625,9 +616,10 @@ export function AiAssistant({
       onEvent: (event, data) => {
         if (cancelled.v) return;
         if (event === "status") {
-          const s = String(data["text"] ?? "");
-          if (s && steps[steps.length - 1] !== s) {
-            steps = [...steps, s];
+          const text = String(data["text"] ?? "");
+          const icon = data["icon"] ? String(data["icon"]) : null;
+          if (text && (steps.length === 0 || stepText(steps[steps.length - 1]!) !== text)) {
+            steps = [...steps, icon ? { text, icon } : text];
             setLiveSteps(steps);
           }
         } else if (event === "thread.title") {
@@ -958,14 +950,17 @@ export function AiAssistant({
                 {thinking ? (
                   <ul className="space-y-2.5 text-[13px] text-muted-foreground">
                     {liveSteps.slice(0, -1).map((s) => (
-                      <li key={s} className="flex items-center gap-2.5">
-                        <StepIcon text={s} />
-                        {s}
+                      <li key={stepText(s)} className="flex items-center gap-2.5">
+                        <StepIcon step={s} />
+                        {stepText(s)}
                       </li>
                     ))}
                     <li className="flex items-center gap-2.5">
                       <Spinner />
-                      <span>{liveSteps[liveSteps.length - 1] ?? "Thinking"}…</span>
+                      <span>
+                        {liveSteps.length ? stepText(liveSteps[liveSteps.length - 1]!) : "Thinking"}
+                        …
+                      </span>
                     </li>
                   </ul>
                 ) : null}
