@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { actionStats, type AssistantAction, type DeployTarget } from "@/lib/assistant-actions";
+import {
+  actionStats,
+  deployLabel,
+  type AssistantAction,
+  type DeployTarget,
+} from "@/lib/assistant-actions";
 import { useGithubConnect } from "@/lib/github-connect";
 import { DiffView } from "@/components/moor/diff-view";
 
@@ -51,7 +56,14 @@ export function ActionOutcome({ action }: { action: AssistantAction }) {
           Commit {sha(r.commitSha)}
         </Link>,
       );
-    if (r.deploymentId) parts.push(<span key="d">Deploying</span>);
+    const dl = deployLabel(action);
+    if (dl)
+      parts.push(
+        <span key="d" className={dl.tone === "bad" ? "text-destructive" : undefined}>
+          {dl.text}
+        </span>,
+      );
+    else if (r.deploymentId) parts.push(<span key="d">Deploying</span>);
   }
   if (action.status === "reverted") {
     if (r.revertCommitUrl)
@@ -210,7 +222,7 @@ export function ChangeReview({
                 <Button variant="ghost" size="sm" disabled={working} onClick={onDismiss}>
                   Dismiss
                 </Button>
-                {!isApp ? (
+                {!isApp && !action.payload.local ? (
                   <Button
                     variant="outline"
                     size="sm"

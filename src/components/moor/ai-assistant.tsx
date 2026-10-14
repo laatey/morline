@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -34,6 +34,7 @@ import type { LogoKey } from "@/lib/platform-data";
 import {
   actionStats,
   applyAction,
+  deployLabel,
   dismissAction,
   revertAction,
   type AssistantAction,
@@ -44,6 +45,7 @@ import type { AssistantContext } from "@/lib/assistant-context";
 // Threads persist via /assistant/threads.
 type Chip = { id?: string; name: string; logo?: string };
 type Msg = {
+  id?: string;
   role: "user" | "agent";
   text: string;
   context?: AssistantContext;
@@ -53,7 +55,14 @@ type Msg = {
   steps?: string[];
   durationMs?: number;
 };
-type Thread = { id: string; title: string; when: string; messages: Msg[] };
+type Thread = {
+  id: string;
+  title: string;
+  when: string;
+  messages: Msg[];
+  /** Older messages exist on the server and load as the user scrolls up. */
+  hasMore?: boolean;
+};
 
 const suggestions = [
   "Build a REST API with login and a SQLite database, and deploy it",
@@ -64,6 +73,7 @@ const suggestions = [
 type RawContext =
   AssistantContext | { type?: string; id?: string; label?: string; logo?: string }[];
 type RawMsg = {
+  id?: string;
   role?: string;
   text?: string;
   content?: string;
@@ -77,6 +87,7 @@ type RawThread = {
   updatedAt?: string;
   createdAt?: string;
   messages?: RawMsg[];
+  hasMoreMessages?: boolean;
 };
 const ago = (iso?: string) => {
   if (!iso) return "now";
@@ -101,6 +112,7 @@ const toMsg = (m: RawMsg): Msg => {
     : [];
   const work = m.toolCalls && !Array.isArray(m.toolCalls) ? m.toolCalls : null;
   return {
+    ...(m.id ? { id: m.id } : {}),
     role: m.role === "user" ? "user" : "agent",
     text: m.text ?? m.content ?? "",
     ...(m.context && !Array.isArray(m.context) ? { context: m.context } : {}),
@@ -115,6 +127,7 @@ const toThread = (t: RawThread): Thread => ({
   title: t.title || "New conversation",
   when: ago(t.updatedAt ?? t.createdAt),
   messages: (t.messages ?? []).map(toMsg),
+  ...(t.hasMoreMessages ? { hasMore: true } : {}),
 });
 const unwrap = (r: unknown): RawThread[] =>
   Array.isArray(r)
@@ -124,7 +137,7 @@ const unwrap = (r: unknown): RawThread[] =>
       []);
 const fresh = (): Thread => ({
   id: crypto.randomUUID(),
-  title: "New conversation",
+  title: "New chat",
   when: "now",
   messages: [],
 });
@@ -208,7 +221,11 @@ function Markdown({ text }: { text: string }) {
 
 /** Reading steps get an eye; everything else (planning, writing, thinking) gets a bulb. */
 function StepIcon({ text }: { text: string }) {
-  const Icon = /^(read|review|look|check|fetch|inspect|scan)/i.test(text) ? Eye : Lightbulb;
+  const Icon = /^(read|review|look|check|fetch|inspect|scan)/i.test(text)
+    ? Eye
+    : /^(writ|edit|creat|delet|updat|chang|modif|apply)/i.test(text)
+      ? Edit
+      : Lightbulb;
   return <Icon className="h-3.5 w-3.5 shrink-0" />;
 }
 
@@ -256,9 +273,13 @@ function ServiceChipIcon({ logo }: { logo?: string | undefined }) {
 function ActionRows({
   actions,
   onReview,
+  onFix,
+  fixing,
 }: {
   actions: AssistantAction[];
   onReview: (id: string) => void;
+  onFix: (a: AssistantAction) => void;
+  fixing: boolean;
 }) {
   return (
     <div className="mt-4">
@@ -276,21 +297,44 @@ function ActionRows({
                 </span>
                 <span className="text-[var(--diff-add)]">+{st.additions}</span>
                 <span className="text-[var(--diff-del)]">−{st.deletions}</span>
-                <span className="font-sans">{statusLabel[a.status] ?? a.status}</span>
+                <span
+                  className={cn(
+                    "font-sans",
+                    deployLabel(a)?.tone === "bad" && "text-destructive",
+                    deployLabel(a)?.tone === "good" && "text-[var(--diff-add)]",
+                  )}
+                >
+                  {deployLabel(a)?.text ?? statusLabel[a.status] ?? a.status}
+                </span>
               </p>
+              {deployLabel(a)?.tone === "bad" && a.deployment?.error ? (
+                <p className="line-clamp-2 text-xs text-destructive">{a.deployment.error}</p>
+              ) : null}
               {a.status === "failed" && a.result?.error ? (
                 <p className="text-xs text-destructive">{a.result.error}</p>
               ) : null}
               <ActionOutcome action={a} />
             </div>
-            <Button
-              size="sm"
-              variant={a.status === "pending" ? "default" : "outline"}
-              className="h-8 shrink-0 rounded-full px-3.5 text-xs"
-              onClick={() => onReview(a.id)}
-            >
-              {open ? "Review" : "View"}
-            </Button>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              {deployLabel(a)?.tone === "bad" ? (
+                <Button
+                  size="sm"
+                  className="h-8 rounded-full px-3.5 text-xs"
+                  disabled={fixing}
+                  onClick={() => onFix(a)}
+                >
+                  Fix and deploy
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                variant={a.status === "pending" ? "default" : "outline"}
+                className="h-8 rounded-full px-3.5 text-xs"
+                onClick={() => onReview(a.id)}
+              >
+                {open ? "Review" : "View"}
+              </Button>
+            </div>
           </div>
         );
       })}
@@ -340,10 +384,47 @@ export function AiAssistant({
       top: scroller.current.scrollHeight,
       behavior: smooth ? "smooth" : "auto",
     });
-  useEffect(() => {
-    if (atBottom) scrollToEnd();
+  // Opening a conversation lands on the latest message at once (no top-to-bottom scrolling).
+  const settled = useRef<string | null>(null);
+  const keepOffset = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    if (keepOffset.current !== null) {
+      // Older messages were added above: hold the reader's place.
+      el.scrollTop = el.scrollHeight - keepOffset.current;
+      keepOffset.current = null;
+      return;
+    }
+    if (settled.current !== active.id && active.messages.length) {
+      settled.current = active.id;
+      scrollToEnd(false);
+    } else if (atBottom) scrollToEnd(settled.current === active.id && active.messages.length > 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active?.messages.length, thinking, liveSteps.length]);
+  }, [active?.id, active?.messages.length, view, thinking, liveSteps.length]);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const loadOlder = async () => {
+    const first = active.messages[0]?.id;
+    if (!active.hasMore || loadingOlder || !first) return;
+    setLoadingOlder(true);
+    try {
+      const r = await api<{ data: RawMsg[]; hasMore: boolean }>(
+        `/assistant/threads/${active.id}/messages?limit=30&before=${encodeURIComponent(first)}`,
+      );
+      keepOffset.current = scroller.current
+        ? scroller.current.scrollHeight - scroller.current.scrollTop
+        : null;
+      update(active.id, (t) => ({
+        ...t,
+        hasMore: r.hasMore,
+        messages: [...r.data.map(toMsg), ...t.messages],
+      }));
+    } catch {
+      toast.error("Could not load earlier messages");
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
   useEffect(
     () => () => {
       stopRef.current?.();
@@ -366,20 +447,12 @@ export function AiAssistant({
           toThread,
         )
       : [];
-  const seeded = useRef(false);
   useEffect(() => {
     load()
       .then((list) => {
         if (!list.length) return;
-        if (seeded.current)
-          setThreads((l) => [
-            ...l.filter((t) => t.messages.length && !list.some((x) => x.id === t.id)),
-            ...list,
-          ]);
-        else {
-          setThreads(list);
-          setActiveId(list[0]!.id);
-        }
+        // Saved conversations go into history; the panel itself stays on the empty new chat.
+        setThreads((l) => [...l.filter((t) => !list.some((x) => x.id === t.id)), ...list]);
       })
       .catch(() => toast.error("Could not load conversations"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -402,22 +475,26 @@ export function AiAssistant({
     requestAnimationFrame(() => field.current?.focus());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addService?.key]);
-  useEffect(() => {
-    if (!initialPrompt?.text) return;
-    seeded.current = true;
+  // One empty chat is reused instead of stacking blanks. A chat only exists on the server once a
+  // first message is sent.
+  const blankThread = () => {
+    const empty = threads.find((t) => !t.messages.length);
+    if (empty) return empty.id;
     const t = fresh();
     setThreads((l) => [t, ...l]);
-    setActiveId(t.id);
+    return t.id;
+  };
+  useEffect(() => {
+    if (!initialPrompt?.text) return;
+    const id = blankThread();
+    setActiveId(id);
     setView("chat");
-    send(initialPrompt.text, t.id, initialPrompt.context);
+    send(initialPrompt.text, id, initialPrompt.context);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPrompt?.key]);
   useEffect(() => {
     if (!prefill?.text) return;
-    seeded.current = true;
-    const t = fresh();
-    setThreads((l) => [t, ...l]);
-    setActiveId(t.id);
+    setActiveId(blankThread());
     setView("chat");
     setInput(prefill.text);
     requestAnimationFrame(() => {
@@ -548,21 +625,58 @@ export function AiAssistant({
     patchAction({ ...a, status: "applying" });
     try {
       patchAction(await call());
+      return true;
     } catch (e) {
       toast.error((e as Error).message || "That did not work");
       const latest = await api<AssistantAction>(`/assistant/actions/${a.id}`).catch(() => null);
       patchAction(latest ?? a);
+      return false;
     } finally {
       setBusyAction(null);
     }
   };
+
+  // Follow every deployment an applied action started, so the chat says Deploying, Live or Failed.
+  const watching = allActions.filter(
+    (a) =>
+      a.status === "applied" &&
+      a.deployment &&
+      ["queued", "building", "deploying"].includes(a.deployment.state),
+  );
+  const watchKey = watching.map((a) => `${a.id}:${a.deployment?.state}`).join(",");
+  useEffect(() => {
+    if (!watching.length) return;
+    const timer = window.setInterval(() => {
+      for (const a of watching) {
+        api<AssistantAction>(`/assistant/actions/${a.id}`)
+          .then((next) => {
+            patchAction(next);
+            const bad = next.deployment && ["failed", "crashed"].includes(next.deployment.state);
+            if (bad) setReview((r) => (r === next.id ? null : r));
+          })
+          .catch(() => undefined);
+      }
+    }, 3000);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchKey]);
+
+  /** "Fix and deploy": the assistant reads the failed deployment's logs and proposes a fix. */
+  const fixDeployment = (a: AssistantAction) => {
+    if (!a.deployment) return;
+    setReview(null);
+    send("Fix and deploy", undefined, {
+      type: "deployment",
+      deploymentId: a.deployment.id,
+      serviceName: a.deployment.serviceName,
+    });
+  };
   const newThread = () => {
-    const t = fresh();
-    setThreads((l) => [t, ...l]);
-    setActiveId(t.id);
+    setActiveId(blankThread());
     setView("chat");
     setChips([]);
   };
+  const saved = threads.filter((t) => t.messages.length);
 
   const iconBtn =
     "h-8 w-8 shrink-0 rounded-full border text-muted-foreground hover:bg-accent hover:text-foreground";
@@ -598,7 +712,7 @@ export function AiAssistant({
               <DropdownMenuLabel className="text-xs text-muted-foreground">
                 Recent conversations
               </DropdownMenuLabel>
-              {threads.slice(0, 3).map((t) => (
+              {saved.slice(0, 3).map((t) => (
                 <DropdownMenuItem
                   key={t.id}
                   onSelect={() => setActiveId(t.id)}
@@ -608,7 +722,10 @@ export function AiAssistant({
                   <span className="shrink-0 text-[11px] text-muted-foreground">{t.when}</span>
                 </DropdownMenuItem>
               ))}
-              {threads.length > 3 ? (
+              {!saved.length ? (
+                <p className="px-2 py-1.5 text-xs text-muted-foreground">No conversations yet.</p>
+              ) : null}
+              {saved.length > 3 ? (
                 <DropdownMenuItem
                   onSelect={() => setView("history")}
                   className="text-muted-foreground"
@@ -647,7 +764,7 @@ export function AiAssistant({
 
       {view === "history" ? (
         <ul className="scroll-area min-h-0 flex-1 divide-y overflow-y-auto border-t">
-          {threads.map((t) => (
+          {saved.map((t) => (
             <li key={t.id} className="group flex items-center gap-2 px-4 hover:bg-accent/50">
               <button
                 className="min-w-0 flex-1 py-3 text-left"
@@ -696,6 +813,7 @@ export function AiAssistant({
             onScroll={(e) => {
               const el = e.currentTarget;
               setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+              if (el.scrollTop < 80) void loadOlder();
             }}
             className="scroll-area h-full overflow-y-auto px-5 pb-6 pt-2"
           >
@@ -729,6 +847,11 @@ export function AiAssistant({
               </div>
             ) : (
               <div className="space-y-7 pt-2">
+                {loadingOlder ? (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Loading earlier messages…
+                  </p>
+                ) : null}
                 {active.messages.map((m, i) =>
                   m.role === "user" ? (
                     <div key={i} className="flex flex-col items-end gap-2">
@@ -767,7 +890,12 @@ export function AiAssistant({
                       ) : null}
                       <Markdown text={m.text} />
                       {m.actions?.length ? (
-                        <ActionRows actions={m.actions} onReview={setReview} />
+                        <ActionRows
+                          actions={m.actions}
+                          onReview={setReview}
+                          onFix={fixDeployment}
+                          fixing={thinking}
+                        />
                       ) : null}
                     </div>
                   ),
@@ -909,7 +1037,11 @@ export function AiAssistant({
           action={reviewing}
           busy={busyAction === reviewing.id}
           onClose={() => setReview(null)}
-          onApply={(mode) => runAction(reviewing, () => applyAction(reviewing.id, mode))}
+          onApply={(mode, deploy) =>
+            void runAction(reviewing, () => applyAction(reviewing.id, mode, deploy)).then(
+              (ok) => ok && setReview(null),
+            )
+          }
           onDismiss={() => runAction(reviewing, () => dismissAction(reviewing.id))}
           onRevert={() => runAction(reviewing, () => revertAction(reviewing.id))}
         />

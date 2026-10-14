@@ -38,11 +38,42 @@ export type AssistantAction = {
     volume?: { mountPath: string; sizeGb: number } | null;
     fileCount?: number;
     deploy?: DeployTarget;
+    local?: boolean;
     githubConnected?: boolean;
   };
   diff: FileDiff[];
   result: ActionResult | null;
+  /** Live state of the deployment this action started. */
+  deployment?: {
+    id: string;
+    state: string;
+    serviceId: string;
+    serviceName: string;
+    error?: string;
+  } | null;
 };
+
+/** What to say about the deployment an applied action started. */
+export function deployLabel(
+  a: AssistantAction,
+): { text: string; tone: "bad" | "good" | "busy" } | null {
+  if (a.status !== "applied" || !a.deployment) return null;
+  switch (a.deployment.state) {
+    case "failed":
+      return { text: "Deploy failed", tone: "bad" };
+    case "crashed":
+      return { text: "Crashed", tone: "bad" };
+    case "active":
+      return { text: "Live", tone: "good" };
+    case "cancelled":
+      return { text: "Deploy cancelled", tone: "busy" };
+    case "queued":
+    case "building":
+      return { text: "Building", tone: "busy" };
+    default:
+      return { text: "Deploying", tone: "busy" };
+  }
+}
 
 export const actionStats = (a: AssistantAction) => ({
   files: a.diff.length,
