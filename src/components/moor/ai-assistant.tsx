@@ -31,7 +31,7 @@ import { api, apiStream } from "@/lib/api";
 import { useEnvId, useSelection, useServices } from "@/lib/workspace";
 import { Logo } from "@/components/moor/primitives";
 import { highlightLines, languageForName } from "@/lib/highlight";
-import { getAlwaysProceed } from "@/lib/assistant-settings";
+import { getAlwaysProceed, useAlwaysProceed } from "@/lib/assistant-settings";
 import type { LogoKey } from "@/lib/platform-data";
 import {
   actionStats,
@@ -403,6 +403,7 @@ export function AiAssistant({
   const [atBottom, setAtBottom] = useState(true);
   const envId = useEnvId();
   const { projectId } = useSelection();
+  const [alwaysProceed, setAlwaysProceed] = useAlwaysProceed();
   const services = useServices().data ?? [];
   const env = useQuery({
     queryKey: ["assistant-env", envId],
@@ -1005,6 +1006,18 @@ export function AiAssistant({
                   </span>
                 ))}
               </div>
+            ) : null}
+            {alwaysProceed ? (
+              <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Lightbulb className="h-3 w-3" />
+                Always proceed is on: changes apply and deploy automatically.
+                <button
+                  className="underline underline-offset-2 hover:text-foreground"
+                  onClick={() => setAlwaysProceed(false)}
+                >
+                  Turn off
+                </button>
+              </p>
             ) : null}
             <textarea
               ref={field}

@@ -9,6 +9,8 @@ import {
   type DeployTarget,
 } from "@/lib/assistant-actions";
 import { useGithubConnect } from "@/lib/github-connect";
+import { useAlwaysProceed } from "@/lib/assistant-settings";
+import { Switch } from "@/components/ui/switch";
 import { DiffView } from "@/components/moor/diff-view";
 
 const mark = { create: "A", update: "M", delete: "D" } as const;
@@ -106,6 +108,7 @@ export function ChangeReview({
 }) {
   const [selected, setSelected] = useState(0);
   const gh = useGithubConnect();
+  const [alwaysProceed, setAlwaysProceed] = useAlwaysProceed();
   useEffect(() => setSelected(0), [action.id]);
   const file = action.diff[selected] ?? action.diff[0];
   const { files, additions, deletions } = actionStats(action);
@@ -219,6 +222,14 @@ export function ChangeReview({
             ) : null}
             {canAct ? (
               <>
+                <label className="mr-auto flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                  <Switch
+                    checked={alwaysProceed}
+                    onCheckedChange={setAlwaysProceed}
+                    aria-label="Always proceed"
+                  />
+                  Always proceed
+                </label>
                 <Button variant="ghost" size="sm" disabled={working} onClick={onDismiss}>
                   Dismiss
                 </Button>
