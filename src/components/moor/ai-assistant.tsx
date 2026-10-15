@@ -48,6 +48,7 @@ import type { AssistantContext } from "@/lib/assistant-context";
 type Chip = { id?: string; name: string; logo?: string };
 type Msg = {
   id?: string;
+  images?: string[];
   role: "user" | "agent";
   text: string;
   context?: AssistantContext;
@@ -73,7 +74,8 @@ const suggestions = [
 ];
 
 type RawContext =
-  AssistantContext | { type?: string; id?: string; label?: string; logo?: string }[];
+  | AssistantContext
+  | { type?: string; id?: string; label?: string; logo?: string; dataUrl?: string }[];
 type RawMsg = {
   id?: string;
   role?: string;
@@ -105,12 +107,15 @@ const ago = (iso?: string) => {
 const toMsg = (m: RawMsg): Msg => {
   const chips: Chip[] = Array.isArray(m.context)
     ? m.context
-        .filter((c) => !!c.label)
+        .filter((c) => !!c.label && c.type !== "image")
         .map((c) => ({
           name: c.label!,
           ...(c.id ? { id: c.id } : {}),
           ...(c.logo ? { logo: c.logo } : {}),
         }))
+    : [];
+  const images = Array.isArray(m.context)
+    ? m.context.filter((c) => c.type === "image" && c.dataUrl).map((c) => c.dataUrl!)
     : [];
   const work = m.toolCalls && !Array.isArray(m.toolCalls) ? m.toolCalls : null;
   return {
@@ -119,6 +124,7 @@ const toMsg = (m: RawMsg): Msg => {
     text: m.text ?? m.content ?? "",
     ...(m.context && !Array.isArray(m.context) ? { context: m.context } : {}),
     ...(chips.length ? { chips } : {}),
+    ...(images.length ? { images } : {}),
     ...(m.actions?.length ? { actions: m.actions } : {}),
     ...(work?.steps?.length ? { steps: work.steps } : {}),
     ...(work?.durationMs ? { durationMs: work.durationMs } : {}),
@@ -156,6 +162,61 @@ const statusLabel: Record<string, string> = {
 function Spinner() {
   return (
     <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-dashed border-muted-foreground" />
+  );
+}
+
+/** Shrink a picked or pasted image so it is cheap to send (max 1600px, JPEG). */
+async function toDataUrl(file: File): Promise<string> {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
+/** A sent message. Long ones show five lines with a soft fade; click to expand. */
+function UserBubble({ text, images }: { text: string; images?: string[] | undefined }) {
+  const [open, setOpen] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  const ref = useRef<HTMLParagraphElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && !open) setClamped(el.scrollHeight > el.clientHeight + 2);
+  }, [text, open]);
+  return (
+    <div className="flex max-w-[88%] min-w-0 flex-col items-end gap-1.5">
+      {images?.length ? (
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {images.map((src, i) => (
+            <img key={i} src={src} alt="" className="h-20 w-20 rounded-xl border object-cover" />
+          ))}
+        </div>
+      ) : null}
+      {text.trim() && text !== "See the attached image." ? (
+        <div
+          onClick={() => clamped && setOpen((o) => !o)}
+          className={cn(
+            "relative min-w-0 max-w-full rounded-3xl bg-muted px-4 py-2.5 text-sm leading-6",
+            clamped && "cursor-pointer",
+          )}
+        >
+          <p
+            ref={ref}
+            className={cn("whitespace-pre-wrap [overflow-wrap:anywhere]", !open && "line-clamp-5")}
+          >
+            {text}
+          </p>
+          {clamped && !open ? (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 rounded-b-3xl bg-gradient-to-t from-muted to-transparent backdrop-blur-[1px]" />
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -300,9 +361,11 @@ function ActionRows({
   onReview,
   onFix,
   fixing,
+  onApply,
 }: {
   actions: AssistantAction[];
   onReview: (id: string) => void;
+  onApply: (a: AssistantAction) => void;
   onFix: (a: AssistantAction) => void;
   fixing: boolean;
 }) {
@@ -351,14 +414,26 @@ function ActionRows({
                   Fix and deploy
                 </Button>
               ) : null}
-              <Button
-                size="sm"
-                variant={a.status === "pending" ? "default" : "outline"}
-                className="h-8 rounded-full px-3.5 text-xs"
-                onClick={() => onReview(a.id)}
-              >
-                {open ? "Review" : "View"}
-              </Button>
+              {a.type === "platform_op" ? (
+                a.status === "pending" ? (
+                  <Button
+                    size="sm"
+                    className="h-8 rounded-full px-3.5 text-xs"
+                    onClick={() => onApply(a)}
+                  >
+                    Apply
+                  </Button>
+                ) : null
+              ) : (
+                <Button
+                  size="sm"
+                  variant={a.status === "pending" ? "default" : "outline"}
+                  className="h-8 rounded-full px-3.5 text-xs"
+                  onClick={() => onReview(a.id)}
+                >
+                  {open ? "Review" : "View"}
+                </Button>
+              )}
             </div>
           </div>
         );
@@ -386,6 +461,18 @@ export function AiAssistant({
   const [view, setView] = useState<"chat" | "history">("chat");
   const [input, setInput] = useState("");
   const [chips, setChips] = useState<{ id: string; name: string; logo?: string }[]>([]);
+  const [images, setImages] = useState<string[]>([]);
+  const picker = useRef<HTMLInputElement>(null);
+  const addImages = async (files: File[]) => {
+    const pics = files.filter((f) => f.type.startsWith("image/"));
+    if (!pics.length) return;
+    try {
+      const urls = await Promise.all(pics.slice(0, 4).map(toDataUrl));
+      setImages((l) => [...l, ...urls].slice(0, 4));
+    } catch {
+      toast.error("Could not read that image");
+    }
+  };
   const [thinking, setThinking] = useState(false);
   const [liveSteps, setLiveSteps] = useState<Step[]>([]);
   const [review, setReview] = useState<string | null>(null);
@@ -536,11 +623,13 @@ export function AiAssistant({
     setThreads((l) => l.map((t) => (t.id === id ? fn(t) : t)));
 
   const send = (text: string, threadId?: string, context?: AssistantContext) => {
-    const q = text.trim();
+    const sentImages = threadId ? [] : images;
+    const q = text.trim() || (sentImages.length ? "See the attached image." : "");
     if (!q || (thinking && !threadId)) return;
     const id = threadId ?? active.id;
     const sentChips = threadId ? [] : chips;
     const body: Record<string, unknown> = { text: q };
+    if (sentImages.length) body["images"] = sentImages;
     if (projectId) body["projectId"] = projectId;
     if (envId) body["environmentId"] = envId;
     if (context) body["context"] = context;
@@ -562,11 +651,13 @@ export function AiAssistant({
           text: q,
           ...(context ? { context } : {}),
           ...(sentChips.length ? { chips: sentChips } : {}),
+          ...(sentImages.length ? { images: sentImages } : {}),
         },
       ],
     }));
     setInput("");
     setChips([]);
+    setImages([]);
     setThinking(true);
     setLiveSteps([]);
     setAtBottom(true);
@@ -576,6 +667,8 @@ export function AiAssistant({
     };
     let replied = false;
     let steps: Step[] = [];
+    let shown = 0;
+    let reveal = 0;
     const startedAt = Date.now();
     const say = (reply: string, raw?: RawMsg) => {
       replied = true;
@@ -620,7 +713,17 @@ export function AiAssistant({
           const icon = data["icon"] ? String(data["icon"]) : null;
           if (text && (steps.length === 0 || stepText(steps[steps.length - 1]!) !== text)) {
             steps = [...steps, icon ? { text, icon } : text];
-            setLiveSteps(steps);
+            // The engine announces many steps in one burst; reveal them one by one so progress reads as it happens.
+            if (!reveal) {
+              reveal = window.setInterval(() => {
+                shown += 1;
+                setLiveSteps(steps.slice(0, shown));
+                if (shown >= steps.length) {
+                  window.clearInterval(reveal);
+                  reveal = 0;
+                }
+              }, 130);
+            }
           }
         } else if (event === "thread.title") {
           const title = String(data["title"] ?? "").trim();
@@ -639,6 +742,7 @@ export function AiAssistant({
         if (!cancelled.v) say((e as Error).message || "Something went wrong.");
       })
       .finally(() => {
+        window.clearInterval(reveal);
         if (!cancelled.v) {
           setThinking(false);
           setLiveSteps([]);
@@ -862,7 +966,7 @@ export function AiAssistant({
               setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
               if (el.scrollTop < 80) void loadOlder();
             }}
-            className="scroll-area h-full overflow-y-auto px-5 pb-6 pt-2"
+            className="scroll-area h-full overflow-y-auto overflow-x-hidden px-5 pb-6 pt-2"
           >
             {!active.messages.length ? (
               <div className="pt-6">
@@ -923,12 +1027,13 @@ export function AiAssistant({
                           ))}
                         </div>
                       ) : null}
-                      <p className="max-w-[88%] whitespace-pre-wrap rounded-3xl bg-muted px-4 py-2.5 text-sm leading-6">
-                        {m.text}
-                      </p>
+                      <UserBubble text={m.text} images={m.images} />
                     </div>
                   ) : (
-                    <div key={i} className="text-[13.5px] leading-6">
+                    <div
+                      key={i}
+                      className="min-w-0 text-[13.5px] leading-6 [overflow-wrap:anywhere]"
+                    >
                       {m.steps?.length ? (
                         <Steps
                           steps={m.steps}
@@ -942,6 +1047,7 @@ export function AiAssistant({
                           onReview={setReview}
                           onFix={fixDeployment}
                           fixing={thinking}
+                          onApply={(a) => void runAction(a, () => applyAction(a.id, "commit"))}
                         />
                       ) : null}
                     </div>
@@ -1014,8 +1120,42 @@ export function AiAssistant({
                 </button>
               </p>
             ) : null}
+            {images.length ? (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {images.map((src, i) => (
+                  <div key={i} className="relative">
+                    <img src={src} alt="" className="h-14 w-14 rounded-lg border object-cover" />
+                    <button
+                      aria-label="Remove image"
+                      onClick={() => setImages((l) => l.filter((_, j) => j !== i))}
+                      className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full border bg-background text-muted-foreground hover:text-foreground"
+                    >
+                      <Close className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <input
+              ref={picker}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                void addImages([...(e.target.files ?? [])]);
+                e.target.value = "";
+              }}
+            />
             <textarea
               ref={field}
+              onPaste={(e) => {
+                const files = [...e.clipboardData.files];
+                if (files.some((f) => f.type.startsWith("image/"))) {
+                  e.preventDefault();
+                  void addImages(files);
+                }
+              }}
               aria-label="Ask Morline AI"
               rows={1}
               value={input}
@@ -1042,6 +1182,9 @@ export function AiAssistant({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuItem onSelect={() => picker.current?.click()}>
+                    Attach an image
+                  </DropdownMenuItem>
                   <DropdownMenuLabel className="text-xs text-muted-foreground">
                     Add a service as context
                   </DropdownMenuLabel>
@@ -1081,7 +1224,7 @@ export function AiAssistant({
                   size="icon"
                   className="h-9 w-9 rounded-full"
                   aria-label="Send message"
-                  disabled={!input.trim()}
+                  disabled={!input.trim() && !images.length}
                   onClick={() => send(input)}
                 >
                   <ArrowUp className="h-4 w-4" />

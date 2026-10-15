@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "fluid-icons/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -99,6 +99,8 @@ function CanvasPage() {
     key: number;
   } | null>(null);
   const service = state.services.find((s) => s.id === selected);
+  const serviceNames = useRef<string[]>([]);
+  serviceNames.current = state.services.map((s) => s.name);
   const projectName = useProject().data?.name;
 
   useEffect(() => {
@@ -122,6 +124,9 @@ function CanvasPage() {
       }
       const text = detail?.text;
       if (!text) return;
+      // A failed deployment of a service that was just deleted has nothing left to fix.
+      if (detail.context?.serviceName && !serviceNames.current.includes(detail.context.serviceName))
+        return;
       setSelected(null);
       setAssistantPrompt({
         text,
@@ -291,19 +296,21 @@ function CanvasPage() {
           }}
         />
       ) : null}
-      {assistantOpen && !service ? (
-        <AiAssistant
-          key={projectId}
-          initialPrompt={assistantPrompt}
-          prefill={assistantPrefill}
-          addService={assistantAdd}
-          onClose={() => {
-            setAssistantOpen(false);
-            setAssistantPrompt(null);
-            setAssistantPrefill(null);
-            setAssistantAdd(null);
-          }}
-        />
+      {assistantOpen ? (
+        <div className={service ? "hidden" : "contents"}>
+          <AiAssistant
+            key={projectId}
+            initialPrompt={assistantPrompt}
+            prefill={assistantPrefill}
+            addService={assistantAdd}
+            onClose={() => {
+              setAssistantOpen(false);
+              setAssistantPrompt(null);
+              setAssistantPrefill(null);
+              setAssistantAdd(null);
+            }}
+          />
+        </div>
       ) : null}
       <NewServiceDialog
         category={addCategory}

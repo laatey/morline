@@ -97,7 +97,7 @@ export function StepIcon({ step }: { step: Step }) {
   const text = stepText(step);
   const Fallback = /^(read|review|look|check|fetch|inspect|scan)/i.test(text)
     ? Eye
-    : /^(writ|edit|creat|delet|updat|chang|modif|apply)/i.test(text)
+    : /^(writ|edit|creat|delet|updat|chang|modif|apply|generat|remov)/i.test(text)
       ? Pencil
       : Lightbulb;
   return <Fallback className={SIZE} />;
