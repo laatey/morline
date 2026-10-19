@@ -933,7 +933,7 @@ export function LogStream({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2">
-        <div className="relative w-56">
+        <div className="relative min-w-[130px] flex-1 sm:w-56 sm:flex-none">
           <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={q}
@@ -954,7 +954,7 @@ export function LogStream({
               })
             }
             className={cn(
-              "h-6 rounded-sm border px-1.5 font-mono text-[10px] uppercase",
+              "h-6 shrink-0 rounded-sm border px-1.5 font-mono text-[10px] uppercase",
               levels.has(lv)
                 ? cn("border-foreground/20", levelTone[lv])
                 : "border-transparent text-muted-foreground/50 line-through",
@@ -963,54 +963,56 @@ export function LogStream({
             {lv}
           </button>
         ))}
-        <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] text-score">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-score" />
-          live tail
-        </span>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              aria-label="Export logs"
-              title="Export logs"
-              disabled={!lines.length}
-            >
-              <Download className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[8.5rem] p-0.5">
-            <DropdownMenuLabel className="px-2 py-1 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
-              Download as
-            </DropdownMenuLabel>
-            {FORMATS.map(([f, label]) => (
-              <DropdownMenuItem
-                key={`d-${f}`}
-                className="px-2 py-1 text-xs"
-                onSelect={() => downloadLogs(lines, f, exportName)}
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          <span className="flex items-center gap-1.5 font-mono text-[10px] text-score">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-score" />
+            live
+          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                aria-label="Export logs"
+                title="Export logs"
+                disabled={!lines.length}
               >
-                {label}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator className="my-0.5" />
-            <DropdownMenuLabel className="px-2 py-1 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
-              Copy as
-            </DropdownMenuLabel>
-            {FORMATS.map(([f, label]) => (
-              <DropdownMenuItem
-                key={`c-${f}`}
-                className="px-2 py-1 text-xs"
-                onSelect={() => {
-                  void navigator.clipboard?.writeText(formatLogs(lines, f));
-                  toast.success(`Copied ${lines.length} lines as ${label}`);
-                }}
-              >
-                {label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[8.5rem] p-0.5">
+              <DropdownMenuLabel className="px-2 py-1 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
+                Download as
+              </DropdownMenuLabel>
+              {FORMATS.map(([f, label]) => (
+                <DropdownMenuItem
+                  key={`d-${f}`}
+                  className="px-2 py-1 text-xs"
+                  onSelect={() => downloadLogs(lines, f, exportName)}
+                >
+                  {label}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator className="my-0.5" />
+              <DropdownMenuLabel className="px-2 py-1 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
+                Copy as
+              </DropdownMenuLabel>
+              {FORMATS.map(([f, label]) => (
+                <DropdownMenuItem
+                  key={`c-${f}`}
+                  className="px-2 py-1 text-xs"
+                  onSelect={() => {
+                    void navigator.clipboard?.writeText(formatLogs(lines, f));
+                    toast.success(`Copied ${lines.length} lines as ${label}`);
+                  }}
+                >
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       <div className="scroll-area min-h-0 flex-1 overflow-auto bg-surface py-1 font-mono text-[11.5px] leading-5">
         {lines.map((l, i) => (
