@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Download,
   Eye,
   EyeOff,
   Folder,
@@ -47,6 +48,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { DeployState, LogLevel, Service } from "@/lib/platform-data";
@@ -65,6 +68,7 @@ import {
 } from "@/lib/workspace";
 import { DeployBadge, Logo, Sparkline } from "./primitives";
 import { cn } from "@/lib/utils";
+import { downloadLogs, formatLogs, type LogFormat } from "@/lib/log-export";
 
 const errMsg = (e: unknown, fallback: string) => (e as ApiError)?.message ?? fallback;
 
@@ -920,6 +924,12 @@ export function LogStream({
   const lines = [...(source.data ?? [])]
     .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
     .filter((l) => levels.has(l.level) && l.message.toLowerCase().includes(q.toLowerCase()));
+  const exportName = `logs-${deploymentId ? `deployment-${deploymentId.slice(0, 8)}${phase ? `-${phase}` : ""}` : (serviceId ?? "all")}`;
+  const FORMATS: [LogFormat, string][] = [
+    ["text", "Plain text"],
+    ["json", "JSON"],
+    ["csv", "CSV"],
+  ];
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2">
@@ -957,6 +967,50 @@ export function LogStream({
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-score" />
           live tail
         </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              aria-label="Export logs"
+              title="Export logs"
+              disabled={!lines.length}
+            >
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[8.5rem] p-0.5">
+            <DropdownMenuLabel className="px-2 py-1 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
+              Download as
+            </DropdownMenuLabel>
+            {FORMATS.map(([f, label]) => (
+              <DropdownMenuItem
+                key={`d-${f}`}
+                className="px-2 py-1 text-xs"
+                onSelect={() => downloadLogs(lines, f, exportName)}
+              >
+                {label}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator className="my-0.5" />
+            <DropdownMenuLabel className="px-2 py-1 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
+              Copy as
+            </DropdownMenuLabel>
+            {FORMATS.map(([f, label]) => (
+              <DropdownMenuItem
+                key={`c-${f}`}
+                className="px-2 py-1 text-xs"
+                onSelect={() => {
+                  void navigator.clipboard?.writeText(formatLogs(lines, f));
+                  toast.success(`Copied ${lines.length} lines as ${label}`);
+                }}
+              >
+                {label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="scroll-area min-h-0 flex-1 overflow-auto bg-surface py-1 font-mono text-[11.5px] leading-5">
         {lines.map((l, i) => (
