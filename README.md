@@ -1,6 +1,6 @@
 # Morline Web
 
-The Morline dashboard and public site: a canvas for projects, services, databases, deployments, logs, metrics, domains and teams, backed by the Morline API at `https://api.morline.space/v1` (see [`morline-server`](../morline-server-main)).
+The Morline dashboard and public site: a canvas for projects, services, databases, deployments, logs, metrics, domains and teams, backed by the Morline API at `https://api.morline.space/v1` (see [`morline-server`](../morline-server)).
 
 `/` is the marketing site and `/projects` is the entry to the app.
 
