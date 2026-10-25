@@ -61,7 +61,7 @@ function Empty({ title, note }: { title: string; note: string }) {
 }
 
 /* ---------------- Data browser ---------------- */
-type Collection = { name: string; count?: number; type?: string; size?: string };
+type Collection = { name: string; count?: number | null; type?: string; size?: string | number | null };
 
 export function DatabaseData({ service }: { service: Service }) {
   const engine = engineOf(service);
@@ -175,10 +175,10 @@ export function DatabaseData({ service }: { service: Service }) {
             </span>
           ) : null}
           <span className="ml-auto font-mono text-[10px] text-muted-foreground">
-            {c.count !== undefined
+            {typeof c.count === "number" && Number.isFinite(c.count)
               ? `${c.count.toLocaleString()} ${engine === "redis" ? "" : "rows"}`
               : ""}
-            {c.size ? ` · ${c.size}` : ""}
+            {c.size != null && c.size !== "" ? ` · ${c.size}` : ""}
           </span>
         </button>
       ))}
