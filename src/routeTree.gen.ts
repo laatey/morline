@@ -14,6 +14,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as CanvasRouteImport } from './routes/canvas'
 import { Route as DeploymentsRouteImport } from './routes/deployments'
+import { Route as DeviceRouteImport } from './routes/device'
 import { Route as DomainsRouteImport } from './routes/domains'
 import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as LoginRouteImport } from './routes/login'
@@ -25,6 +26,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as DeploymentsIdRouteImport } from './routes/deployments_.$id'
+import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectProjectIdRouteImport } from './routes/project.$projectId'
 import { Route as ApiPublicAiSplatRouteImport } from './routes/api/public/ai/$'
 
@@ -51,6 +53,11 @@ const CanvasRoute = CanvasRouteImport.update({
 const DeploymentsRoute = DeploymentsRouteImport.update({
   id: '/deployments',
   path: '/deployments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeviceRoute = DeviceRouteImport.update({
+  id: '/device',
+  path: '/device',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DomainsRoute = DomainsRouteImport.update({
@@ -108,6 +115,11 @@ const DeploymentsIdRoute = DeploymentsIdRouteImport.update({
   path: '/deployments/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthConsentRoute = OauthConsentRouteImport.update({
+  id: '/oauth/consent',
+  path: '/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectProjectIdRoute = ProjectProjectIdRouteImport.update({
   id: '/project/$projectId',
   path: '/project/$projectId',
@@ -125,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/activity': typeof ActivityRoute
   '/canvas': typeof CanvasRoute
   '/deployments': typeof DeploymentsRoute
+  '/device': typeof DeviceRoute
   '/domains': typeof DomainsRoute
   '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
@@ -136,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/team': typeof TeamRoute
   '/deployments/$id': typeof DeploymentsIdRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/project/$projectId': typeof ProjectProjectIdRoute
   '/api/public/ai/$': typeof ApiPublicAiSplatRoute
 }
@@ -145,6 +159,7 @@ export interface FileRoutesByTo {
   '/activity': typeof ActivityRoute
   '/canvas': typeof CanvasRoute
   '/deployments': typeof DeploymentsRoute
+  '/device': typeof DeviceRoute
   '/domains': typeof DomainsRoute
   '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
@@ -156,6 +171,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/team': typeof TeamRoute
   '/deployments/$id': typeof DeploymentsIdRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/project/$projectId': typeof ProjectProjectIdRoute
   '/api/public/ai/$': typeof ApiPublicAiSplatRoute
 }
@@ -166,6 +182,7 @@ export interface FileRoutesById {
   '/activity': typeof ActivityRoute
   '/canvas': typeof CanvasRoute
   '/deployments': typeof DeploymentsRoute
+  '/device': typeof DeviceRoute
   '/domains': typeof DomainsRoute
   '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
@@ -177,6 +194,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/team': typeof TeamRoute
   '/deployments_/$id': typeof DeploymentsIdRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/project/$projectId': typeof ProjectProjectIdRoute
   '/api/public/ai/$': typeof ApiPublicAiSplatRoute
 }
@@ -188,6 +206,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/canvas'
     | '/deployments'
+    | '/device'
     | '/domains'
     | '/integrations'
     | '/login'
@@ -199,6 +218,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/team'
     | '/deployments/$id'
+    | '/oauth/consent'
     | '/project/$projectId'
     | '/api/public/ai/$'
   fileRoutesByTo: FileRoutesByTo
@@ -208,6 +228,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/canvas'
     | '/deployments'
+    | '/device'
     | '/domains'
     | '/integrations'
     | '/login'
@@ -219,6 +240,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/team'
     | '/deployments/$id'
+    | '/oauth/consent'
     | '/project/$projectId'
     | '/api/public/ai/$'
   id:
@@ -228,6 +250,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/canvas'
     | '/deployments'
+    | '/device'
     | '/domains'
     | '/integrations'
     | '/login'
@@ -239,6 +262,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/team'
     | '/deployments_/$id'
+    | '/oauth/consent'
     | '/project/$projectId'
     | '/api/public/ai/$'
   fileRoutesById: FileRoutesById
@@ -249,6 +273,7 @@ export interface RootRouteChildren {
   ActivityRoute: typeof ActivityRoute
   CanvasRoute: typeof CanvasRoute
   DeploymentsRoute: typeof DeploymentsRoute
+  DeviceRoute: typeof DeviceRoute
   DomainsRoute: typeof DomainsRoute
   IntegrationsRoute: typeof IntegrationsRoute
   LoginRoute: typeof LoginRoute
@@ -260,6 +285,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   TeamRoute: typeof TeamRoute
   DeploymentsIdRoute: typeof DeploymentsIdRoute
+  OauthConsentRoute: typeof OauthConsentRoute
   ProjectProjectIdRoute: typeof ProjectProjectIdRoute
   ApiPublicAiSplatRoute: typeof ApiPublicAiSplatRoute
 }
@@ -299,6 +325,13 @@ declare module '@tanstack/react-router' {
       path: '/deployments'
       fullPath: '/deployments'
       preLoaderRoute: typeof DeploymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/device': {
+      id: '/device'
+      path: '/device'
+      fullPath: '/device'
+      preLoaderRoute: typeof DeviceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/domains': {
@@ -378,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeploymentsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/consent': {
+      id: '/oauth/consent'
+      path: '/oauth/consent'
+      fullPath: '/oauth/consent'
+      preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/project/$projectId': {
       id: '/project/$projectId'
       path: '/project/$projectId'
@@ -401,6 +441,7 @@ const rootRouteChildren: RootRouteChildren = {
   ActivityRoute: ActivityRoute,
   CanvasRoute: CanvasRoute,
   DeploymentsRoute: DeploymentsRoute,
+  DeviceRoute: DeviceRoute,
   DomainsRoute: DomainsRoute,
   IntegrationsRoute: IntegrationsRoute,
   LoginRoute: LoginRoute,
@@ -412,6 +453,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   TeamRoute: TeamRoute,
   DeploymentsIdRoute: DeploymentsIdRoute,
+  OauthConsentRoute: OauthConsentRoute,
   ProjectProjectIdRoute: ProjectProjectIdRoute,
   ApiPublicAiSplatRoute: ApiPublicAiSplatRoute,
 }
