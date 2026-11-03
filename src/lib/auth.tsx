@@ -165,12 +165,24 @@ export function useAuth() {
   return ctx;
 }
 
-/** Wraps workspace screens: redirects signed-out visitors to /login. */
+const NEXT_KEY = "morline.next";
+/** Returns (and clears) the same-origin path a visitor was sent to sign in from. */
+export function takeNext(): string | null {
+  if (typeof window === "undefined") return null;
+  const v = sessionStorage.getItem(NEXT_KEY);
+  sessionStorage.removeItem(NEXT_KEY);
+  return v && v.startsWith("/") && !v.startsWith("//") ? v : null;
+}
+
+/** Wraps workspace screens: redirects signed-out visitors to /login, remembering where they were. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   const navigate = useNavigate();
   useEffect(() => {
-    if (status === "signed-out") navigate({ to: "/login", replace: true });
+    if (status === "signed-out") {
+      sessionStorage.setItem(NEXT_KEY, window.location.pathname + window.location.search);
+      navigate({ to: "/login", replace: true });
+    }
   }, [status, navigate]);
   if (status !== "signed-in") {
     return <div className="min-h-screen bg-surface" />;

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AuthLayout } from "@/components/moor/auth-layout";
 import { Logo } from "@/components/moor/primitives";
 import { initialServices } from "@/lib/platform-data";
-import { useAuth } from "@/lib/auth";
+import { useAuth, takeNext } from "@/lib/auth";
 import { api, ApiError, oauthUrl } from "@/lib/api";
 
 export const Route = createFileRoute("/login")({
@@ -52,7 +52,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const { signIn, status } = useAuth();
   useEffect(() => {
-    if (status === "signed-in") navigate({ to: "/projects", replace: true });
+    if (status === "signed-in") navigate({ href: takeNext() ?? "/projects", replace: true });
   }, [status, navigate]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -73,7 +73,7 @@ function LoginPage() {
         setSent(true);
       } else {
         await signIn(email, password);
-        navigate({ to: "/projects" });
+        navigate({ href: takeNext() ?? "/projects" });
       }
     } catch (err) {
       if (err instanceof ApiError) {
