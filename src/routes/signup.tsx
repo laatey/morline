@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AuthLayout } from "@/components/moor/auth-layout";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth";
+import { useAuth, takeNext } from "@/lib/auth";
 import { ApiError, oauthUrl } from "@/lib/api";
 
 export const Route = createFileRoute("/signup")({
@@ -34,7 +34,7 @@ function SignupPage() {
   const navigate = useNavigate();
   const { signUp, status } = useAuth();
   useEffect(() => {
-    if (status === "signed-in") navigate({ to: "/projects", replace: true });
+    if (status === "signed-in") navigate({ href: takeNext() ?? "/projects", replace: true });
   }, [status, navigate]);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
