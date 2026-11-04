@@ -5,7 +5,7 @@ import { RequireAuth, useAuth } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
 
 export const Route = createFileRoute("/oauth/consent")({
-  validateSearch: (s: Record<string, unknown>) => ({ request: String(s.request ?? "") }),
+  validateSearch: (s: Record<string, unknown>) => ({ request: String(s['request'] ?? "") }),
   head: () => ({
     meta: [
       { title: "Authorize access — Morline" },

@@ -7,7 +7,7 @@ import { api, ApiError } from "@/lib/api";
 import { ConsentCard } from "./oauth.consent";
 
 export const Route = createFileRoute("/device")({
-  validateSearch: (s: Record<string, unknown>) => ({ code: s.code ? String(s.code) : "" }),
+  validateSearch: (s: Record<string, unknown>) => ({ code: s['code'] ? String(s['code']) : "" }),
   head: () => ({
     meta: [
       { title: "Connect the CLI — Morline" },
