@@ -14,3 +14,4 @@
 - `/` is the public marketing site and `/projects` is the application entry.
 - Package manager is Bun; commit `bun.lock` only. Don't add `package-lock.json`.
 - `routeTree.gen.ts` is generated. See `src/routes/README.md` for routing conventions.
+- Standalone integration sources live under `integrations/`; they target the existing Morline Node API, not the web app's server runtime, so downloadable packages remain reproducible.
