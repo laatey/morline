@@ -432,3 +432,21 @@
 .hljs-strong {
   font-weight: 600;
 }
+
+/* Landing page motion */
+@keyframes ml-dash { to { stroke-dashoffset: -200; } }
+@keyframes ml-scroll { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+@keyframes ml-pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+@keyframes ml-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes ml-spin { to { transform: rotate(360deg); } }
+@keyframes ml-marquee { to { transform: translateX(-50%); } }
+.ml-dash { stroke-dasharray: 6 10; animation: ml-dash 6s linear infinite; }
+.ml-scroll { animation: ml-scroll 22s linear infinite; }
+.ml-pulse { animation: ml-pulse 2.4s ease-in-out infinite; }
+.ml-rise { animation: ml-rise .9s cubic-bezier(.2,.7,.2,1) both; }
+.ml-spin { animation: ml-spin 60s linear infinite; transform-origin: center; }
+.ml-marquee { animation: ml-marquee 40s linear infinite; }
+.ml-reveal { opacity: 0; transform: translateY(24px); transition: opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1); }
+.ml-reveal.ml-in { opacity: 1; transform: none; }
+.ml-grid { background-image: linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px); background-size: 48px 48px; }
+@media (prefers-reduced-motion: reduce) { .ml-dash,.ml-scroll,.ml-pulse,.ml-spin,.ml-marquee,.ml-rise { animation: none; } .ml-reveal { opacity: 1; transform: none; } }

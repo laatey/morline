@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight } from "fluid-icons/react";
 import { Mark } from "@/components/moor/workspace-shell";
 import pg from "@/assets/stack/postgresql.svg";
@@ -10,14 +10,15 @@ import py from "@/assets/stack/python.svg";
 import docker from "@/assets/stack/docker.svg";
 import rust from "@/assets/stack/rust.svg";
 import mongo from "@/assets/stack/mongodb.svg";
-import { logLines } from "@/lib/platform-data";
-import rope from "@/assets/rope.png";
-import wave from "@/assets/wave-plate.jpg";
+import mysql from "@/assets/stack/mysql.svg";
+import vite from "@/assets/stack/vite.svg";
+import n8n from "@/assets/stack/n8n.svg";
+import strapi from "@/assets/stack/strapi.svg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { name: "theme-color", content: "oklch(0.272 0.001 106)" },
+      { name: "theme-color", content: "oklch(0.18 0.004 264)" },
       { title: "Morline — Deploy the parts. See the whole." },
       {
         name: "description",
@@ -33,11 +34,6 @@ export const Route = createFileRoute("/")({
       { property: "og:url", content: "https://morline.space/" },
       { property: "og:site_name", content: "Morline" },
       { property: "og:image", content: "https://morline.space/og.jpg" },
-      { property: "og:image:secure_url", content: "https://morline.space/og.jpg" },
-      { property: "og:image:type", content: "image/jpeg" },
-      { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "630" },
-      { property: "og:image:alt", content: "Morline — Deploy the parts. See the whole." },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:image", content: "https://morline.space/og.jpg" },
     ],
@@ -46,751 +42,416 @@ export const Route = createFileRoute("/")({
   component: MarketingPage,
 });
 
-const specimens = [
-  { src: next, name: "web", note: "Next.js / 3 replicas", pos: "left-[4%] top-[8%] -rotate-3" },
-  { src: pg, name: "postgres", note: "volume 20 GB", pos: "left-[24%] top-[44%] rotate-2" },
-  { src: redis, name: "cache", note: "private network", pos: "left-[44%] top-[4%] -rotate-1" },
-  { src: go, name: "api", note: "go 1.23 / healthy", pos: "left-[60%] top-[50%] rotate-3" },
-  { src: py, name: "worker", note: "cron */5", pos: "left-[78%] top-[12%] -rotate-2" },
-  { src: docker, name: "image", note: "ghcr.io / latest", pos: "left-[8%] top-[62%] rotate-1" },
-  { src: rust, name: "edge", note: "fra / iad / sin", pos: "left-[86%] top-[58%] -rotate-3" },
-  { src: mongo, name: "events", note: "replica set", pos: "left-[40%] top-[66%] rotate-2" },
+/* ---------- helpers ---------- */
+
+function useReveal() {
+  useEffect(() => {
+    const els = document.querySelectorAll(".ml-reveal");
+    const io = new IntersectionObserver(
+      (es) => es.forEach((e) => e.isIntersecting && e.target.classList.add("ml-in")),
+      { threshold: 0.15 },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+}
+
+function Eyebrow({ n, children }: { n: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+      <span className="text-primary">{n}</span>
+      <span className="h-px w-10 bg-border" />
+      {children}
+    </div>
+  );
+}
+
+const codeLines = [
+  "import { serve } from 'morline'",
+  "const db = env.DATABASE_URL",
+  "service('api').port(8080)",
+  "  .connect('postgres')",
+  "  .connect('redis')",
+  "volume('/data', '20GB')",
+  "region(['fra','iad','sin'])",
+  "healthcheck('/healthz')",
+  "replicas(3).autoscale()",
+  "deploy() // 12.4s",
+  "▲ build cached 94%",
+  "● api live on :8080",
 ];
 
-function Mono({ className = "", children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <p
-      className={`font-mono text-[10px] uppercase leading-[1.35] tracking-wide text-muted-foreground ${className}`}
-    >
-      {children}
-    </p>
-  );
-}
+/* ---------- hero machine: a computer drawn from code ---------- */
 
-function Hl({ children }: { children: React.ReactNode }) {
+function CodeMachine() {
+  const lines = [...codeLines, ...codeLines];
   return (
-    <mark className="bg-primary px-1 text-primary-foreground [box-decoration-break:clone]">
-      {children}
-    </mark>
-  );
-}
-
-function Circled({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="relative inline-block">
-      {children}
-      <svg
-        className="pointer-events-none absolute -inset-x-2 -inset-y-1.5 h-[calc(100%+12px)] w-[calc(100%+16px)] text-primary"
-        viewBox="0 0 100 40"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M6 22 C4 8 40 3 70 5 C92 7 99 16 95 27 C90 38 40 39 18 35 C6 32 3 24 12 14"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          vectorEffect="non-scaling-stroke"
-        />
+    <div className="relative mx-auto aspect-[5/4] w-full max-w-[620px]">
+      {/* glow */}
+      <div className="absolute inset-[12%] rounded-full bg-primary/25 blur-[90px]" />
+      <svg viewBox="0 0 500 400" className="absolute inset-0 h-full w-full" fill="none">
+        <defs>
+          <linearGradient id="scr" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="var(--primary)" stopOpacity=".18" />
+            <stop offset="1" stopColor="var(--primary)" stopOpacity=".02" />
+          </linearGradient>
+          <clipPath id="screenClip">
+            <rect x="96" y="46" width="308" height="190" rx="6" />
+          </clipPath>
+        </defs>
+        {/* monitor body built from ascii-ish dashed strokes */}
+        <rect x="80" y="30" width="340" height="222" rx="16" stroke="var(--foreground)" strokeOpacity=".5" strokeWidth="1.2" />
+        <rect x="88" y="38" width="324" height="206" rx="10" stroke="var(--foreground)" strokeOpacity=".18" strokeDasharray="2 4" />
+        <rect x="96" y="46" width="308" height="190" rx="6" fill="url(#scr)" stroke="var(--primary)" strokeOpacity=".5" />
+        <g clipPath="url(#screenClip)">
+          <g className="ml-scroll">
+            {lines.map((l, i) => (
+              <text key={i} x="110" y={68 + i * 17} fontFamily="var(--font-mono-family)" fontSize="11" fill="var(--foreground)" fillOpacity={l.startsWith("●") ? 1 : 0.62}>
+                <tspan fill="var(--primary)" fillOpacity=".7">{String((i % codeLines.length) + 1).padStart(2, "0")}  </tspan>
+                {l}
+              </text>
+            ))}
+          </g>
+        </g>
+        {/* neck & base */}
+        <path d="M225 252 L215 300 H285 L275 252" stroke="var(--foreground)" strokeOpacity=".45" />
+        <path d="M150 300 H350 L370 318 H130 Z" stroke="var(--foreground)" strokeOpacity=".45" />
+        {/* keyboard of tokens */}
+        {Array.from({ length: 3 }).map((_, r) =>
+          Array.from({ length: 14 }).map((_, c) => (
+            <rect key={`${r}-${c}`} x={112 + c * 20 + r * 4} y={334 + r * 14} width="15" height="9" rx="2" stroke="var(--foreground)" strokeOpacity={(r * 14 + c) % 7 === 0 ? 0.9 : 0.25} />
+          )),
+        )}
+        {/* cables to infra */}
+        <path d="M420 120 C470 120 470 60 495 60" stroke="var(--primary)" className="ml-dash" />
+        <path d="M420 170 C470 170 470 230 495 230" stroke="var(--primary)" className="ml-dash" />
+        <path d="M80 140 C30 140 30 80 5 80" stroke="var(--primary)" className="ml-dash" />
       </svg>
-    </span>
+      {/* floating service chips */}
+      {[
+        { src: pg, t: "postgres", s: "20 GB", c: "right-[-4%] top-[8%]" },
+        { src: redis, t: "cache", s: "private", c: "right-[-2%] top-[54%]" },
+        { src: next, t: "web", s: "3 replicas", c: "left-[-6%] top-[14%]" },
+      ].map((x, i) => (
+        <div key={x.t} className={`ml-rise absolute ${x.c} flex items-center gap-2.5 rounded-full border border-border bg-background/80 py-1.5 pl-1.5 pr-4 backdrop-blur`} style={{ animationDelay: `${0.4 + i * 0.2}s` }}>
+          <img src={x.src} alt="" className="h-7 w-7 rounded-full bg-muted p-1" />
+          <div className="leading-tight">
+            <div className="text-xs font-medium">{x.t}</div>
+            <div className="font-mono text-[10px] text-muted-foreground">{x.s}</div>
+          </div>
+          <span className="ml-pulse ml-1 h-1.5 w-1.5 rounded-full bg-primary" />
+        </div>
+      ))}
+    </div>
   );
 }
 
-function DotMatrix({
-  cols = 36,
-  rows = 18,
-  className = "",
-  invert = false,
-}: {
-  cols?: number;
-  rows?: number;
-  className?: string;
-  invert?: boolean;
-}) {
-  const dots: React.ReactNode[] = [];
-  const cw = 100 / cols;
-  const rh = 100 / rows;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const nx = c / (cols - 1);
-      const ny = r / (rows - 1);
-      const dist = Math.sqrt((nx - 0.5) ** 2 + (ny - 0.5) ** 2) / 0.707;
-      const radius = invert ? Math.max(0.2, (1 - dist) * 2.8) : Math.max(0.2, dist * 2.8);
-      dots.push(
-        <circle
-          key={`${r}-${c}`}
-          cx={c * cw + cw / 2}
-          cy={r * rh + rh / 2}
-          r={radius}
-          fill="currentColor"
-        />,
-      );
-    }
-  }
+/* ---------- interactive topology ---------- */
+
+const nodes = [
+  { id: "web", src: next, x: 12, y: 28, note: "Next.js · 3 replicas" },
+  { id: "api", src: go, x: 42, y: 50, note: "Go 1.23 · healthy" },
+  { id: "worker", src: py, x: 40, y: 14, note: "cron */5" },
+  { id: "postgres", src: pg, x: 74, y: 24, note: "volume 20 GB" },
+  { id: "cache", src: redis, x: 76, y: 70, note: "private network" },
+  { id: "edge", src: rust, x: 14, y: 76, note: "fra · iad · sin" },
+];
+const edges: [string, string][] = [
+  ["web", "api"], ["edge", "web"], ["api", "postgres"], ["api", "cache"], ["worker", "postgres"], ["worker", "cache"],
+];
+
+function Topology() {
+  const [hover, setHover] = useState<string | null>("api");
+  const pos = (id: string) => nodes.find((n) => n.id === id)!;
+  const active = (a: string, b: string) => hover === a || hover === b;
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={className} aria-hidden="true">
-      {dots}
+    <div className="relative aspect-[16/10] w-full">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+        {edges.map(([a, b]) => {
+          const p = pos(a), q = pos(b);
+          const mx = (p.x + q.x) / 2;
+          return (
+            <path key={a + b} d={`M${p.x} ${p.y} C${mx} ${p.y} ${mx} ${q.y} ${q.x} ${q.y}`} vectorEffect="non-scaling-stroke"
+              stroke={active(a, b) ? "var(--primary)" : "var(--border)"} strokeWidth={active(a, b) ? 1.6 : 1}
+              className={active(a, b) ? "ml-dash" : ""} fill="none" style={{ transition: "stroke .3s" }} />
+          );
+        })}
+      </svg>
+      {nodes.map((n) => {
+        const on = hover === n.id || edges.some(([a, b]) => (a === hover && b === n.id) || (b === hover && a === n.id));
+        return (
+          <button key={n.id} onMouseEnter={() => setHover(n.id)} onFocus={() => setHover(n.id)}
+            className="absolute -translate-x-1/2 -translate-y-1/2 text-left transition-all duration-300"
+            style={{ left: `${n.x}%`, top: `${n.y}%`, opacity: hover && !on ? 0.35 : 1 }}>
+            <div className={`flex items-center gap-3 rounded-xl border bg-background px-3 py-2.5 transition-all ${hover === n.id ? "scale-105 border-primary shadow-[0_0_40px_-8px_var(--primary)]" : "border-border"}`}>
+              <img src={n.src} alt="" className="h-6 w-6" />
+              <div>
+                <div className="text-sm font-medium">{n.id}</div>
+                <div className="font-mono text-[10px] text-muted-foreground">{n.note}</div>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------- push-to-live pipeline ---------- */
+
+const stages = [
+  { k: "push", t: "git push origin main", log: ["→ webhook received", "→ commit 8f3a2c1 · fix: pool size"] },
+  { k: "build", t: "Detected Go 1.23", log: ["→ restoring cache (94%)", "→ go build ./cmd/api", "✓ image 18.2 MB"] },
+  { k: "verify", t: "Health checks", log: ["→ GET /healthz 200", "→ postgres reachable", "✓ 3/3 replicas ready"] },
+  { k: "live", t: "Traffic switched", log: ["✓ api.morline.app", "✓ previous deployment removed", "◷ 12.4s total"] },
+];
+
+function Pipeline() {
+  const [i, setI] = useState(0);
+  const paused = useRef(false);
+  useEffect(() => {
+    const t = setInterval(() => !paused.current && setI((v) => (v + 1) % stages.length), 2600);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr]" onMouseEnter={() => (paused.current = true)} onMouseLeave={() => (paused.current = false)}>
+      <ol className="relative">
+        <span className="absolute left-[11px] top-3 bottom-3 w-px bg-border" />
+        <span className="absolute left-[11px] top-3 w-px bg-primary transition-all duration-700" style={{ height: `${(i / (stages.length - 1)) * 88}%` }} />
+        {stages.map((s, n) => (
+          <li key={s.k}>
+            <button onClick={() => setI(n)} className="group relative flex w-full items-start gap-5 py-5 text-left">
+              <span className={`relative z-10 mt-1 grid h-6 w-6 place-items-center rounded-full border transition-colors ${n <= i ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background"}`}>
+                <span className="font-mono text-[10px]">{n + 1}</span>
+              </span>
+              <span>
+                <span className={`block font-display text-3xl tracking-tight transition-colors md:text-4xl ${n === i ? "text-foreground" : "text-muted-foreground/60 group-hover:text-muted-foreground"}`}>{s.k}</span>
+                <span className="font-mono text-xs text-muted-foreground">{s.t}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ol>
+      <div className="relative self-center overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="flex items-center gap-1.5 border-b border-border px-4 py-3">
+          <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+          <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+          <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+          <span className="ml-3 font-mono text-[11px] text-muted-foreground">api · deployment #142</span>
+        </div>
+        <div className="min-h-[260px] p-5 font-mono text-[13px] leading-7">
+          {stages.slice(0, i + 1).flatMap((s, n) =>
+            s.log.map((l, j) => (
+              <div key={`${n}-${j}`} className="ml-rise" style={{ animationDelay: n === i ? `${j * 0.15}s` : "0s", animationDuration: n === i ? ".5s" : "0s" }}>
+                <span className={l.startsWith("✓") ? "text-primary" : "text-muted-foreground"}>{l}</span>
+              </div>
+            )),
+          )}
+          <span className="ml-pulse inline-block h-4 w-2 translate-y-0.5 bg-primary" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- globe of regions ---------- */
+
+function Globe() {
+  const regions = [
+    { n: "fra", x: 52, y: 32 }, { n: "iad", x: 28, y: 38 }, { n: "sin", x: 76, y: 58 },
+    { n: "gru", x: 34, y: 70 }, { n: "acc", x: 49, y: 54 }, { n: "nrt", x: 84, y: 38 },
+  ];
+  const dots: [number, number][] = [];
+  for (let y = 6; y < 94; y += 3.2)
+    for (let x = 4; x < 96; x += 3.2) {
+      const dx = (x - 50) / 46, dy = (y - 50) / 44;
+      if (dx * dx + dy * dy < 1 && (Math.sin(x * 0.31) + Math.cos(y * 0.27) + Math.sin((x + y) * 0.13)) > 0.2) dots.push([x, y]);
+    }
+  return (
+    <svg viewBox="0 0 100 100" className="w-full">
+      <circle cx="50" cy="50" r="46" stroke="var(--border)" fill="none" strokeWidth=".3" />
+      <g className="ml-spin" style={{ transformBox: "fill-box" }}>
+        <ellipse cx="50" cy="50" rx="46" ry="14" stroke="var(--border)" fill="none" strokeWidth=".2" />
+        <ellipse cx="50" cy="50" rx="14" ry="46" stroke="var(--border)" fill="none" strokeWidth=".2" />
+      </g>
+      {dots.map(([x, y], i) => <circle key={i} cx={x} cy={y} r=".55" fill="var(--foreground)" fillOpacity=".28" />)}
+      {regions.slice(1).map((r) => (
+        <path key={r.n} d={`M52 32 Q${(52 + r.x) / 2} ${Math.min(32, r.y) - 18} ${r.x} ${r.y}`} stroke="var(--primary)" strokeWidth=".35" fill="none" className="ml-dash" />
+      ))}
+      {regions.map((r, i) => (
+        <g key={r.n}>
+          <circle cx={r.x} cy={r.y} r="2.4" fill="var(--primary)" fillOpacity=".2" className="ml-pulse" style={{ animationDelay: `${i * 0.3}s` }} />
+          <circle cx={r.x} cy={r.y} r=".9" fill="var(--primary)" />
+          <text x={r.x + 2.2} y={r.y + 0.8} fontSize="2.6" fontFamily="var(--font-mono-family)" fill="var(--foreground)">{r.n}</text>
+        </g>
+      ))}
     </svg>
   );
 }
 
-function MarketingPage() {
-  useEffect(() => {
-    document.documentElement.style.backgroundColor = "var(--color-background)";
-    document.body.style.backgroundColor = "var(--color-background)";
-    let meta = document.querySelector('meta[name="theme-color"]');
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.setAttribute("name", "theme-color");
-      document.head.appendChild(meta);
-    }
-    meta.setAttribute("content", "oklch(0.272 0.001 106)");
-  }, []);
+/* ---------- page ---------- */
 
+const stack = [next, pg, go, redis, py, docker, rust, mongo, mysql, vite, n8n, strapi];
+
+function MarketingPage() {
+  useReveal();
+  const [cmd, setCmd] = useState<"cli" | "mcp">("cli");
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
-      {/* Top bar — buttons live outside the frame */}
-      <header className="flex items-center justify-between gap-4 px-4 py-2 sm:px-6">
-        <span className="flex items-center gap-2 font-display text-base font-semibold tracking-tight">
-          <Mark className="h-4 w-4" /> morline<span className="text-primary">.</span>
-        </span>
-        <nav className="flex items-center gap-2 sm:gap-3">
-          <Link
-            to="/login"
-            className="hidden rounded-full px-3 py-1.5 font-mono text-[11px] uppercase text-muted-foreground hover:text-foreground sm:inline-flex"
-          >
-            Sign in
-          </Link>
-          <Link
-            to="/projects"
-            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3.5 py-1.5 font-mono text-[11px] uppercase text-background transition-colors hover:bg-primary hover:text-primary-foreground"
-          >
-            Open workspace <ArrowUpRight className="h-3.5 w-3.5" />
-          </Link>
-        </nav>
+    <div className="dark min-h-screen overflow-x-hidden bg-background text-foreground">
+      {/* nav */}
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-[1240px] items-center justify-between px-6">
+          <Link to="/" className="flex items-center gap-2 font-display text-lg font-semibold"><Mark /> Morline</Link>
+          <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
+            <a href="#canvas" className="hover:text-foreground">Canvas</a>
+            <a href="#deploy" className="hover:text-foreground">Deploys</a>
+            <a href="#regions" className="hover:text-foreground">Regions</a>
+            <a href="#tools" className="hover:text-foreground">CLI & MCP</a>
+          </nav>
+          <div className="flex items-center gap-2">
+            <Link to="/login" className="rounded-full px-4 py-1.5 text-sm text-muted-foreground hover:text-foreground">Sign in</Link>
+            <Link to="/signup" className="rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background hover:opacity-90">Start deploying</Link>
+          </div>
+        </div>
       </header>
 
-      {/* Frame — everything below sits inside one bordered cut-out panel */}
-      <div className="mx-0 mb-2 overflow-hidden rounded-t-2xl border border-border sm:mx-3 sm:mb-3 sm:rounded-3xl">
-        {/* Sheet 01 — the cover */}
-        <section
-          className="relative min-h-[calc(100svh-140px)] border-b border-border"
-          aria-labelledby="cover"
-        >
-          <span
-            aria-hidden="true"
-            className="sun-disc pointer-events-none absolute right-[5%] top-[8%] aspect-square w-[36vw] rounded-full md:right-[6%] md:top-[9%] md:w-[20vw]"
-          />
-          <header className="grid grid-cols-2 gap-4 p-5 md:grid-cols-4 md:p-8">
-            <Mono>
-              Issue №1
-              <br />
-              Deployment
-            </Mono>
-            <Mono className="hidden md:block">
-              <a href="#sheet-2" className="hover:text-foreground">
-                The system
-              </a>
-              <br />
-              <a href="#sheet-3" className="hover:text-foreground">
-                The viewfinder
-              </a>
-              <br />
-              <a href="#sheet-4" className="hover:text-foreground">
-                Field notes
-              </a>
-              <br />
-              <a href="#sheet-5" className="hover:text-foreground">
-                The signal
-              </a>
-            </Mono>
-            <Mono className="hidden md:block">
-              morline.space
-              <br />
-              EST. 2026
-            </Mono>
-            <Mono className="hidden text-right md:block">
-              Fra-1 · iad · sin
-              <br />
-              Uptime 99.99%
-            </Mono>
-          </header>
-
-          <div className="relative px-4 md:px-8">
-            <h1
-              id="cover"
-              className="relative select-none font-display text-[27vw] font-extrabold leading-[0.78] tracking-[-0.07em] md:text-[21vw]"
-            >
-              morline<span className="text-primary">.</span>
+      {/* hero */}
+      <section className="relative pt-14">
+        <div className="ml-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]" />
+        <div className="relative mx-auto grid max-w-[1240px] items-center gap-12 px-6 py-20 lg:grid-cols-[1.05fr_1fr] lg:py-28">
+          <div>
+            <div className="ml-rise inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 font-mono text-[11px] text-muted-foreground">
+              <span className="ml-pulse h-1.5 w-1.5 rounded-full bg-primary" /> MCP server & CLI now available
+            </div>
+            <h1 className="ml-rise mt-7 font-display text-[clamp(2.8rem,6.4vw,5.6rem)] font-semibold leading-[0.95] tracking-[-0.04em]" style={{ animationDelay: ".1s" }}>
+              Deploy the parts.<br />
+              <span className="bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">See the whole.</span>
             </h1>
-            <Mono className="absolute right-6 top-2 hidden text-right md:block md:right-10">
-              Frame 01
-              <br />
-              Roll 04
-              <br />
-              Region fra-1
-              <br />
-              Build 1.8s
-              <br />
-              Archive No. 031
-            </Mono>
-          </div>
-
-          <div className="mx-auto mt-10 max-w-3xl px-5 pb-24 text-center md:mt-14">
-            <svg
-              viewBox="0 0 24 24"
-              className="mx-auto mb-5 h-6 w-6 text-primary"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <path d="M12 4v16M4 12h16M6.34 6.34l11.32 11.32M6.34 17.66L17.66 6.34" />
-            </svg>
-            <p className="font-display text-2xl font-semibold uppercase leading-[1.15] tracking-tight sm:text-4xl">
-              <Hl>Deploy the parts.</Hl> Keep every service, database and worker <Hl>in view</Hl>,
-              connected, and <Hl>in its place.</Hl>
+            <p className="ml-rise mt-7 max-w-[520px] text-lg leading-relaxed text-muted-foreground" style={{ animationDelay: ".2s" }}>
+              Apps, databases, workers and volumes in one living canvas. Push code, watch it wire itself together, and always know what talks to what.
             </p>
-            <p className="mx-auto mt-6 max-w-sm text-left text-sm text-muted-foreground">
-              Morline turns a repository into a running system — then keeps the whole system on one
-              canvas, so you always see what talks to what.
-            </p>
-          </div>
-
-          <Mono className="absolute bottom-5 left-5 md:bottom-8 md:left-8">
-            No YAML walls.
-            <br />
-            No lost context.
-            <br />
-            Just momentum.
-          </Mono>
-          <Mono className="absolute bottom-5 right-5 text-right md:bottom-8 md:right-8">
-            Scroll ↓<br />
-            Sheet 01 / 05
-          </Mono>
-        </section>
-
-        {/* Sheet 02 — the specimens */}
-        <section id="sheet-2" className="relative border-b border-border">
-          <div className="grid gap-6 p-5 md:grid-cols-[1fr_2fr_1fr] md:p-8">
-            <Mono>
-              Fig. 02 · The system
-              <br />
-              Movement study
-            </Mono>
-            <h2 className="font-display text-3xl font-semibold leading-tight tracking-tight md:text-center md:text-5xl">
-              Everything you run, <Circled>laid out</Circled> like it{" "}
-              <Circled>actually is.</Circled>
-            </h2>
-            <Mono className="md:text-right">
-              8 services
-              <br />3 private links
-              <br />1 environment
-            </Mono>
-          </div>
-
-          <div className="relative mx-5 mb-5 hidden h-[680px] md:block">
-            <svg className="absolute inset-0 h-full w-full text-border" aria-hidden="true">
-              <path
-                d="M 12% 20% C 30% 30%, 25% 50%, 30% 58%"
-                stroke="currentColor"
-                fill="none"
-                strokeDasharray="4 5"
-              />
-            </svg>
-            {specimens.map((s) => (
-              <figure
-                key={s.name}
-                className={`group absolute w-32 transition-transform duration-300 hover:z-10 hover:rotate-0 hover:scale-110 ${s.pos}`}
-              >
-                <div className="relative grid aspect-[4/5] place-items-center border border-border bg-card shadow-sm overflow-hidden">
-                  <DotMatrix
-                    className="pointer-events-none absolute inset-0 h-full w-full text-foreground opacity-[0.12] transition-opacity duration-500 group-hover:opacity-0"
-                    cols={14}
-                    rows={18}
-                    invert
-                  />
-                  <img
-                    src={s.src}
-                    alt=""
-                    className="relative z-10 h-12 w-12 grayscale transition group-hover:grayscale-0"
-                  />
-                </div>
-                <figcaption className="mt-1.5 text-center font-mono text-[9px] uppercase text-muted-foreground">
-                  <span className="text-foreground">{s.name}</span>
-                  <br />
-                  {s.note}
-                </figcaption>
-              </figure>
-            ))}
-            <p className="absolute left-[30%] top-[30%] flex items-center gap-2 font-display text-sm italic text-primary">
-              it's your database
-              <svg width="60" height="18" viewBox="0 0 60 18" aria-hidden="true">
-                <path
-                  d="M2 4 C20 16 40 16 56 12 M50 7 L57 12 L50 16"
-                  stroke="currentColor"
-                  fill="none"
-                  strokeWidth="1.2"
-                />
-              </svg>
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 px-5 pb-8 md:hidden">
-            {specimens.slice(0, 6).map((s, i) => (
-              <figure key={s.name} className={i % 2 ? "rotate-2" : "-rotate-2"}>
-                <div className="relative grid aspect-[4/5] place-items-center border border-border bg-card overflow-hidden">
-                  <DotMatrix
-                    className="pointer-events-none absolute inset-0 h-full w-full text-foreground opacity-[0.12]"
-                    cols={10}
-                    rows={12}
-                    invert
-                  />
-                  <img src={s.src} alt="" className="relative z-10 h-10 w-10" />
-                </div>
-                <figcaption className="mt-1 text-center font-mono text-[9px] uppercase text-muted-foreground">
-                  {s.name} · {s.note}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-
-          <div className="grid gap-8 border-t border-border p-5 md:grid-cols-3 md:p-8">
-            {[
-              [
-                "A",
-                "Push a commit.",
-                "Connect a repo or bring an image. Builds start where your code lives.",
-              ],
-              [
-                "B",
-                "Draw the line.",
-                "Services find each other over private networking. The link is on the canvas, not in a doc.",
-              ],
-              [
-                "C",
-                "Stay with it.",
-                "Logs, health, metrics and rollbacks sit next to the thing they describe.",
-              ],
-            ].map(([k, t, d]) => (
-              <div key={k}>
-                <Mono>Observation {k}</Mono>
-                <p className="mt-2 font-display text-2xl font-semibold">{t}</p>
-                <p className="mt-2 max-w-xs text-sm text-muted-foreground">{d}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Sheet 03 — the viewfinder */}
-        <section
-          id="sheet-3"
-          className="relative border-b border-border"
-          aria-labelledby="viewfinder"
-        >
-          <div className="grid gap-6 p-5 md:grid-cols-[1fr_2fr_1fr] md:p-8">
-            <Mono>
-              Fig. 03 · The viewfinder
-              <br />
-              Framing study
-            </Mono>
-            <h2
-              id="viewfinder"
-              className="font-display text-3xl font-semibold leading-tight tracking-tight md:text-center md:text-5xl"
-            >
-              Zoom in. <Circled>Nothing</Circled> leaves the <Circled>frame.</Circled>
-            </h2>
-            <Mono className="md:text-right">
-              AF locked
-              <br />
-              f/1.8 · fra-1
-            </Mono>
-          </div>
-
-          <div className="relative mx-auto mb-6 max-w-3xl border border-border bg-card px-6 py-8 md:mb-10 md:px-10 md:py-12">
-            <span aria-hidden="true" className="corner-bracket corner-bracket-tl" />
-            <span aria-hidden="true" className="corner-bracket corner-bracket-tr" />
-            <span aria-hidden="true" className="corner-bracket corner-bracket-bl" />
-            <span aria-hidden="true" className="corner-bracket corner-bracket-br" />
-            <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
-              <span
-                aria-hidden="true"
-                className="rec-blink inline-block h-2 w-2 rounded-full bg-destructive"
-              />
-              REC · live · deploy #412
-            </p>
-            <div className="mt-6 font-mono text-[11px] leading-6">
-              {logLines.slice(0, 5).map((l, i) => (
-                <p key={i} className="truncate">
-                  <span className="mr-3 text-muted-foreground">{l.svc}</span>
-                  {l.msg}
-                </p>
-              ))}
-            </div>
-            <p className="mt-8 font-display text-2xl font-semibold leading-snug md:text-3xl">
-              Logs, health and rollbacks —<br />
-              always <span className="italic font-light">in focus.</span>
-            </p>
-            <Mono className="mt-6">
-              ISO 100 · 1.8s exposure
-              <br />
-              Frame 03 / 05
-            </Mono>
-          </div>
-        </section>
-
-        {/* Sheet 04 — field notes */}
-        <section
-          id="sheet-4"
-          className="relative border-b border-border"
-          aria-labelledby="field-notes"
-        >
-          <div className="grid gap-6 p-5 md:grid-cols-[1fr_2fr_1fr] md:p-8">
-            <Mono>
-              Fig. 04 · Field notes
-              <br />
-              Ledger study
-            </Mono>
-            <h2
-              id="field-notes"
-              className="font-display text-3xl font-semibold leading-tight tracking-tight md:text-center md:text-5xl"
-            >
-              Everything leaves a <Circled>paper trail.</Circled>
-            </h2>
-            <Mono className="md:text-right">
-              Filed under
-              <br />
-              deploys
-            </Mono>
-          </div>
-
-          <div className="mx-auto mb-6 grid max-w-4xl gap-4 px-5 md:mb-10 md:grid-cols-[2fr_1fr] md:px-8">
-            <div className="border border-border bg-card">
-              {[
-                ["09:41", "deploy #412 queued · fra-1"],
-                ["09:41", "build 1.8s · ghcr.io/morline/api:latest"],
-                ["09:42", "healthcheck passing · 3/3 replicas"],
-                ["09:42", "private link attached · api → postgres"],
-                ["09:43", "traffic shifted · 0% → 100%"],
-                ["09:43", "● live — rollback armed"],
-              ].map(([t, m]) => (
-                <p
-                  key={m}
-                  className="border-b border-border px-5 py-3 font-mono text-[11px] last:border-b-0"
-                >
-                  <span className="mr-4 text-muted-foreground">{t}</span>
-                  {m}
-                </p>
-              ))}
-            </div>
-            <div className="flex flex-col items-start gap-6 md:items-end">
-              <Mono className="md:text-right">
-                No context lost.
-                <br />
-                No doc archaeology.
-              </Mono>
-              <span className="-rotate-6 rounded-sm border-2 border-primary px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-primary">
-                Approved for deploy
-              </span>
-              <Mono className="md:text-right">
-                Ledger 04
-                <br />
-                Page 112
-              </Mono>
-            </div>
-          </div>
-        </section>
-
-        {/* Sheet 05 — dot matrix */}
-        <section
-          className="relative overflow-hidden border-b border-border bg-card"
-          aria-labelledby="dot-matrix-heading"
-        >
-          {/* large halftone background — dense centre fading outward */}
-          <DotMatrix
-            cols={80}
-            rows={40}
-            className="pointer-events-none absolute inset-0 h-full w-full text-foreground opacity-[0.06]"
-            invert
-          />
-
-          <div className="relative grid gap-6 p-5 md:grid-cols-[1fr_2fr_1fr] md:p-8">
-            <Mono>
-              Fig. 05 · Dot matrix
-              <br />
-              Halftone study
-            </Mono>
-            <h2
-              id="dot-matrix-heading"
-              className="font-display text-3xl font-semibold leading-tight tracking-tight md:text-center md:text-5xl"
-            >
-              Every part is a <Circled>signal.</Circled>
-            </h2>
-            <Mono className="md:text-right">
-              Exposure 1/60s
-              <br />
-              ISO 400 · f/5.6
-            </Mono>
-          </div>
-
-          {/* Halftone canvas — three columns each with a different density gradient */}
-          <div className="relative mx-5 mb-5 grid h-64 grid-cols-3 gap-px overflow-hidden border border-border md:h-96">
-            {/* Column A — sparse outer ring → dense core */}
-            <div className="relative overflow-hidden border-r border-border bg-background">
-              <DotMatrix
-                cols={22}
-                rows={28}
-                invert
-                className="absolute inset-0 h-full w-full text-primary opacity-70"
-              />
-              <div className="absolute inset-0 flex flex-col items-start justify-end p-3">
-                <Mono>
-                  Node A<br />
-                  fra-1
-                </Mono>
-              </div>
-            </div>
-            {/* Column B — dense core (invert=false → large dots at edges for silhouette) */}
-            <div className="relative overflow-hidden bg-background">
-              <DotMatrix
-                cols={30}
-                rows={28}
-                invert={false}
-                className="absolute inset-0 h-full w-full text-foreground opacity-[0.18]"
-              />
-              {/* centred wordmark */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                <span className="select-none font-display text-4xl font-extrabold tracking-[-0.07em] md:text-6xl">
-                  morline<span className="text-primary">.</span>
-                </span>
-                <Mono>Halftone · Fig. 05</Mono>
-              </div>
-            </div>
-            {/* Column C — sparse */}
-            <div className="relative overflow-hidden border-l border-border bg-background">
-              <DotMatrix
-                cols={22}
-                rows={28}
-                invert
-                className="absolute inset-0 h-full w-full text-muted-foreground opacity-40"
-              />
-              <div className="absolute inset-0 flex flex-col items-end justify-end p-3">
-                <Mono className="text-right">
-                  Node C<br />
-                  sin-1
-                </Mono>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative grid gap-6 border-t border-border p-5 md:grid-cols-3 md:p-8">
-            {[
-              [
-                "01",
-                "Service as signal.",
-                "Every running process emits a pulse — a health state, a log line, a connection. Morline turns that noise into a readable picture.",
-              ],
-              [
-                "02",
-                "Density = activity.",
-                "The darker the grid, the busier the service. Watch the dots change as traffic flows in and out, or as deploys roll through replicas.",
-              ],
-              [
-                "03",
-                "Pattern over time.",
-                "Halftone printing revealed tone with distance. Morline reveals topology with position. Same idea. Different ink.",
-              ],
-            ].map(([k, t, d]) => (
-              <div key={k}>
-                <Mono>Print {k}</Mono>
-                <p className="mt-2 font-display text-2xl font-semibold">{t}</p>
-                <p className="mt-2 max-w-xs text-sm text-muted-foreground">{d}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Plate — the current, after Hokusai */}
-        <section className="relative border-b border-border" aria-labelledby="plate">
-          <h2 id="plate" className="sr-only">
-            The current
-          </h2>
-          <img
-            src={wave}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            width={1920}
-            height={640}
-            className="h-52 w-full object-cover md:h-80"
-          />
-          <Mono className="plate-note absolute left-5 top-5 md:left-8 md:top-8">
-            Plate · The current
-            <br />
-            after Hokusai · Edo
-            <br />A system in motion, seen whole.
-          </Mono>
-          <Mono className="plate-note absolute right-5 top-5 text-right md:right-8 md:top-8">
-            fra-1 → iad → sin
-            <br />
-            traffic flows east
-          </Mono>
-        </section>
-
-        {/* Sheet 05 — the signal */}
-        <section
-          id="sheet-5"
-          className="relative overflow-hidden bg-[oklch(0.30_0.02_262)] text-[oklch(0.93_0.01_260)]"
-        >
-          {/* corner cut-outs */}
-          <span
-            aria-hidden="true"
-            className="absolute left-0 top-0 h-8 w-8 rounded-br-2xl bg-background sm:h-12 sm:w-12 sm:rounded-br-3xl"
-          />
-          <span
-            aria-hidden="true"
-            className="absolute right-0 top-0 h-8 w-8 rounded-bl-2xl bg-background sm:h-12 sm:w-12 sm:rounded-bl-3xl"
-          />
-
-          <div className="flex flex-wrap items-center justify-between gap-4 px-5 pt-14 md:px-12 md:pt-20">
-            <p className="font-mono text-[10px] uppercase opacity-50">
-              Sheet 05 / 05 · The signal
-              <br />
-              production · live
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                to="/projects"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 font-mono text-xs uppercase text-primary-foreground hover:opacity-90"
-              >
-                Open the workspace <ArrowUpRight className="h-4 w-4" />
+            <div className="ml-rise mt-10 flex flex-wrap items-center gap-3" style={{ animationDelay: ".3s" }}>
+              <Link to="/signup" className="group inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-[0_0_50px_-10px_var(--primary)]">
+                Deploy from GitHub <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </Link>
-              <Link
-                to="/login"
-                className="inline-flex items-center rounded-full border border-[oklch(0.93_0.01_260)]/25 px-5 py-2.5 font-mono text-xs uppercase hover:bg-[oklch(0.93_0.01_260)]/10"
-              >
-                Sign in
-              </Link>
+              <code className="rounded-full border border-border px-5 py-3 font-mono text-sm text-muted-foreground">
+                <span className="text-primary">$</span> npx morline up
+              </code>
             </div>
           </div>
-
-          <div className="grid gap-10 p-5 pt-10 md:grid-cols-[1fr_1.4fr] md:p-12 md:pt-14">
-            <h2 className="font-display text-5xl font-extrabold leading-[0.9] tracking-[-0.04em] md:text-7xl">
-              Ship it.
-              <br />
-              <span className="italic font-light">Watch it</span>
-              <br />
-              breathe<span className="text-primary">.</span>
-            </h2>
-            <div className="border border-[oklch(0.93_0.01_260)]/15 p-4 font-mono text-[11px] leading-6">
-              {logLines.slice(0, 10).map((l, i) => (
-                <p key={i} className="truncate opacity-70">
-                  <span className="mr-3 opacity-40">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="mr-3 opacity-40">{l.svc}</span>
-                  {l.msg}
-                </p>
-              ))}
-              <p className="mt-2 text-primary">● deployment live — 1.8s</p>
-            </div>
+          <CodeMachine />
+        </div>
+        {/* stack marquee */}
+        <div className="relative border-y border-border/60 py-6 [mask-image:linear-gradient(90deg,transparent,black_15%,black_85%,transparent)]">
+          <div className="ml-marquee flex w-max gap-16">
+            {[...stack, ...stack].map((s, i) => <img key={i} src={s} alt="" className="h-7 w-7 opacity-60 grayscale transition hover:opacity-100 hover:grayscale-0" />)}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Footer — the line */}
-        <footer className="relative overflow-hidden bg-[oklch(0.235_0_0)] text-[oklch(0.93_0_0)]">
-          <img src={rope} alt="" aria-hidden="true" className="w-full" />
-          <div className="grid gap-10 px-5 py-10 md:grid-cols-[1.5fr_1fr_1fr_1fr] md:px-12 md:py-12">
-            <div>
-              <span className="flex items-center gap-2 font-display text-base font-semibold tracking-tight">
-                <Mark className="h-4 w-4" /> morline<span className="text-primary">.</span>
-              </span>
-              <p className="mt-3 max-w-[240px] text-xs leading-relaxed opacity-60">
-                Deploy the parts. Keep the whole system in view.
-              </p>
-              <p className="mt-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wide opacity-70">
-                <span
-                  aria-hidden="true"
-                  className="inline-block h-1.5 w-1.5 rounded-full bg-primary"
-                />
-                all systems go · fra-1 · iad · sin
-              </p>
-            </div>
-
-            {(
-              [
-                [
-                  "Product",
-                  [
-                    ["Workspace", "/projects"],
-                    ["Deployments", "/deployments"],
-                    ["Logs", "/logs"],
-                    ["Metrics", "/metrics"],
-                    ["Domains", "/domains"],
-                  ],
-                ],
-                [
-                  "Workspace",
-                  [
-                    ["Activity", "/activity"],
-                    ["Integrations", "/integrations"],
-                    ["Team", "/team"],
-                    ["Settings", "/settings"],
-                  ],
-                ],
-                [
-                  "Account",
-                  [
-                    ["Sign in", "/login"],
-                    ["Create account", "/signup"],
-                    ["Your account", "/account"],
-                  ],
-                ],
-              ] as Array<[string, Array<[string, string]>]>
-            ).map(([title, links]) => (
-              <div key={title}>
-                <Mono className="opacity-50">{title}</Mono>
-                <ul className="mt-3 space-y-2">
-                  {links.map(([label, to]) => (
-                    <li key={label}>
-                      <Link
-                        to={to}
-                        className="font-mono text-[11px] uppercase tracking-wide opacity-70 transition-opacity hover:text-primary hover:opacity-100"
-                      >
-                        {label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+      {/* canvas */}
+      <section id="canvas" className="relative mx-auto max-w-[1240px] px-6 py-32">
+        <div className="ml-reveal grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+          <div>
+            <Eyebrow n="01">The canvas</Eyebrow>
+            <h2 className="mt-6 font-display text-[clamp(2.2rem,4.5vw,3.8rem)] font-semibold leading-[1] tracking-[-0.03em]">Your infrastructure, drawn as it actually runs.</h2>
           </div>
-
-          <p
-            aria-hidden="true"
-            className="select-none px-2 text-center font-display text-[24vw] font-extrabold leading-[0.72] tracking-[-0.07em] text-[oklch(0.93_0_0)] md:text-[23vw]"
-          >
-            morline<span className="text-primary">.</span>
+          <p className="max-w-md text-muted-foreground lg:justify-self-end">
+            Every service is a node, every connection a line you can trace. Hover one to see exactly what depends on it — no tribal knowledge, no stale diagrams.
           </p>
+        </div>
+        <div className="ml-reveal relative mt-16 rounded-[28px] border border-border bg-card/40 p-4 md:p-10">
+          <div className="ml-grid absolute inset-0 rounded-[28px] opacity-60" />
+          <Topology />
+        </div>
+      </section>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 px-5 pb-6 font-mono text-[10px] uppercase opacity-60 md:mt-0 md:px-12 md:pr-20">
-            <span>© 2026 Morline · morline.space</span>
-            <span>No rules. Just push forward.</span>
-            <a href="mailto:hello@morline.space" className="hover:opacity-100">
-              hello@morline.space
-            </a>
+      {/* deploy pipeline */}
+      <section id="deploy" className="relative border-t border-border/60 bg-card/30">
+        <div className="mx-auto max-w-[1240px] px-6 py-32">
+          <div className="ml-reveal max-w-2xl">
+            <Eyebrow n="02">Push to live</Eyebrow>
+            <h2 className="mt-6 font-display text-[clamp(2.2rem,4.5vw,3.8rem)] font-semibold leading-[1] tracking-[-0.03em]">One push. Four honest steps. Zero guesswork.</h2>
           </div>
-          {/* bottom corner cut-outs */}
-          <span
-            aria-hidden="true"
-            className="absolute bottom-0 left-0 h-8 w-8 rounded-tr-2xl bg-background sm:h-12 sm:w-12 sm:rounded-tr-3xl"
-          />
-          <span
-            aria-hidden="true"
-            className="absolute bottom-0 right-0 h-8 w-8 rounded-tl-2xl bg-background sm:h-12 sm:w-12 sm:rounded-tl-3xl"
-          />
-        </footer>
-      </div>
+          <div className="ml-reveal mt-16"><Pipeline /></div>
+        </div>
+      </section>
+
+      {/* big numbers band */}
+      <section className="border-y border-border/60">
+        <div className="mx-auto grid max-w-[1240px] divide-border/60 px-6 md:grid-cols-4 md:divide-x">
+          {[["12s", "median deploy"], ["94%", "build cache hits"], ["6", "global regions"], ["0", "YAML files"]].map(([v, l]) => (
+            <div key={l} className="ml-reveal py-12 md:px-8">
+              <div className="font-display text-6xl font-semibold tracking-[-0.04em]">{v}</div>
+              <div className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">{l}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* regions + AI */}
+      <section id="regions" className="mx-auto grid max-w-[1240px] items-center gap-16 px-6 py-32 lg:grid-cols-2">
+        <div className="ml-reveal mx-auto w-full max-w-[520px]"><Globe /></div>
+        <div className="ml-reveal">
+          <Eyebrow n="03">Everywhere, calmly</Eyebrow>
+          <h2 className="mt-6 font-display text-[clamp(2.2rem,4.5vw,3.8rem)] font-semibold leading-[1] tracking-[-0.03em]">Close to your users. Clear when it breaks.</h2>
+          <p className="mt-6 max-w-md text-muted-foreground">Place services in the regions you need. When something crashes, the assistant reads the logs, explains the cause and can open a pull request with the fix.</p>
+          <div className="mt-10 border-l-2 border-primary pl-5 font-mono text-sm">
+            <div className="text-muted-foreground">✕ api crashed · exit 1</div>
+            <div className="mt-2">Pool size 50 exceeds postgres max_connections (25).</div>
+            <div className="mt-2 text-primary">→ PR #88 · set DB_POOL=20</div>
+          </div>
+        </div>
+      </section>
+
+      {/* CLI & MCP */}
+      <section id="tools" className="border-t border-border/60 bg-card/30">
+        <div className="mx-auto grid max-w-[1240px] gap-16 px-6 py-32 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="ml-reveal">
+            <Eyebrow n="04">Wherever you work</Eyebrow>
+            <h2 className="mt-6 font-display text-[clamp(2.2rem,4.5vw,3.8rem)] font-semibold leading-[1] tracking-[-0.03em]">From your terminal. From your AI.</h2>
+            <p className="mt-6 max-w-md text-muted-foreground">The Morline CLI and MCP server sign in with OAuth and act with exactly your permissions — nothing more.</p>
+            <div className="mt-10 inline-flex rounded-full border border-border p-1">
+              {(["cli", "mcp"] as const).map((k) => (
+                <button key={k} onClick={() => setCmd(k)} className={`rounded-full px-5 py-1.5 font-mono text-xs uppercase transition ${cmd === k ? "bg-foreground text-background" : "text-muted-foreground"}`}>{k}</button>
+              ))}
+            </div>
+          </div>
+          <div className="ml-reveal overflow-hidden rounded-2xl border border-border bg-background font-mono text-[13px] leading-7">
+            <div className="border-b border-border px-5 py-3 text-[11px] text-muted-foreground">{cmd === "cli" ? "~/acme — zsh" : "claude · morline mcp"}</div>
+            <div key={cmd} className="p-6">
+              {(cmd === "cli"
+                ? ["$ morline login", "  ✓ signed in as ada@acme.dev", "$ morline deploy api", "  ▲ building… cached 94%", "  ✓ live in 12.4s", "$ morline logs api --tail"]
+                : ["> why is checkout slow?", "  ↳ morline.metrics(api, 1h)", "  ↳ morline.logs(postgres)", "  p95 jumped after #141: missing index", "  on orders(user_id). Open a PR?", "> yes"]
+              ).map((l, i) => (
+                <div key={i} className="ml-rise" style={{ animationDelay: `${i * 0.12}s` }}>
+                  <span className={l.includes("✓") ? "text-primary" : l.startsWith("$") || l.startsWith(">") ? "text-foreground" : "text-muted-foreground"}>{l}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="relative overflow-hidden">
+        <div className="ml-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_bottom,black_20%,transparent_70%)]" />
+        <div className="absolute bottom-[-40%] left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-primary/25 blur-[120px]" />
+        <div className="ml-reveal relative mx-auto max-w-[900px] px-6 py-40 text-center">
+          <h2 className="font-display text-[clamp(2.6rem,6vw,5rem)] font-semibold leading-[0.95] tracking-[-0.04em]">Ship the first part<br />in the next minute.</h2>
+          <div className="mt-10 flex justify-center gap-3">
+            <Link to="/signup" className="rounded-full bg-foreground px-7 py-3 text-sm font-medium text-background">Start for free</Link>
+            <Link to="/projects" className="rounded-full border border-border px-7 py-3 text-sm">Open workspace</Link>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-border/60">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-muted-foreground">
+          <span className="flex items-center gap-2"><Mark /> Morline © 2026</span>
+          <span className="font-mono text-xs">all systems normal <span className="ml-pulse ml-1 inline-block h-1.5 w-1.5 rounded-full bg-primary" /></span>
+        </div>
+      </footer>
     </div>
   );
 }
