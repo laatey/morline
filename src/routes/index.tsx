@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { ArrowUpRight } from "fluid-icons/react";
+import { useEffect, useState } from "react";
+import { ArrowRight, Boxes, Database, HardDrive, Terminal, GitBranch, Network, Shield, Cpu } from "lucide-react";
 import { Mark } from "@/components/moor/workspace-shell";
 import pg from "@/assets/stack/postgresql.svg";
 import redis from "@/assets/stack/redis.svg";
@@ -10,9 +10,20 @@ import py from "@/assets/stack/python.svg";
 import docker from "@/assets/stack/docker.svg";
 import rust from "@/assets/stack/rust.svg";
 import mongo from "@/assets/stack/mongodb.svg";
-import { logLines } from "@/lib/platform-data";
-import rope from "@/assets/rope.png";
-import wave from "@/assets/wave-plate.jpg";
+import {
+  HeroStackVisual,
+  CanvasSchematic,
+  DatabaseSchematic,
+  VolumeSchematic,
+  CliSchematic,
+} from "@/components/landing/visuals";
+import {
+  ArchitectureBand,
+  GlobalNetworkBand,
+  ObservabilityBand,
+  LightContrastBand,
+  ClosingCtaAndFooter,
+} from "@/components/landing/sections";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,751 +57,242 @@ export const Route = createFileRoute("/")({
   component: MarketingPage,
 });
 
-const specimens = [
-  { src: next, name: "web", note: "Next.js / 3 replicas", pos: "left-[4%] top-[8%] -rotate-3" },
-  { src: pg, name: "postgres", note: "volume 20 GB", pos: "left-[24%] top-[44%] rotate-2" },
-  { src: redis, name: "cache", note: "private network", pos: "left-[44%] top-[4%] -rotate-1" },
-  { src: go, name: "api", note: "go 1.23 / healthy", pos: "left-[60%] top-[50%] rotate-3" },
-  { src: py, name: "worker", note: "cron */5", pos: "left-[78%] top-[12%] -rotate-2" },
-  { src: docker, name: "image", note: "ghcr.io / latest", pos: "left-[8%] top-[62%] rotate-1" },
-  { src: rust, name: "edge", note: "fra / iad / sin", pos: "left-[86%] top-[58%] -rotate-3" },
-  { src: mongo, name: "events", note: "replica set", pos: "left-[40%] top-[66%] rotate-2" },
+const stacks = [
+  { name: "Next.js", src: next },
+  { name: "Go", src: go },
+  { name: "Python", src: py },
+  { name: "Rust", src: rust },
+  { name: "Docker", src: docker },
+  { name: "PostgreSQL", src: pg },
+  { name: "Redis", src: redis },
+  { name: "MongoDB", src: mongo },
 ];
 
-function Mono({ className = "", children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <p
-      className={`font-mono text-[10px] uppercase leading-[1.35] tracking-wide text-muted-foreground ${className}`}
-    >
-      {children}
-    </p>
-  );
-}
+type CapabilityId = "canvas" | "databases" | "volumes" | "cli";
 
-function Hl({ children }: { children: React.ReactNode }) {
-  return (
-    <mark className="bg-primary px-1 text-primary-foreground [box-decoration-break:clone]">
-      {children}
-    </mark>
-  );
-}
-
-function Circled({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="relative inline-block">
-      {children}
-      <svg
-        className="pointer-events-none absolute -inset-x-2 -inset-y-1.5 h-[calc(100%+12px)] w-[calc(100%+16px)] text-primary"
-        viewBox="0 0 100 40"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M6 22 C4 8 40 3 70 5 C92 7 99 16 95 27 C90 38 40 39 18 35 C6 32 3 24 12 14"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-    </span>
-  );
-}
-
-function DotMatrix({
-  cols = 36,
-  rows = 18,
-  className = "",
-  invert = false,
-}: {
-  cols?: number;
-  rows?: number;
-  className?: string;
-  invert?: boolean;
-}) {
-  const dots: React.ReactNode[] = [];
-  const cw = 100 / cols;
-  const rh = 100 / rows;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const nx = c / (cols - 1);
-      const ny = r / (rows - 1);
-      const dist = Math.sqrt((nx - 0.5) ** 2 + (ny - 0.5) ** 2) / 0.707;
-      const radius = invert ? Math.max(0.2, (1 - dist) * 2.8) : Math.max(0.2, dist * 2.8);
-      dots.push(
-        <circle
-          key={`${r}-${c}`}
-          cx={c * cw + cw / 2}
-          cy={r * rh + rh / 2}
-          r={radius}
-          fill="currentColor"
-        />,
-      );
-    }
-  }
-  return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={className} aria-hidden="true">
-      {dots}
-    </svg>
-  );
-}
+const capabilities: Array<{
+  id: CapabilityId;
+  label: string;
+  icon: typeof Boxes;
+  title: string;
+  summary: string;
+  points: Array<{ icon: typeof GitBranch; title: string; body: string }>;
+}> = [
+  {
+    id: "canvas",
+    label: "Canvas",
+    icon: Boxes,
+    title: "Your whole architecture, live on one surface",
+    summary: "Deploy repos, images, and templates onto a spatial canvas where every service relationship stays visible.",
+    points: [
+      { icon: GitBranch, title: "GitHub & public URLs", body: "Connect any repository or deploy straight from a public Git URL or container registry." },
+      { icon: Network, title: "Private networking", body: "Services discover each other over internal DNS with zero firewall wrangling." },
+      { icon: Cpu, title: "Per-service inspector", body: "Open deployments, logs, variables, and metrics in place without losing your map." },
+    ],
+  },
+  {
+    id: "databases",
+    label: "Databases",
+    icon: Database,
+    title: "Managed data stores that fit the rest of your stack",
+    summary: "Spin up Postgres, MySQL, MongoDB, or Redis in seconds with dedicated panels for data, backups, and credentials.",
+    points: [
+      { icon: Database, title: "One-click provisioning", body: "Ready-to-connect instances with private URLs injected into sibling services." },
+      { icon: Shield, title: "Automated snapshots", body: "Scheduled backups and point-in-time recovery built into the database panel." },
+      { icon: Network, title: "Live data & metrics", body: "Inspect tables, connections, and storage usage without leaving the workspace." },
+    ],
+  },
+  {
+    id: "volumes",
+    label: "Volumes",
+    icon: HardDrive,
+    title: "Persistent storage attached right where it belongs",
+    summary: "Mount fast NVMe volumes beneath any service on the canvas so stateful workloads survive every redeploy.",
+    points: [
+      { icon: HardDrive, title: "Stacked on the canvas", body: "See mounted paths and capacity directly under the service that owns them." },
+      { icon: Cpu, title: "Online resizing", body: "Expand volume capacity as your data grows without recreating the service." },
+      { icon: Shield, title: "Isolated per environment", body: "Staging and production keep separate volumes with clean lifecycle controls." },
+    ],
+  },
+  {
+    id: "cli",
+    label: "CLI & MCP",
+    icon: Terminal,
+    title: "Built for terminals and coding agents",
+    summary: "Authenticate with OAuth device flow from your shell or connect an MCP client to inspect deploys and logs safely.",
+    points: [
+      { icon: Terminal, title: "OAuth device login", body: "Scoped user tokens with no long-lived API keys pasted into config files." },
+      { icon: Shield, title: "Redacted by default", body: "Secret variable values stay masked when agents or teammates inspect environments." },
+      { icon: GitBranch, title: "Deploy from anywhere", body: "Trigger builds, tail logs, and check health straight from your local workflow." },
+    ],
+  },
+];
 
 function MarketingPage() {
+  const [activeCap, setActiveCap] = useState<CapabilityId>("canvas");
+  const current = capabilities.find((c) => c.id === activeCap) ?? capabilities[0]!;
+
   useEffect(() => {
-    document.documentElement.style.backgroundColor = "var(--color-background)";
-    document.body.style.backgroundColor = "var(--color-background)";
+    document.documentElement.style.backgroundColor = "oklch(0.115 0.004 260)";
+    document.body.style.backgroundColor = "oklch(0.115 0.004 260)";
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
       meta = document.createElement("meta");
       meta.setAttribute("name", "theme-color");
       document.head.appendChild(meta);
     }
-    meta.setAttribute("content", "oklch(0.272 0.001 106)");
+    meta.setAttribute("content", "oklch(0.115 0.004 260)");
   }, []);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
-      {/* Top bar — buttons live outside the frame */}
-      <header className="flex items-center justify-between gap-4 px-4 py-2 sm:px-6">
-        <span className="flex items-center gap-2 font-display text-base font-semibold tracking-tight">
-          <Mark className="h-4 w-4" /> morline<span className="text-primary">.</span>
-        </span>
-        <nav className="flex items-center gap-2 sm:gap-3">
-          <Link
-            to="/login"
-            className="hidden rounded-full px-3 py-1.5 font-mono text-[11px] uppercase text-muted-foreground hover:text-foreground sm:inline-flex"
-          >
-            Sign in
+    <div className="landing-shell min-h-screen overflow-x-hidden selection:bg-[var(--lp-accent)] selection:text-[var(--lp-bg)]">
+      {/* Minimal sticky navigation */}
+      <header className="sticky top-0 z-40 border-b border-[var(--lp-border)] bg-[var(--lp-bg)]/85 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          <Link to="/" className="flex items-center gap-2 font-display text-base font-semibold tracking-tight text-[var(--lp-fg)]">
+            <Mark className="h-4 w-4" /> morline<span className="text-[var(--lp-accent)]">.</span>
           </Link>
-          <Link
-            to="/projects"
-            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3.5 py-1.5 font-mono text-[11px] uppercase text-background transition-colors hover:bg-primary hover:text-primary-foreground"
-          >
-            Open workspace <ArrowUpRight className="h-3.5 w-3.5" />
-          </Link>
-        </nav>
+          <nav className="hidden items-center gap-7 text-sm text-[var(--lp-muted)] md:flex">
+            <a href="#product" className="transition-colors hover:text-[var(--lp-fg)]">Product</a>
+            <a href="#architecture" className="transition-colors hover:text-[var(--lp-fg)]">Architecture</a>
+            <a href="#infrastructure" className="transition-colors hover:text-[var(--lp-fg)]">Network</a>
+            <a href="#observability" className="transition-colors hover:text-[var(--lp-fg)]">Observability</a>
+          </nav>
+          <div className="flex items-center gap-3">
+            <Link to="/login" className="text-sm text-[var(--lp-muted)] transition-colors hover:text-[var(--lp-fg)]">
+              Sign in
+            </Link>
+            <Link
+              to="/projects"
+              className="inline-flex items-center rounded-full bg-[var(--lp-fg)] px-4 py-1.5 text-sm font-medium text-[var(--lp-bg)] transition-opacity hover:opacity-90"
+            >
+              Get started
+            </Link>
+          </div>
+        </div>
       </header>
 
-      {/* Frame — everything below sits inside one bordered cut-out panel */}
-      <div className="mx-0 mb-2 overflow-hidden rounded-t-2xl border border-border sm:mx-3 sm:mb-3 sm:rounded-3xl">
-        {/* Sheet 01 — the cover */}
-        <section
-          className="relative min-h-[calc(100svh-140px)] border-b border-border"
-          aria-labelledby="cover"
-        >
-          <span
-            aria-hidden="true"
-            className="sun-disc pointer-events-none absolute right-[5%] top-[8%] aspect-square w-[36vw] rounded-full md:right-[6%] md:top-[9%] md:w-[20vw]"
-          />
-          <header className="grid grid-cols-2 gap-4 p-5 md:grid-cols-4 md:p-8">
-            <Mono>
-              Issue №1
-              <br />
-              Deployment
-            </Mono>
-            <Mono className="hidden md:block">
-              <a href="#sheet-2" className="hover:text-foreground">
-                The system
-              </a>
-              <br />
-              <a href="#sheet-3" className="hover:text-foreground">
-                The viewfinder
-              </a>
-              <br />
-              <a href="#sheet-4" className="hover:text-foreground">
-                Field notes
-              </a>
-              <br />
-              <a href="#sheet-5" className="hover:text-foreground">
-                The signal
-              </a>
-            </Mono>
-            <Mono className="hidden md:block">
-              morline.space
-              <br />
-              EST. 2026
-            </Mono>
-            <Mono className="hidden text-right md:block">
-              Fra-1 · iad · sin
-              <br />
-              Uptime 99.99%
-            </Mono>
-          </header>
-
-          <div className="relative px-4 md:px-8">
-            <h1
-              id="cover"
-              className="relative select-none font-display text-[27vw] font-extrabold leading-[0.78] tracking-[-0.07em] md:text-[21vw]"
+      {/* Hero */}
+      <section className="relative pt-20 pb-16 md:pt-28 md:pb-24">
+        <div className="mx-auto max-w-4xl px-6 text-center">
+          <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-[-0.03em] sm:text-6xl md:text-7xl">
+            Deploy the parts.{" "}
+            <span className="text-[var(--lp-accent)]">See the whole.</span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-[var(--lp-muted)] sm:text-lg">
+            Cloud infrastructure for teams that ship apps, databases, and workers together on one connected canvas.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/projects"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--lp-fg)] px-5 py-2.5 text-sm font-medium text-[var(--lp-bg)] transition-opacity hover:opacity-90"
             >
-              morline<span className="text-primary">.</span>
-            </h1>
-            <Mono className="absolute right-6 top-2 hidden text-right md:block md:right-10">
-              Frame 01
-              <br />
-              Roll 04
-              <br />
-              Region fra-1
-              <br />
-              Build 1.8s
-              <br />
-              Archive No. 031
-            </Mono>
-          </div>
-
-          <div className="mx-auto mt-10 max-w-3xl px-5 pb-24 text-center md:mt-14">
-            <svg
-              viewBox="0 0 24 24"
-              className="mx-auto mb-5 h-6 w-6 text-primary"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              aria-hidden="true"
+              Start deploying <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center rounded-full border border-[var(--lp-border-strong)] px-5 py-2.5 text-sm text-[var(--lp-fg)] transition-colors hover:bg-[var(--lp-card)]"
             >
-              <path d="M12 4v16M4 12h16M6.34 6.34l11.32 11.32M6.34 17.66L17.66 6.34" />
-            </svg>
-            <p className="font-display text-2xl font-semibold uppercase leading-[1.15] tracking-tight sm:text-4xl">
-              <Hl>Deploy the parts.</Hl> Keep every service, database and worker <Hl>in view</Hl>,
-              connected, and <Hl>in its place.</Hl>
-            </p>
-            <p className="mx-auto mt-6 max-w-sm text-left text-sm text-muted-foreground">
-              Morline turns a repository into a running system — then keeps the whole system on one
-              canvas, so you always see what talks to what.
-            </p>
+              Sign in
+            </Link>
           </div>
+        </div>
 
-          <Mono className="absolute bottom-5 left-5 md:bottom-8 md:left-8">
-            No YAML walls.
-            <br />
-            No lost context.
-            <br />
-            Just momentum.
-          </Mono>
-          <Mono className="absolute bottom-5 right-5 text-right md:bottom-8 md:right-8">
-            Scroll ↓<br />
-            Sheet 01 / 05
-          </Mono>
-        </section>
+        <div className="mt-12 px-4 md:mt-16">
+          <HeroStackVisual />
+        </div>
+      </section>
 
-        {/* Sheet 02 — the specimens */}
-        <section id="sheet-2" className="relative border-b border-border">
-          <div className="grid gap-6 p-5 md:grid-cols-[1fr_2fr_1fr] md:p-8">
-            <Mono>
-              Fig. 02 · The system
-              <br />
-              Movement study
-            </Mono>
-            <h2 className="font-display text-3xl font-semibold leading-tight tracking-tight md:text-center md:text-5xl">
-              Everything you run, <Circled>laid out</Circled> like it{" "}
-              <Circled>actually is.</Circled>
-            </h2>
-            <Mono className="md:text-right">
-              8 services
-              <br />3 private links
-              <br />1 environment
-            </Mono>
-          </div>
-
-          <div className="relative mx-5 mb-5 hidden h-[680px] md:block">
-            <svg className="absolute inset-0 h-full w-full text-border" aria-hidden="true">
-              <path
-                d="M 12% 20% C 30% 30%, 25% 50%, 30% 58%"
-                stroke="currentColor"
-                fill="none"
-                strokeDasharray="4 5"
-              />
-            </svg>
-            {specimens.map((s) => (
-              <figure
-                key={s.name}
-                className={`group absolute w-32 transition-transform duration-300 hover:z-10 hover:rotate-0 hover:scale-110 ${s.pos}`}
-              >
-                <div className="relative grid aspect-[4/5] place-items-center border border-border bg-card shadow-sm overflow-hidden">
-                  <DotMatrix
-                    className="pointer-events-none absolute inset-0 h-full w-full text-foreground opacity-[0.12] transition-opacity duration-500 group-hover:opacity-0"
-                    cols={14}
-                    rows={18}
-                    invert
-                  />
-                  <img
-                    src={s.src}
-                    alt=""
-                    className="relative z-10 h-12 w-12 grayscale transition group-hover:grayscale-0"
-                  />
-                </div>
-                <figcaption className="mt-1.5 text-center font-mono text-[9px] uppercase text-muted-foreground">
-                  <span className="text-foreground">{s.name}</span>
-                  <br />
-                  {s.note}
-                </figcaption>
-              </figure>
-            ))}
-            <p className="absolute left-[30%] top-[30%] flex items-center gap-2 font-display text-sm italic text-primary">
-              it's your database
-              <svg width="60" height="18" viewBox="0 0 60 18" aria-hidden="true">
-                <path
-                  d="M2 4 C20 16 40 16 56 12 M50 7 L57 12 L50 16"
-                  stroke="currentColor"
-                  fill="none"
-                  strokeWidth="1.2"
-                />
-              </svg>
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 px-5 pb-8 md:hidden">
-            {specimens.slice(0, 6).map((s, i) => (
-              <figure key={s.name} className={i % 2 ? "rotate-2" : "-rotate-2"}>
-                <div className="relative grid aspect-[4/5] place-items-center border border-border bg-card overflow-hidden">
-                  <DotMatrix
-                    className="pointer-events-none absolute inset-0 h-full w-full text-foreground opacity-[0.12]"
-                    cols={10}
-                    rows={12}
-                    invert
-                  />
-                  <img src={s.src} alt="" className="relative z-10 h-10 w-10" />
-                </div>
-                <figcaption className="mt-1 text-center font-mono text-[9px] uppercase text-muted-foreground">
-                  {s.name} · {s.note}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-
-          <div className="grid gap-8 border-t border-border p-5 md:grid-cols-3 md:p-8">
-            {[
-              [
-                "A",
-                "Push a commit.",
-                "Connect a repo or bring an image. Builds start where your code lives.",
-              ],
-              [
-                "B",
-                "Draw the line.",
-                "Services find each other over private networking. The link is on the canvas, not in a doc.",
-              ],
-              [
-                "C",
-                "Stay with it.",
-                "Logs, health, metrics and rollbacks sit next to the thing they describe.",
-              ],
-            ].map(([k, t, d]) => (
-              <div key={k}>
-                <Mono>Observation {k}</Mono>
-                <p className="mt-2 font-display text-2xl font-semibold">{t}</p>
-                <p className="mt-2 max-w-xs text-sm text-muted-foreground">{d}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Sheet 03 — the viewfinder */}
-        <section
-          id="sheet-3"
-          className="relative border-b border-border"
-          aria-labelledby="viewfinder"
-        >
-          <div className="grid gap-6 p-5 md:grid-cols-[1fr_2fr_1fr] md:p-8">
-            <Mono>
-              Fig. 03 · The viewfinder
-              <br />
-              Framing study
-            </Mono>
-            <h2
-              id="viewfinder"
-              className="font-display text-3xl font-semibold leading-tight tracking-tight md:text-center md:text-5xl"
-            >
-              Zoom in. <Circled>Nothing</Circled> leaves the <Circled>frame.</Circled>
-            </h2>
-            <Mono className="md:text-right">
-              AF locked
-              <br />
-              f/1.8 · fra-1
-            </Mono>
-          </div>
-
-          <div className="relative mx-auto mb-6 max-w-3xl border border-border bg-card px-6 py-8 md:mb-10 md:px-10 md:py-12">
-            <span aria-hidden="true" className="corner-bracket corner-bracket-tl" />
-            <span aria-hidden="true" className="corner-bracket corner-bracket-tr" />
-            <span aria-hidden="true" className="corner-bracket corner-bracket-bl" />
-            <span aria-hidden="true" className="corner-bracket corner-bracket-br" />
-            <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
-              <span
-                aria-hidden="true"
-                className="rec-blink inline-block h-2 w-2 rounded-full bg-destructive"
-              />
-              REC · live · deploy #412
-            </p>
-            <div className="mt-6 font-mono text-[11px] leading-6">
-              {logLines.slice(0, 5).map((l, i) => (
-                <p key={i} className="truncate">
-                  <span className="mr-3 text-muted-foreground">{l.svc}</span>
-                  {l.msg}
-                </p>
-              ))}
-            </div>
-            <p className="mt-8 font-display text-2xl font-semibold leading-snug md:text-3xl">
-              Logs, health and rollbacks —<br />
-              always <span className="italic font-light">in focus.</span>
-            </p>
-            <Mono className="mt-6">
-              ISO 100 · 1.8s exposure
-              <br />
-              Frame 03 / 05
-            </Mono>
-          </div>
-        </section>
-
-        {/* Sheet 04 — field notes */}
-        <section
-          id="sheet-4"
-          className="relative border-b border-border"
-          aria-labelledby="field-notes"
-        >
-          <div className="grid gap-6 p-5 md:grid-cols-[1fr_2fr_1fr] md:p-8">
-            <Mono>
-              Fig. 04 · Field notes
-              <br />
-              Ledger study
-            </Mono>
-            <h2
-              id="field-notes"
-              className="font-display text-3xl font-semibold leading-tight tracking-tight md:text-center md:text-5xl"
-            >
-              Everything leaves a <Circled>paper trail.</Circled>
-            </h2>
-            <Mono className="md:text-right">
-              Filed under
-              <br />
-              deploys
-            </Mono>
-          </div>
-
-          <div className="mx-auto mb-6 grid max-w-4xl gap-4 px-5 md:mb-10 md:grid-cols-[2fr_1fr] md:px-8">
-            <div className="border border-border bg-card">
-              {[
-                ["09:41", "deploy #412 queued · fra-1"],
-                ["09:41", "build 1.8s · ghcr.io/morline/api:latest"],
-                ["09:42", "healthcheck passing · 3/3 replicas"],
-                ["09:42", "private link attached · api → postgres"],
-                ["09:43", "traffic shifted · 0% → 100%"],
-                ["09:43", "● live — rollback armed"],
-              ].map(([t, m]) => (
-                <p
-                  key={m}
-                  className="border-b border-border px-5 py-3 font-mono text-[11px] last:border-b-0"
-                >
-                  <span className="mr-4 text-muted-foreground">{t}</span>
-                  {m}
-                </p>
-              ))}
-            </div>
-            <div className="flex flex-col items-start gap-6 md:items-end">
-              <Mono className="md:text-right">
-                No context lost.
-                <br />
-                No doc archaeology.
-              </Mono>
-              <span className="-rotate-6 rounded-sm border-2 border-primary px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-primary">
-                Approved for deploy
-              </span>
-              <Mono className="md:text-right">
-                Ledger 04
-                <br />
-                Page 112
-              </Mono>
-            </div>
-          </div>
-        </section>
-
-        {/* Sheet 05 — dot matrix */}
-        <section
-          className="relative overflow-hidden border-b border-border bg-card"
-          aria-labelledby="dot-matrix-heading"
-        >
-          {/* large halftone background — dense centre fading outward */}
-          <DotMatrix
-            cols={80}
-            rows={40}
-            className="pointer-events-none absolute inset-0 h-full w-full text-foreground opacity-[0.06]"
-            invert
-          />
-
-          <div className="relative grid gap-6 p-5 md:grid-cols-[1fr_2fr_1fr] md:p-8">
-            <Mono>
-              Fig. 05 · Dot matrix
-              <br />
-              Halftone study
-            </Mono>
-            <h2
-              id="dot-matrix-heading"
-              className="font-display text-3xl font-semibold leading-tight tracking-tight md:text-center md:text-5xl"
-            >
-              Every part is a <Circled>signal.</Circled>
-            </h2>
-            <Mono className="md:text-right">
-              Exposure 1/60s
-              <br />
-              ISO 400 · f/5.6
-            </Mono>
-          </div>
-
-          {/* Halftone canvas — three columns each with a different density gradient */}
-          <div className="relative mx-5 mb-5 grid h-64 grid-cols-3 gap-px overflow-hidden border border-border md:h-96">
-            {/* Column A — sparse outer ring → dense core */}
-            <div className="relative overflow-hidden border-r border-border bg-background">
-              <DotMatrix
-                cols={22}
-                rows={28}
-                invert
-                className="absolute inset-0 h-full w-full text-primary opacity-70"
-              />
-              <div className="absolute inset-0 flex flex-col items-start justify-end p-3">
-                <Mono>
-                  Node A<br />
-                  fra-1
-                </Mono>
-              </div>
-            </div>
-            {/* Column B — dense core (invert=false → large dots at edges for silhouette) */}
-            <div className="relative overflow-hidden bg-background">
-              <DotMatrix
-                cols={30}
-                rows={28}
-                invert={false}
-                className="absolute inset-0 h-full w-full text-foreground opacity-[0.18]"
-              />
-              {/* centred wordmark */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                <span className="select-none font-display text-4xl font-extrabold tracking-[-0.07em] md:text-6xl">
-                  morline<span className="text-primary">.</span>
-                </span>
-                <Mono>Halftone · Fig. 05</Mono>
-              </div>
-            </div>
-            {/* Column C — sparse */}
-            <div className="relative overflow-hidden border-l border-border bg-background">
-              <DotMatrix
-                cols={22}
-                rows={28}
-                invert
-                className="absolute inset-0 h-full w-full text-muted-foreground opacity-40"
-              />
-              <div className="absolute inset-0 flex flex-col items-end justify-end p-3">
-                <Mono className="text-right">
-                  Node C<br />
-                  sin-1
-                </Mono>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative grid gap-6 border-t border-border p-5 md:grid-cols-3 md:p-8">
-            {[
-              [
-                "01",
-                "Service as signal.",
-                "Every running process emits a pulse — a health state, a log line, a connection. Morline turns that noise into a readable picture.",
-              ],
-              [
-                "02",
-                "Density = activity.",
-                "The darker the grid, the busier the service. Watch the dots change as traffic flows in and out, or as deploys roll through replicas.",
-              ],
-              [
-                "03",
-                "Pattern over time.",
-                "Halftone printing revealed tone with distance. Morline reveals topology with position. Same idea. Different ink.",
-              ],
-            ].map(([k, t, d]) => (
-              <div key={k}>
-                <Mono>Print {k}</Mono>
-                <p className="mt-2 font-display text-2xl font-semibold">{t}</p>
-                <p className="mt-2 max-w-xs text-sm text-muted-foreground">{d}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Plate — the current, after Hokusai */}
-        <section className="relative border-b border-border" aria-labelledby="plate">
-          <h2 id="plate" className="sr-only">
-            The current
+      {/* Product capabilities */}
+      <section id="product" className="border-t border-[var(--lp-border)] py-24 md:py-32">
+        <div className="mx-auto max-w-6xl px-6">
+          <p className="font-mono text-xs uppercase tracking-wider text-[var(--lp-accent)]">Product</p>
+          <h2 className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-5xl">
+            Cloud infrastructure that won’t box you in
           </h2>
-          <img
-            src={wave}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            width={1920}
-            height={640}
-            className="h-52 w-full object-cover md:h-80"
-          />
-          <Mono className="plate-note absolute left-5 top-5 md:left-8 md:top-8">
-            Plate · The current
-            <br />
-            after Hokusai · Edo
-            <br />A system in motion, seen whole.
-          </Mono>
-          <Mono className="plate-note absolute right-5 top-5 text-right md:right-8 md:top-8">
-            fra-1 → iad → sin
-            <br />
-            traffic flows east
-          </Mono>
-        </section>
 
-        {/* Sheet 05 — the signal */}
-        <section
-          id="sheet-5"
-          className="relative overflow-hidden bg-[oklch(0.30_0.02_262)] text-[oklch(0.93_0.01_260)]"
-        >
-          {/* corner cut-outs */}
-          <span
-            aria-hidden="true"
-            className="absolute left-0 top-0 h-8 w-8 rounded-br-2xl bg-background sm:h-12 sm:w-12 sm:rounded-br-3xl"
-          />
-          <span
-            aria-hidden="true"
-            className="absolute right-0 top-0 h-8 w-8 rounded-bl-2xl bg-background sm:h-12 sm:w-12 sm:rounded-bl-3xl"
-          />
+          <div className="mt-14 grid gap-10 lg:grid-cols-[180px_1fr_1.15fr] lg:items-start">
+            {/* Capability selector */}
+            <div className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+              {capabilities.map(({ id, label, icon: Icon }) => {
+                const active = id === activeCap;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setActiveCap(id)}
+                    className="inline-flex shrink-0 items-center gap-2.5 rounded-lg border px-3.5 py-2 text-left text-sm transition-colors"
+                    style={{
+                      borderColor: active ? "var(--lp-border-strong)" : "transparent",
+                      backgroundColor: active ? "var(--lp-card)" : "transparent",
+                      color: active ? "var(--lp-fg)" : "var(--lp-muted)",
+                    }}
+                  >
+                    <Icon className="h-4 w-4" style={{ color: active ? "var(--lp-accent)" : "var(--lp-subtle)" }} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 px-5 pt-14 md:px-12 md:pt-20">
-            <p className="font-mono text-[10px] uppercase opacity-50">
-              Sheet 05 / 05 · The signal
-              <br />
-              production · live
-            </p>
-            <div className="flex flex-wrap gap-3">
+            {/* Active capability details */}
+            <div>
+              <h3 className="font-display text-2xl font-medium leading-snug text-[var(--lp-fg)]">
+                {current.title}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-[var(--lp-muted)]">{current.summary}</p>
+
+              <div className="mt-8 grid gap-6 sm:grid-cols-2">
+                {current.points.map(({ icon: Icon, title, body }) => (
+                  <div key={title}>
+                    <div className="flex items-center gap-2 text-sm font-medium text-[var(--lp-fg)]">
+                      <Icon className="h-3.5 w-3.5 text-[var(--lp-accent)]" />
+                      {title}
+                    </div>
+                    <p className="mt-1.5 text-xs leading-relaxed text-[var(--lp-muted)]">{body}</p>
+                  </div>
+                ))}
+              </div>
+
               <Link
                 to="/projects"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 font-mono text-xs uppercase text-primary-foreground hover:opacity-90"
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-[var(--lp-fg)] px-4 py-2 text-xs font-medium text-[var(--lp-bg)] transition-opacity hover:opacity-90"
               >
-                Open the workspace <ArrowUpRight className="h-4 w-4" />
-              </Link>
-              <Link
-                to="/login"
-                className="inline-flex items-center rounded-full border border-[oklch(0.93_0.01_260)]/25 px-5 py-2.5 font-mono text-xs uppercase hover:bg-[oklch(0.93_0.01_260)]/10"
-              >
-                Sign in
+                Open workspace <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-          </div>
 
-          <div className="grid gap-10 p-5 pt-10 md:grid-cols-[1fr_1.4fr] md:p-12 md:pt-14">
-            <h2 className="font-display text-5xl font-extrabold leading-[0.9] tracking-[-0.04em] md:text-7xl">
-              Ship it.
-              <br />
-              <span className="italic font-light">Watch it</span>
-              <br />
-              breathe<span className="text-primary">.</span>
-            </h2>
-            <div className="border border-[oklch(0.93_0.01_260)]/15 p-4 font-mono text-[11px] leading-6">
-              {logLines.slice(0, 10).map((l, i) => (
-                <p key={i} className="truncate opacity-70">
-                  <span className="mr-3 opacity-40">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="mr-3 opacity-40">{l.svc}</span>
-                  {l.msg}
-                </p>
-              ))}
-              <p className="mt-2 text-primary">● deployment live — 1.8s</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Footer — the line */}
-        <footer className="relative overflow-hidden bg-[oklch(0.235_0_0)] text-[oklch(0.93_0_0)]">
-          <img src={rope} alt="" aria-hidden="true" className="w-full" />
-          <div className="grid gap-10 px-5 py-10 md:grid-cols-[1.5fr_1fr_1fr_1fr] md:px-12 md:py-12">
+            {/* Active schematic */}
             <div>
-              <span className="flex items-center gap-2 font-display text-base font-semibold tracking-tight">
-                <Mark className="h-4 w-4" /> morline<span className="text-primary">.</span>
-              </span>
-              <p className="mt-3 max-w-[240px] text-xs leading-relaxed opacity-60">
-                Deploy the parts. Keep the whole system in view.
-              </p>
-              <p className="mt-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wide opacity-70">
-                <span
-                  aria-hidden="true"
-                  className="inline-block h-1.5 w-1.5 rounded-full bg-primary"
-                />
-                all systems go · fra-1 · iad · sin
-              </p>
+              {activeCap === "canvas" && <CanvasSchematic />}
+              {activeCap === "databases" && <DatabaseSchematic />}
+              {activeCap === "volumes" && <VolumeSchematic />}
+              {activeCap === "cli" && <CliSchematic />}
             </div>
-
-            {(
-              [
-                [
-                  "Product",
-                  [
-                    ["Workspace", "/projects"],
-                    ["Deployments", "/deployments"],
-                    ["Logs", "/logs"],
-                    ["Metrics", "/metrics"],
-                    ["Domains", "/domains"],
-                  ],
-                ],
-                [
-                  "Workspace",
-                  [
-                    ["Activity", "/activity"],
-                    ["Integrations", "/integrations"],
-                    ["Team", "/team"],
-                    ["Settings", "/settings"],
-                  ],
-                ],
-                [
-                  "Account",
-                  [
-                    ["Sign in", "/login"],
-                    ["Create account", "/signup"],
-                    ["Your account", "/account"],
-                  ],
-                ],
-              ] as Array<[string, Array<[string, string]>]>
-            ).map(([title, links]) => (
-              <div key={title}>
-                <Mono className="opacity-50">{title}</Mono>
-                <ul className="mt-3 space-y-2">
-                  {links.map(([label, to]) => (
-                    <li key={label}>
-                      <Link
-                        to={to}
-                        className="font-mono text-[11px] uppercase tracking-wide opacity-70 transition-opacity hover:text-primary hover:opacity-100"
-                      >
-                        {label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
           </div>
 
-          <p
-            aria-hidden="true"
-            className="select-none px-2 text-center font-display text-[24vw] font-extrabold leading-[0.72] tracking-[-0.07em] text-[oklch(0.93_0_0)] md:text-[23vw]"
-          >
-            morline<span className="text-primary">.</span>
-          </p>
-
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 px-5 pb-6 font-mono text-[10px] uppercase opacity-60 md:mt-0 md:px-12 md:pr-20">
-            <span>© 2026 Morline · morline.space</span>
-            <span>No rules. Just push forward.</span>
-            <a href="mailto:hello@morline.space" className="hover:opacity-100">
-              hello@morline.space
-            </a>
+          {/* Supported runtimes & data stores strip */}
+          <div className="mt-16 border-t border-[var(--lp-border)] pt-8">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-[var(--lp-subtle)]">
+              Supported out of the box
+            </p>
+            <div className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-4">
+              {stacks.map((s) => (
+                <div key={s.name} className="flex items-center gap-2.5 text-sm text-[var(--lp-muted)]">
+                  <img src={s.src} alt="" className="h-5 w-5 opacity-80" />
+                  <span>{s.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          {/* bottom corner cut-outs */}
-          <span
-            aria-hidden="true"
-            className="absolute bottom-0 left-0 h-8 w-8 rounded-tr-2xl bg-background sm:h-12 sm:w-12 sm:rounded-tr-3xl"
-          />
-          <span
-            aria-hidden="true"
-            className="absolute bottom-0 right-0 h-8 w-8 rounded-tl-2xl bg-background sm:h-12 sm:w-12 sm:rounded-tl-3xl"
-          />
-        </footer>
-      </div>
+        </div>
+      </section>
+
+      <ArchitectureBand />
+      <GlobalNetworkBand />
+      <ObservabilityBand />
+      <LightContrastBand />
+      <ClosingCtaAndFooter />
     </div>
   );
 }

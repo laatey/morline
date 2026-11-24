@@ -432,3 +432,26 @@
 .hljs-strong {
   font-weight: 600;
 }
+
+/* Scoped landing-page surface tokens — deep obsidian + warm stone contrast band */
+.landing-shell {
+  --lp-bg: oklch(0.115 0.004 260);
+  --lp-band: oklch(0.145 0.005 260);
+  --lp-card: oklch(0.165 0.006 260);
+  --lp-card-hover: oklch(0.19 0.008 260);
+  --lp-border: oklch(1 0 0 / 9%);
+  --lp-border-strong: oklch(1 0 0 / 16%);
+  --lp-fg: oklch(0.96 0.004 260);
+  --lp-muted: oklch(0.67 0.008 260);
+  --lp-subtle: oklch(0.48 0.008 260);
+  --lp-accent: oklch(0.71 0.17 258);
+  --lp-accent-soft: oklch(0.71 0.17 258 / 14%);
+  --lp-live: oklch(0.76 0.17 152);
+  --lp-light-bg: oklch(0.925 0.008 98);
+  --lp-light-card: oklch(0.89 0.008 98);
+  --lp-light-fg: oklch(0.17 0.008 260);
+  --lp-light-muted: oklch(0.42 0.01 260);
+  --lp-light-border: oklch(0.17 0.008 260 / 10%);
+  background-color: var(--lp-bg);
+  color: var(--lp-fg);
+}
